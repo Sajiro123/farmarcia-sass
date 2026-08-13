@@ -1,6 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+} from '@angular/forms';
 
 interface CarouselSlide {
   image: string;
@@ -14,7 +19,7 @@ interface CarouselSlide {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit, OnDestroy {
   loginForm: FormGroup;
@@ -32,27 +37,30 @@ export class LoginComponent implements OnInit, OnDestroy {
       image: '/assets/images/carousel-1.jpg',
       badge: 'Control de Stock Inteligente',
       title: 'Inventario en Tiempo Real',
-      description: 'Monitorea medicamentos, alertas de vencimiento y realiza pedidos inteligentes de forma automatizada.'
+      description:
+        'Monitorea medicamentos, alertas de vencimiento y realiza pedidos inteligentes de forma automatizada.',
     },
     {
       image: '/assets/images/carousel-2.jpg',
       badge: 'Atención Profesional',
       title: 'Recetas y Facturación Rápida',
-      description: 'Emite facturas electrónicas y gestiona recetas digitales en segundos con nuestra interfaz ágil.'
+      description:
+        'Emite facturas electrónicas y gestiona recetas digitales en segundos con nuestra interfaz ágil.',
     },
     {
       image: '/assets/images/carousel-3.jpg',
       badge: 'Analítica Avanzada',
       title: 'Reportes y Rendimiento de Ventas',
-      description: 'Visualiza gráficos en tiempo real del rendimiento de tu farmacia y toma decisiones basadas en datos.'
-    }
+      description:
+        'Visualiza gráficos en tiempo real del rendimiento de tu farmacia y toma decisiones basadas en datos.',
+    },
   ];
 
   branches = [
     { id: 'principal', name: 'Sede Principal (Lima)' },
     { id: 'norte', name: 'Sucursal Norte' },
     { id: 'sur', name: 'Sucursal Sur' },
-    { id: 'express', name: 'Medicare Express (Delivery)' }
+    { id: 'express', name: 'Medicare Express (Delivery)' },
   ];
 
   constructor(private fb: FormBuilder) {
@@ -60,7 +68,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       branch: ['principal', [Validators.required]],
-      rememberMe: [false]
+      rememberMe: [false],
     });
   }
 
@@ -91,7 +99,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   prevSlide(): void {
-    this.currentSlide = (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+    this.currentSlide =
+      (this.currentSlide - 1 + this.slides.length) % this.slides.length;
   }
 
   goToSlide(index: number): void {
@@ -117,13 +126,13 @@ export class LoginComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.isLoading = false;
       const email = this.loginForm.value.email;
-      
+
       // Simulating a successful login
       this.submitFeedback = {
         success: true,
-        message: `¡Bienvenido de nuevo! Iniciando sesión en la sede seleccionada...`
+        message: `¡Bienvenido de nuevo! Iniciando sesión en la sede seleccionada...`,
       };
-      
+
       console.log('Login exitoso:', this.loginForm.value);
     }, 2000);
   }
