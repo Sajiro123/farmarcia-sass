@@ -1,0 +1,218 @@
+<div class="min-h-screen flex bg-slate-950 font-sans text-slate-100 overflow-hidden">
+  <!-- Left Side: Login Form -->
+  <div class="w-full lg:w-[45%] flex flex-col justify-between p-8 sm:p-12 md:p-16 lg:p-20 bg-slate-900 border-r border-slate-800/60 relative z-10">
+    
+    <!-- Header/Logo -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-medicare-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-medicare-500/20">
+        <svg class="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 10.5V20a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9.5M3 10V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M12 3v3m-3-3h6"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+          Medicare<span class="text-medicare-400 font-medium text-sm px-2 py-0.5 rounded-md bg-medicare-500/10 border border-medicare-500/20">SaaS</span>
+        </h1>
+        <p class="text-xs text-slate-400">Sistema de Gestión de Farmacias</p>
+      </div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="my-auto py-12 max-w-md w-full mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-extrabold tracking-tight text-white">¡Bienvenido de nuevo!</h2>
+        <p class="text-slate-400 mt-2">Accede a tu panel administrativo para gestionar tu farmacia.</p>
+      </div>
+
+      <!-- Feedback Messages -->
+      @if (submitFeedback) {
+        <div [class]="submitFeedback.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-rose-500/10 border-rose-500/20 text-rose-300'" 
+             class="mb-6 p-4 rounded-xl border flex items-start gap-3 animate-fade-in">
+          <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            @if (submitFeedback.success) {
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            } @else {
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            }
+          </svg>
+          <span class="text-sm font-medium">{{ submitFeedback.message }}</span>
+        </div>
+      }
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
+        <!-- Sucursal/Sede Selection -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Seleccionar Sucursal</label>
+          <div class="relative">
+            <select formControlName="branch" 
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-medicare-500/50 focus:border-medicare-500 transition duration-200 appearance-none">
+              @for (branch of branches; track branch.id) {
+                <option [value]="branch.id">{{ branch.name }}</option>
+              }
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+              <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Input -->
+        <div>
+          <label for="email" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Correo Electrónico</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+              </svg>
+            </span>
+            <input id="email" type="email" formControlName="email" placeholder="admin@medicare.com"
+                   [class.border-rose-500]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
+                   class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-medicare-500/50 focus:border-medicare-500 transition duration-200" />
+          </div>
+          @if (loginForm.get('email')?.touched && loginForm.get('email')?.errors) {
+            <span class="text-rose-400 text-xs mt-1 block">
+              @if (loginForm.get('email')?.hasError('required')) { El correo es requerido. }
+              @if (loginForm.get('email')?.hasError('email')) { Por favor ingresa un correo válido. }
+            </span>
+          }
+        </div>
+
+        <!-- Password Input -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Contraseña</label>
+            <a href="#" class="text-xs font-medium text-medicare-400 hover:text-medicare-300 transition-colors">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </span>
+            <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••••"
+                   [class.border-rose-500]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+                   class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-12 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-medicare-500/50 focus:border-medicare-500 transition duration-200" />
+            <button type="button" (click)="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors focus:outline-none">
+              @if (showPassword) {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path>
+                </svg>
+              } @else {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              }
+            </button>
+          </div>
+          @if (loginForm.get('password')?.touched && loginForm.get('password')?.errors) {
+            <span class="text-rose-400 text-xs mt-1 block">
+              @if (loginForm.get('password')?.hasError('required')) { La contraseña es requerida. }
+              @if (loginForm.get('password')?.hasError('minlength')) { Debe tener al menos 6 caracteres. }
+            </span>
+          }
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none text-slate-300 hover:text-slate-200">
+            <input type="checkbox" formControlName="rememberMe" class="rounded bg-slate-950 border-slate-800 text-medicare-500 focus:ring-medicare-500 focus:ring-offset-0 w-4.5 h-4.5 transition-colors" />
+            <span class="text-sm">Mantener sesión iniciada</span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" [disabled]="isLoading" 
+                class="w-full bg-gradient-to-r from-medicare-600 to-emerald-600 hover:from-medicare-500 hover:to-emerald-500 text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-medicare-600/20 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-medicare-400/50 disabled:opacity-50 disabled:pointer-events-none">
+          @if (isLoading) {
+            <svg class="animate-spin h-5 w-5 text-slate-950" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Autenticando...</span>
+          } @else {
+            <span>Ingresar al Sistema</span>
+            <svg class="w-5 h-5 text-slate-950 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          }
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/40 pt-6">
+      <p>&copy; 2026 Medicare Inc. Todos los derechos reservados.</p>
+      <div class="flex gap-4">
+        <a href="#" class="hover:text-slate-300 transition-colors">Términos</a>
+        <a href="#" class="hover:text-slate-300 transition-colors">Soporte</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Image Carousel -->
+  <div class="hidden lg:block lg:w-[55%] relative h-full overflow-hidden" 
+       (mouseenter)="stopAutoPlay()" 
+       (mouseleave)="startAutoPlay()">
+    
+    <!-- Slides Container -->
+    <div class="absolute inset-0 w-full h-full flex transition-transform duration-700 ease-in-out" 
+         [style.transform]="'translateX(-' + (currentSlide * 100) + '%)'">
+      
+      @for (slide of slides; track $index) {
+        <div class="w-full h-full flex-shrink-0 relative">
+          <!-- Background Image -->
+          <img [src]="slide.image" [alt]="slide.title" class="absolute inset-0 w-full h-full object-cover object-center scale-105" />
+          
+          <!-- Radial & Linear Overlay for cinematic contrast -->
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-transparent"></div>
+        </div>
+      }
+    </div>
+
+    <!-- Floating UI: Slide Content Card -->
+    <div class="absolute bottom-16 left-16 right-16 p-8 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-800/80 shadow-2xl flex flex-col justify-between max-w-xl animate-slide-up">
+      <div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-medicare-500/20 text-medicare-300 border border-medicare-500/30 mb-4 tracking-wider uppercase">
+          <span class="w-1.5 h-1.5 rounded-full bg-medicare-400 animate-pulse"></span>
+          {{ slides[currentSlide].badge }}
+        </span>
+        <h3 class="text-2xl font-bold text-white tracking-tight mb-2">{{ slides[currentSlide].title }}</h3>
+        <p class="text-slate-300 text-sm leading-relaxed mb-6">{{ slides[currentSlide].description }}</p>
+      </div>
+
+      <!-- Controls Row inside Card -->
+      <div class="flex items-center justify-between border-t border-slate-800/50 pt-4">
+        <!-- Slide dots indicators -->
+        <div class="flex items-center gap-2">
+          @for (slide of slides; track $index) {
+            <button type="button" (click)="goToSlide($index)" 
+                    [class]="currentSlide === $index ? 'w-8 bg-medicare-400' : 'w-2 bg-slate-600 hover:bg-slate-400'" 
+                    class="h-2 rounded-full transition-all duration-300 focus:outline-none" 
+                    [attr.aria-label]="'Ir a slide ' + ($index + 1)">
+            </button>
+          }
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex items-center gap-2">
+          <button type="button" (click)="prevSlide()" 
+                  class="w-10 h-10 rounded-xl bg-slate-950/60 hover:bg-slate-950 text-slate-400 hover:text-white border border-slate-800/80 flex items-center justify-center transition-all duration-200 active:scale-95 focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <button type="button" (click)="nextSlide()" 
+                  class="w-10 h-10 rounded-xl bg-slate-950/60 hover:bg-slate-950 text-slate-400 hover:text-white border border-slate-800/80 flex items-center justify-center transition-all duration-200 active:scale-95 focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

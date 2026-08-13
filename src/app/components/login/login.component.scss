@@ -1,0 +1,34 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// Fade in animation helper for feedback message
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Smooth transition for carousel scale effect
+img {
+  transition: transform 12s cubic-bezier(0.25, 1, 0.5, 1);
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+// Styling custom scrollbar if needed
+select {
+  background-image: none;
+}
