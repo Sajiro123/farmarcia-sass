@@ -2,7 +2,7 @@
   <!-- Left Side: Login Form -->
   <div
     class="w-full lg:w-[45%] flex flex-col justify-between p-8 sm:p-12 md:p-16 lg:p-20 bg-slate-900 border-r border-slate-800/60 relative z-10">
-
+    <span>prueba</span>
     <!-- Header/Logo -->
     <div class="flex items-center gap-3">
       <div
@@ -193,7 +193,8 @@
       @for (slide of slides; track $index) {
       <div class="w-full h-full flex-shrink-0 relative">
         <!-- Background Image -->
-        <img [src]="slide.image" [alt]="slide.title" class="absolute inset-0 w-full h-full object-cover object-center" />
+        <img [src]="slide.image" [alt]="slide.title"
+          class="absolute inset-0 w-full h-full object-cover object-center" />
         <!-- Radial & Linear Overlay for cinematic contrast -->
         <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
         <div class="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-transparent"></div>
