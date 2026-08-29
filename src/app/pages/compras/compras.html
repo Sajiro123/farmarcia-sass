@@ -1,0 +1,414 @@
+<div class="space-y-6 animate-fade-in">
+
+  <!-- Header Page Title -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+        <i class="pi pi-truck text-emerald-600 dark:text-emerald-400 text-2xl"></i>
+        Gestión de Compras & Reabastecimiento Estratégico
+      </h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Recepción de mercadería por cajas, cálculo de Punto de Reorden (PPR) y control de cuentas por pagar
+      </p>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-1.5 p-1 bg-surface-container dark:bg-slate-800 rounded-2xl border border-outline-variant dark:border-slate-700">
+      <button 
+        (click)="tabActiva = 'recepcion'"
+        [ngClass]="tabActiva === 'recepcion' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300'"
+        class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5">
+        <i class="pi pi-box text-xs"></i> Recepción de Facturas
+      </button>
+      <button 
+        (click)="tabActiva = 'reorden'"
+        [ngClass]="tabActiva === 'reorden' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300'"
+        class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5">
+        <i class="pi pi-sync text-xs"></i> Punto de Reorden (PPR) ⚡
+      </button>
+      <button 
+        (click)="tabActiva = 'cuentas'"
+        [ngClass]="tabActiva === 'cuentas' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300'"
+        class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5">
+        <i class="pi pi-credit-card text-xs"></i> Cuentas por Pagar
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: RECEPCIÓN DE MERCADERÍA POR CAJAS / UNIDADES -->
+  @if (tabActiva === 'recepcion') {
+    <!-- SECCIÓN 1: DATOS PROVEEDOR -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+      <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+        <i class="pi pi-file text-emerald-600"></i>
+        1. Datos del Proveedor y Comprobante
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 text-xs">
+        <div>
+          <label class="font-bold text-slate-500 dark:text-slate-400 block mb-1">RUC Proveedor:</label>
+          <input [(ngModel)]="rucProveedor" type="text" class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-500 dark:text-slate-400 block mb-1">Razón Social:</label>
+          <input [(ngModel)]="proveedor" type="text" class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-bold text-slate-800 dark:text-white" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-500 dark:text-slate-400 block mb-1">N° Comprobante:</label>
+          <input [(ngModel)]="nroComprobante" type="text" class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-emerald-600 dark:text-emerald-400" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-500 dark:text-slate-400 block mb-1">Condición de Pago:</label>
+          <select [(ngModel)]="condicionPago" class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-bold text-slate-800 dark:text-white">
+            <option>Contado</option>
+            <option>Crédito 15 días</option>
+            <option>Crédito 30 días</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: INGRESO FLEXIBLE DE PRODUCTOS -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+        <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <i class="pi pi-box text-emerald-600"></i>
+          2. Agregar Ítem (Compra por Cajas / Unidades)
+        </h2>
+
+        <div class="flex items-center gap-2 p-1 bg-surface-container dark:bg-slate-900 rounded-xl border border-outline-variant dark:border-slate-700">
+          <button 
+            (click)="modalidadIngreso = 'cajas'"
+            [ngClass]="modalidadIngreso === 'cajas' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-500'"
+            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="pi pi-box text-xs"></i> Compra por Cajas / Fardos
+          </button>
+          <button 
+            (click)="modalidadIngreso = 'unidades'"
+            [ngClass]="modalidadIngreso === 'unidades' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-500'"
+            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="pi pi-tag text-xs"></i> Compra por Unidades
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+        <div class="sm:col-span-2">
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Nombre del Medicamento / Producto:</label>
+          <input [(ngModel)]="productoSeleccionado" type="text" placeholder="Ej: Paracetamol 500mg..." class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-medium text-slate-800 dark:text-white" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Categoría:</label>
+          <select [(ngModel)]="categoriaSeleccionada" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-medium text-slate-800 dark:text-white">
+            <option>Analgésicos</option>
+            <option>Antibióticos</option>
+            <option>Cardiología</option>
+            <option>Venta Libre (OTC)</option>
+            <option>Cuidado Personal</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col justify-center">
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Control de Lote:</label>
+          <label class="flex items-center gap-2 cursor-pointer p-2 bg-surface-container-low dark:bg-slate-900 rounded-xl border border-outline-variant dark:border-slate-700">
+            <input type="checkbox" [(ngModel)]="requiereLote" (change)="onToggleRequiereLote()" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
+            <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              {{ requiereLote ? '⚠️ Requiere Lote & Venc. (DIGEMID)' : '📦 Sin Lote (Auto-generado)' }}
+            </span>
+          </label>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Lote:</label>
+          <input [(ngModel)]="loteInput" type="text" [placeholder]="requiereLote ? 'Ej: LT-98231' : 'ING-AUTO-202608'" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono text-slate-800 dark:text-white" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Fecha Vencimiento:</label>
+          <input [(ngModel)]="vencimientoInput" type="text" [placeholder]="requiereLote ? 'AAAA-MM' : 'Sin Venc.'" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono text-slate-800 dark:text-white" />
+        </div>
+
+        @if (modalidadIngreso === 'cajas') {
+          <div>
+            <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Cantidad Cajas / Fardos:</label>
+            <input [(ngModel)]="cantidadCajas" type="number" min="1" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Unidades por Caja:</label>
+            <input [(ngModel)]="unidadesPorCaja" type="number" min="1" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Costo por Caja Completa (S/):</label>
+            <input [(ngModel)]="costoPorCaja" type="number" step="0.01" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+          </div>
+        } @else {
+          <div>
+            <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Cantidad Unidades:</label>
+            <input [(ngModel)]="cantidadCajas" type="number" min="1" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Costo Unitario (S/):</label>
+            <input [(ngModel)]="costoPorCaja" type="number" step="0.01" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 dark:text-white" />
+          </div>
+        }
+
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Precio Venta Sugerido (S/):</label>
+          <input [(ngModel)]="precioVentaSugerido" type="number" step="0.01" class="w-full bg-white dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl px-3 py-2 font-mono font-bold text-emerald-600 dark:text-emerald-400" />
+        </div>
+      </div>
+
+      <!-- Live Preview Banner -->
+      <div class="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-4">
+          <div>
+            <span class="text-slate-500 text-[11px]">Total Unidades:</span>
+            <p class="font-extrabold text-slate-800 dark:text-white font-mono text-sm">{{ totalUnidadesCalculadas }} unid.</p>
+          </div>
+          <div class="h-6 w-px bg-emerald-200 dark:bg-emerald-800"></div>
+          <div>
+            <span class="text-slate-500 text-[11px]">Costo Unitario Real:</span>
+            <p class="font-extrabold text-slate-800 dark:text-white font-mono text-sm">S/ {{ costoUnitarioCalculado | number:'1.3-3' }}</p>
+          </div>
+          <div class="h-6 w-px bg-emerald-200 dark:bg-emerald-800"></div>
+          <div>
+            <span class="text-slate-500 text-[11px]">Margen Ganancia:</span>
+            <p class="font-extrabold text-emerald-700 dark:text-emerald-400 font-mono text-sm">+{{ margenCalculado }}%</p>
+          </div>
+        </div>
+
+        <button (click)="agregarItemACompra()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs flex items-center gap-1.5 cursor-pointer">
+          <i class="pi pi-plus"></i> Agregar a Factura
+        </button>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: TABLA DE PRODUCTOS -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <i class="pi pi-list text-emerald-600"></i>
+          3. Ítems en la Factura ({{ itemsCompra.length }})
+        </h2>
+        <span class="text-sm font-extrabold text-slate-800 dark:text-white font-mono">
+          Total Factura: S/ {{ totalFactura | number:'1.2-2' }}
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+            <tr>
+              <th class="p-3">Producto</th>
+              <th class="p-3">Lote & Control</th>
+              <th class="p-3 text-center">Cajas</th>
+              <th class="p-3 text-center">Total Unid.</th>
+              <th class="p-3 text-right">Costo Caja</th>
+              <th class="p-3 text-right">Costo Unit.</th>
+              <th class="p-3 text-right">Subtotal</th>
+              <th class="p-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (it of itemsCompra; track it.id; let i = $index) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                <td class="p-3 font-bold text-slate-800 dark:text-white">{{ it.nombre }}</td>
+                <td class="p-3 font-mono text-[10px]">
+                  <span class="px-2 py-0.5 rounded font-bold" [ngClass]="it.requiereLote ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">
+                    {{ it.lote }} ({{ it.vencimiento }})
+                  </span>
+                </td>
+                <td class="p-3 text-center font-mono font-bold">{{ it.cantidadCajas }}</td>
+                <td class="p-3 text-center font-mono font-extrabold text-emerald-600">{{ it.totalUnidades }}</td>
+                <td class="p-3 text-right font-mono">S/ {{ it.costoPorCaja | number:'1.2-2' }}</td>
+                <td class="p-3 text-right font-mono text-slate-500">S/ {{ it.costoUnitario | number:'1.3-3' }}</td>
+                <td class="p-3 text-right font-mono font-bold text-slate-900 dark:text-white">
+                  S/ {{ (it.cantidadCajas * it.costoPorCaja) | number:'1.2-2' }}
+                </td>
+                <td class="p-3 text-center">
+                  <button (click)="eliminarItem(i)" class="text-rose-500 hover:text-rose-700 p-1 cursor-pointer">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-end pt-3">
+        <button (click)="guardarYRecepcionarCompra()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer">
+          <i class="pi pi-check-circle text-base"></i> Recepcionar & Cargar a Inventario
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: PUNTO DE REORDEN INTELIGENTE (PPR) -->
+  @if (tabActiva === 'reorden') {
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <i class="pi pi-sync text-emerald-600"></i> Matriz de Punto de Reorden & Stock de Seguridad
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Fórmula: PPR = (Venta Diaria Promedio × Días de Entrega) + Stock de Seguridad
+          </p>
+        </div>
+
+        <button 
+          (click)="generarOrdenCompraAutomatica()"
+          class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-xs flex items-center gap-2 cursor-pointer">
+          <i class="pi pi-bolt"></i> Generar Orden de Compra Automática (OC)
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+            <tr>
+              <th class="p-3">Medicamento / Laboratorio</th>
+              <th class="p-3 text-center">Stock Actual</th>
+              <th class="p-3 text-center">Venta Diaria</th>
+              <th class="p-3 text-center">Días Entrega</th>
+              <th class="p-3 text-center">Stock Seguridad</th>
+              <th class="p-3 text-center">Punto Reorden (PPR)</th>
+              <th class="p-3 text-center">Estado Alerta</th>
+              <th class="p-3 text-center">Cant. Sugerida</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (p of productosReorden; track p.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                <td class="p-3">
+                  <p class="font-bold text-slate-800 dark:text-white">{{ p.nombre }}</p>
+                  <p class="text-[10px] text-slate-400">{{ p.laboratorio }}</p>
+                </td>
+                <td class="p-3 text-center font-mono font-bold" [ngClass]="p.stockActual <= p.puntoReorden ? 'text-rose-600' : 'text-slate-800 dark:text-white'">
+                  {{ p.stockActual }} unid.
+                </td>
+                <td class="p-3 text-center font-mono">{{ p.ventaDiariaPromedio }} /día</td>
+                <td class="p-3 text-center font-mono">{{ p.diasEntregaProveedor }} días</td>
+                <td class="p-3 text-center font-mono text-slate-500">{{ p.stockSeguridad }} unid.</td>
+                <td class="p-3 text-center font-mono font-extrabold text-amber-600">{{ p.puntoReorden }} unid.</td>
+                <td class="p-3 text-center">
+                  @if (p.stockActual <= p.puntoReorden) {
+                    <span class="px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 rounded font-bold text-[10px] animate-pulse">
+                      🚨 PEDIR URGENTE
+                    </span>
+                  } @else {
+                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded font-bold text-[10px]">
+                      ✅ ÓPTIMO
+                    </span>
+                  }
+                </td>
+                <td class="p-3 text-center font-mono font-black text-emerald-600">
+                  {{ p.cantidadSugeridaPedir > 0 ? '+' + p.cantidadSugeridaPedir + ' unid.' : '-' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: CUENTAS POR PAGAR A PROVEEDORES -->
+  @if (tabActiva === 'cuentas') {
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+      <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+        <i class="pi pi-credit-card text-emerald-600"></i> Cronograma de Facturas a Crédito y Vencimientos
+      </h2>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+            <tr>
+              <th class="p-3">Factura</th>
+              <th class="p-3">Proveedor</th>
+              <th class="p-3">Fecha Vencimiento</th>
+              <th class="p-3 text-center">Días Restantes</th>
+              <th class="p-3 text-right">Monto Total</th>
+              <th class="p-3 text-right">Saldo Pendiente</th>
+              <th class="p-3 text-center">Estado</th>
+              <th class="p-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            @for (cxp of cuentasPorPagar; track cxp.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                <td class="p-3 font-mono font-bold text-slate-800 dark:text-white">{{ cxp.nroFactura }}</td>
+                <td class="p-3 font-semibold text-slate-700 dark:text-slate-300">{{ cxp.proveedor }}</td>
+                <td class="p-3 font-mono">{{ cxp.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                <td class="p-3 text-center font-mono font-bold" [ngClass]="cxp.diasRestantes < 0 ? 'text-rose-600' : 'text-slate-700 dark:text-slate-300'">
+                  {{ cxp.diasRestantes < 0 ? 'Vencida (' + (-cxp.diasRestantes) + 'd)' : cxp.diasRestantes + ' días' }}
+                </td>
+                <td class="p-3 text-right font-mono">S/ {{ cxp.montoTotal | number:'1.2-2' }}</td>
+                <td class="p-3 text-right font-mono font-black text-slate-900 dark:text-white">S/ {{ cxp.saldoPendiente | number:'1.2-2' }}</td>
+                <td class="p-3 text-center">
+                  <span [ngClass]="cxp.estado === 'PAGADO' ? 'bg-emerald-100 text-emerald-700' : cxp.estado === 'VENCIDO' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'" class="px-2 py-0.5 rounded font-bold text-[10px]">
+                    {{ cxp.estado }}
+                  </span>
+                </td>
+                <td class="p-3 text-center">
+                  @if (cxp.estado !== 'PAGADO') {
+                    <button (click)="registrarPagoCuenta(cxp)" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer">
+                      Pagar
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- MODAL: ORDEN DE COMPRA SUGERIDA -->
+@if (showOrdenCompraModal && ordenCompraGenerada) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 text-slate-800 animate-slide-up">
+      <div class="text-center pb-2 border-b border-dashed border-slate-300">
+        <p class="font-black text-base text-emerald-800">ORDEN DE COMPRA SUGERIDA (PPR)</p>
+        <p class="text-xs text-slate-500">{{ ordenCompraGenerada.id }} • {{ ordenCompraGenerada.fecha | date:'medium' }}</p>
+        <p class="text-[11px] text-slate-400">Proveedor: {{ ordenCompraGenerada.proveedorSugerido }}</p>
+      </div>
+
+      <div class="space-y-2 text-xs font-mono max-h-52 overflow-y-auto">
+        @for (it of ordenCompraGenerada.items; track it.producto) {
+          <div class="p-2 bg-slate-50 rounded-xl border flex justify-between items-center">
+            <div>
+              <p class="font-bold text-slate-800">{{ it.producto }}</p>
+              <p class="text-[10px] text-slate-400">Stock Actual: {{ it.stockActual }} | PPR: {{ it.puntoReorden }}</p>
+            </div>
+            <div class="text-right">
+              <span class="font-black text-emerald-700">+{{ it.cantidadPedir }} unid.</span>
+              <p class="text-[10px] text-slate-500">S/ {{ it.costoEstimado | number:'1.2-2' }}</p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="flex justify-between items-center pt-2 border-t font-mono">
+        <span class="text-xs font-bold">TOTAL ESTIMADO OC:</span>
+        <span class="text-base font-black text-emerald-700">S/ {{ ordenCompraGenerada.totalEstimado | number:'1.2-2' }}</span>
+      </div>
+
+      <div class="flex gap-2">
+        <button (click)="imprimirOC()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="pi pi-print"></i> Imprimir Orden</button>
+        <button (click)="showOrdenCompraModal = false" class="py-2.5 px-4 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

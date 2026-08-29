@@ -1,0 +1,228 @@
+<div class="space-y-6 animate-fade-in">
+
+  <!-- Header & Title -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+        <i class="pi pi-database text-emerald-600 dark:text-emerald-400 text-2xl"></i>
+        Gestión de Inventario & Control FEFO
+      </h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Trazabilidad estricta por lotes, ubicación física de anaqueles y generación de Actas de Baja DIGEMID
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+        <i class="pi pi-check-circle"></i> Algoritmo FEFO Activo
+      </span>
+    </div>
+  </div>
+
+  <!-- Summary Status Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant dark:border-slate-700 shadow-2xs">
+      <span class="text-[11px] font-bold uppercase text-slate-400">Total Lotes</span>
+      <p class="text-xl font-black text-slate-800 dark:text-white font-mono mt-1">{{ lotesFefo.length }}</p>
+    </div>
+
+    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant dark:border-slate-700 shadow-2xs">
+      <span class="text-[11px] font-bold uppercase text-amber-500">Pronto Vencimiento (≤90d)</span>
+      <p class="text-xl font-black text-amber-600 dark:text-amber-400 font-mono mt-1">2</p>
+    </div>
+
+    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant dark:border-slate-700 shadow-2xs">
+      <span class="text-[11px] font-bold uppercase text-rose-500">Vencidos / Bloqueados</span>
+      <p class="text-xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">1</p>
+    </div>
+
+    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-outline-variant dark:border-slate-700 shadow-2xs">
+      <span class="text-[11px] font-bold uppercase text-emerald-600">Actas de Baja DIGEMID</span>
+      <p class="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{{ actasRegistradas.length }}</p>
+    </div>
+  </div>
+
+  <!-- Filters & Search Bar -->
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-outline-variant dark:border-slate-700 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+    <!-- Search -->
+    <div class="relative w-full sm:w-80">
+      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+      <input 
+        [(ngModel)]="busqueda" 
+        placeholder="Buscar lote, medicamento, principio activo..." 
+        class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white" />
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+      @for (st of ['TODOS', 'OPTIMO', 'ALERTA', 'CRITICO', 'VENCIDO']; track st) {
+        <button 
+          (click)="filtroEstado = st"
+          [ngClass]="filtroEstado === st ? 'bg-emerald-600 text-white font-bold' : 'bg-surface-container-low dark:bg-slate-900 text-slate-600 dark:text-slate-400'"
+          class="px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
+          {{ st }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- FEFO Inventory Table -->
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+          <tr>
+            <th class="p-3">Orden FEFO</th>
+            <th class="p-3">Medicamento & Principio Activo</th>
+            <th class="p-3">Lote & Reg. Sanitario</th>
+            <th class="p-3">Ubicación Almacén</th>
+            <th class="p-3">Condición</th>
+            <th class="p-3 text-center">Stock</th>
+            <th class="p-3">Fecha Vencimiento</th>
+            <th class="p-3">Estado FEFO</th>
+            <th class="p-3 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          @for (item of lotesFiltrados; track item.id; let i = $index) {
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+              <td class="p-3 font-mono font-bold text-slate-400">#{{ i + 1 }}</td>
+              <td class="p-3">
+                <p class="font-bold text-slate-800 dark:text-white">{{ item.producto }}</p>
+                <p class="text-[10px] text-slate-500">{{ item.principioActivo }} • {{ item.laboratorio }}</p>
+              </td>
+              <td class="p-3 font-mono">
+                <span class="font-bold text-slate-700 dark:text-slate-300">{{ item.lote }}</span>
+                <p class="text-[9px] text-slate-400">{{ item.registroSanitario }}</p>
+              </td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded font-mono font-bold text-[10px]">
+                  {{ item.pasillo }}-{{ item.estante }}-{{ item.nivel }}-{{ item.gaveta }}
+                </span>
+              </td>
+              <td class="p-3">
+                <span class="text-[10px] text-slate-500 font-medium">{{ item.temperatura }}</span>
+              </td>
+              <td class="p-3 text-center font-mono font-bold" [ngClass]="item.stock === 0 ? 'text-rose-600' : 'text-slate-800 dark:text-white'">
+                {{ item.stock }} unid.
+              </td>
+              <td class="p-3 font-mono font-bold text-slate-700 dark:text-slate-300">
+                {{ item.vencimiento }}
+              </td>
+              <td class="p-3">
+                @let badge = getBadgeStatus(item.dias);
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold {{ badge.class }}">
+                  <i class="{{ badge.icon }} text-[9px]"></i>
+                  {{ badge.text }}
+                </span>
+              </td>
+              <td class="p-3 text-center">
+                <button 
+                  (click)="openBajaModal(item)"
+                  title="Generar Acta de Baja por Vencimiento / Deterioro"
+                  class="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 rounded-lg text-[10px] font-bold border border-rose-200 dark:border-rose-800 cursor-pointer">
+                  Acta de Baja
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: GENERAR ACTA DE BAJA (DIGEMID / SUNAT) -->
+@if (showBajaModal && loteSeleccionadoParaBaja) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full border border-outline-variant dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
+        <div>
+          <h3 class="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+            <i class="pi pi-file-excel"></i> Acta de Baja de Medicamentos
+          </h3>
+          <p class="text-[11px] text-slate-400">Descargo oficial de inventario para DIGEMID y SUNAT</p>
+        </div>
+        <button (click)="showBajaModal = false" class="text-slate-400 cursor-pointer"><i class="pi pi-times"></i></button>
+      </div>
+
+      <div class="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-800 text-xs">
+        <p class="font-bold text-rose-900 dark:text-rose-200">{{ loteSeleccionadoParaBaja.producto }}</p>
+        <p class="text-[11px] text-rose-700 dark:text-rose-300 font-mono">Lote: {{ loteSeleccionadoParaBaja.lote }} • Stock Actual: {{ loteSeleccionadoParaBaja.stock }} unid.</p>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Cantidad a Dar de Baja:</label>
+          <input [(ngModel)]="cantidadBaja" type="number" min="1" [max]="loteSeleccionadoParaBaja.stock" class="w-full bg-white dark:bg-slate-900 border rounded-xl p-2 font-mono font-bold dark:border-slate-600" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Motivo de Descargo Oficial:</label>
+          <select [(ngModel)]="motivoBaja" class="w-full bg-white dark:bg-slate-900 border rounded-xl p-2 font-bold dark:border-slate-600">
+            @for (m of motivosDisponibles; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Químico Responsable:</label>
+            <input [(ngModel)]="quimicoResponsable" class="w-full bg-white dark:bg-slate-900 border rounded-xl p-2 font-bold dark:border-slate-600" />
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">N° Colegio (CQFP):</label>
+            <input [(ngModel)]="cmpQuimico" class="w-full bg-white dark:bg-slate-900 border rounded-xl p-2 font-mono font-bold dark:border-slate-600" />
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Observaciones del Acta:</label>
+          <textarea [(ngModel)]="observacionesBaja" rows="2" placeholder="Detalles de la destrucción o retiro físico..." class="w-full bg-white dark:bg-slate-900 border rounded-xl p-2 dark:border-slate-600"></textarea>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button (click)="showBajaModal = false" class="flex-1 py-2.5 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer">Cancelar</button>
+        <button (click)="confirmarActaBaja()" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold text-xs cursor-pointer">Emitir Acta & Descontar Stock</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL: IMPRESIÓN DE ACTA OFICIAL -->
+@if (showActaImprimirModal && actaParaImprimir) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-800 animate-slide-up">
+      <div class="text-center pb-2 border-b border-dashed border-slate-300">
+        <p class="font-black text-sm text-rose-800">ACTA DE BAJA Y DESTRUCCIÓN DE MEDICAMENTOS</p>
+        <p class="text-[10px] text-slate-500">Conforme a la Directiva Sanitaria DIGEMID / SUNAT</p>
+        <p class="text-xs font-mono font-bold mt-1 text-slate-700">{{ actaParaImprimir.id }}</p>
+      </div>
+
+      <div class="space-y-1.5 text-xs font-mono">
+        <p>Fecha: {{ actaParaImprimir.fecha | date:'medium' }}</p>
+        <p>Fármaco: <strong>{{ actaParaImprimir.producto }}</strong></p>
+        <p>Lote Retirado: <strong>{{ actaParaImprimir.lote }}</strong></p>
+        <p>Cantidad de Baja: <strong>{{ actaParaImprimir.cantidadBaja }} unidades</strong></p>
+        <p>Motivo: {{ actaParaImprimir.motivo }}</p>
+        <p>Responsable: {{ actaParaImprimir.responsable }} ({{ actaParaImprimir.cmpQuimico }})</p>
+        @if (actaParaImprimir.observaciones) {
+          <p class="text-[11px] text-slate-500">Obs: {{ actaParaImprimir.observaciones }}</p>
+        }
+      </div>
+
+      <div class="pt-6 border-t border-dashed border-slate-300 text-center">
+        <div class="w-36 h-0.5 bg-slate-400 mx-auto mb-1"></div>
+        <p class="text-[10px] font-bold">Firma del Director Técnico / Q.F.</p>
+      </div>
+
+      <div class="flex gap-2">
+        <button (click)="imprimirActa()" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="pi pi-print"></i> Imprimir Acta</button>
+        <button (click)="showActaImprimirModal = false" class="py-2.5 px-4 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold cursor-pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

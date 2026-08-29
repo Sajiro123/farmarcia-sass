@@ -1,0 +1,291 @@
+<div class="space-y-6 animate-fade-in">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-medicare-100 text-medicare-800 dark:bg-medicare-900/40 dark:text-medicare-300">
+          UI Kit Poseidon
+        </span>
+        <span class="text-xs text-slate-400 font-medium">PrimeNG + Tailwind CSS</span>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">Form Layout</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Ejemplos de distribución de formularios, cuadrículas responsivas y componentes PrimeNG con el tema Lara.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <p-button label="Guardar Borrador" icon="pi pi-bookmark" [outlined]="true" severity="secondary" size="small"></p-button>
+      <p-button label="Nuevo Registro" icon="pi pi-plus" size="small"></p-button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- 1. Vertical Form Layout -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="pi pi-align-left text-medicare-500"></i> Vertical
+          </h2>
+          <span class="text-xs text-slate-400">Flex Column</span>
+        </div>
+
+        <p-fluid class="space-y-4">
+          <div class="flex flex-col gap-2">
+            <label for="vert-name" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre Completo</label>
+            <input id="vert-name" type="text" pInputText [(ngModel)]="verticalName" placeholder="Ej. Juan Pérez" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label for="vert-email" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Correo Electrónico</label>
+            <input id="vert-email" type="email" pInputText [(ngModel)]="verticalEmail" placeholder="juan.perez@ejemplo.com" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label for="vert-age" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Edad</label>
+            <p-inputnumber id="vert-age" [(ngModel)]="verticalAge" placeholder="Ej. 30"></p-inputnumber>
+          </div>
+        </p-fluid>
+      </div>
+
+      <div class="pt-6 mt-4 flex justify-end">
+        <p-button label="Enviar Vertical" icon="pi pi-check" size="small"></p-button>
+      </div>
+    </div>
+
+    <!-- 2. Vertical Grid Form Layout -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="pi pi-th-large text-medicare-500"></i> Vertical Grid
+          </h2>
+          <span class="text-xs text-slate-400">Grid 2 Cols</span>
+        </div>
+
+        <p-fluid>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label for="grid-name" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre</label>
+              <input id="grid-name" type="text" pInputText [(ngModel)]="gridName" placeholder="Nombre" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label for="grid-email" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Email</label>
+              <input id="grid-email" type="email" pInputText [(ngModel)]="gridEmail" placeholder="Email" />
+            </div>
+
+            <div class="flex flex-col gap-2 md:col-span-2">
+              <label for="grid-age" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Edad</label>
+              <p-inputnumber id="grid-age" [(ngModel)]="gridAge" placeholder="Edad"></p-inputnumber>
+            </div>
+          </div>
+        </p-fluid>
+      </div>
+
+      <div class="pt-6 mt-4 flex justify-end">
+        <p-button label="Enviar Grid" icon="pi pi-check" severity="success" size="small"></p-button>
+      </div>
+    </div>
+
+    <!-- 3. Horizontal Form Layout -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm">
+      <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="pi pi-arrows-h text-medicare-500"></i> Horizontal
+        </h2>
+        <span class="text-xs text-slate-400">Label + Input inline</span>
+      </div>
+
+      <p-fluid class="space-y-4">
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="horiz-name" class="col-span-12 md:col-span-3 text-sm font-semibold text-slate-700 dark:text-slate-300 md:text-right">
+            Nombre:
+          </label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="horiz-name" type="text" pInputText [(ngModel)]="horizontalName" placeholder="Nombre completo" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="horiz-email" class="col-span-12 md:col-span-3 text-sm font-semibold text-slate-700 dark:text-slate-300 md:text-right">
+            Email:
+          </label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="horiz-email" type="email" pInputText [(ngModel)]="horizontalEmail" placeholder="correo@ejemplo.com" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center pt-2">
+          <div class="col-span-12 md:col-span-9 md:col-start-4 flex gap-2">
+            <p-button label="Guardar" icon="pi pi-save" size="small"></p-button>
+            <p-button label="Cancelar" [outlined]="true" severity="secondary" size="small"></p-button>
+          </div>
+        </div>
+      </p-fluid>
+    </div>
+
+    <!-- 4. Inline Form & Help Text -->
+    <div class="space-y-6">
+      <!-- Inline -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="pi pi-minus text-medicare-500"></i> Inline
+          </h2>
+          <span class="text-xs text-slate-400">Compact</span>
+        </div>
+
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Nombres</label>
+            <input type="text" pInputText [(ngModel)]="inlineFirstname" placeholder="Nombres" class="w-full" />
+          </div>
+          <div class="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Apellidos</label>
+            <input type="text" pInputText [(ngModel)]="inlineLastname" placeholder="Apellidos" class="w-full" />
+          </div>
+          <div>
+            <p-button label="Agregar" icon="pi pi-plus" size="small"></p-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Text -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="pi pi-question-circle text-medicare-500"></i> Help Text
+          </h2>
+          <span class="text-xs text-slate-400">Guías de campo</span>
+        </div>
+
+        <p-fluid class="space-y-1">
+          <label for="help-user" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre de Usuario</label>
+          <input id="help-user" type="text" pInputText [(ngModel)]="helpUsername" placeholder="usuario123" />
+          <small class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-1">
+            <i class="pi pi-info-circle text-xs text-medicare-500"></i>
+            Ingresa tu usuario institucional para validar tus permisos en Medicare POS.
+          </small>
+        </p-fluid>
+      </div>
+    </div>
+
+    <!-- 5. Advanced Form Grid (Full Width) -->
+    <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm">
+      <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="pi pi-id-card text-medicare-500"></i> Formulario Avanzado / Form Grid
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Estructura típica de registro médico, clientes y proveedores con validación de campos combinados.
+          </p>
+        </div>
+        <span class="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+          Grid 12 Columnas
+        </span>
+      </div>
+
+      <p-fluid>
+        <div class="grid grid-cols-12 gap-5">
+          <!-- Firstname -->
+          <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+            <label for="adv-first" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombres *</label>
+            <input id="adv-first" type="text" pInputText [(ngModel)]="advFirstname" placeholder="Ej. Carlos Alberto" />
+          </div>
+
+          <!-- Lastname -->
+          <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+            <label for="adv-last" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Apellidos *</label>
+            <input id="adv-last" type="text" pInputText [(ngModel)]="advLastname" placeholder="Ej. Mendoza Morales" />
+          </div>
+
+          <!-- Address -->
+          <div class="col-span-12 flex flex-col gap-2">
+            <label for="adv-addr" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Dirección Domiciliaria</label>
+            <textarea id="adv-addr" pTextarea [(ngModel)]="advAddress" rows="3" placeholder="Av. Javier Prado Este 1234, Dpto 502"></textarea>
+          </div>
+
+          <!-- City -->
+          <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+            <label for="adv-city" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Ciudad / Distrito</label>
+            <input id="adv-city" type="text" pInputText [(ngModel)]="advCity" placeholder="San Isidro" />
+          </div>
+
+          <!-- State / Region (Select) -->
+          <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
+            <label for="adv-state" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Departamento</label>
+            <p-select 
+              id="adv-state" 
+              [options]="states" 
+              [(ngModel)]="advState" 
+              optionLabel="name" 
+              placeholder="Seleccionar..." 
+              [filter]="true" 
+              filterBy="name">
+            </p-select>
+          </div>
+
+          <!-- Zip -->
+          <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
+            <label for="adv-zip" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Código Postal</label>
+            <input id="adv-zip" type="text" pInputText [(ngModel)]="advZip" placeholder="15036" />
+          </div>
+        </div>
+
+        <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <p class="text-xs text-slate-400">
+            * Campos obligatorios para el registro en el sistema farmacéutico.
+          </p>
+          <div class="flex gap-3">
+            <p-button label="Limpiar" [outlined]="true" severity="secondary" icon="pi pi-trash" size="small"></p-button>
+            <p-button label="Guardar Registro" icon="pi pi-check" size="small"></p-button>
+          </div>
+        </div>
+      </p-fluid>
+    </div>
+
+    <!-- 6. Float Labels & Icons Showcase -->
+    <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-6 shadow-sm">
+      <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-700/60">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="pi pi-sparkles text-medicare-500"></i> Float Labels & Icon Fields (Estilo Poseidon)
+        </h2>
+        <span class="text-xs text-slate-400">Modern Inputs</span>
+      </div>
+
+      <p-fluid>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          <!-- Float Label -->
+          <div class="flex flex-col justify-end">
+            <p-floatlabel>
+              <input id="float-input" type="text" pInputText [(ngModel)]="floatValue" />
+              <label for="float-input">Etiqueta Flotante</label>
+            </p-floatlabel>
+          </div>
+
+          <!-- Icon Field -->
+          <div class="flex flex-col justify-end">
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input type="text" pInputText [(ngModel)]="iconSearchValue" placeholder="Buscar medicamento..." />
+            </p-iconfield>
+          </div>
+
+          <!-- Dropdown Option -->
+          <div class="flex flex-col justify-end">
+            <p-select 
+              [options]="dropdownOptions" 
+              [(ngModel)]="selectedDropdown" 
+              optionLabel="label" 
+              placeholder="Tipo de Producto">
+            </p-select>
+          </div>
+        </div>
+      </p-fluid>
+    </div>
+
+  </div>
+</div>

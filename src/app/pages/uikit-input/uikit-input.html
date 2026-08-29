@@ -1,0 +1,196 @@
+<div class="animate-fade-in space-y-6">
+
+  <!-- Main Grid: 2 Columns matching screenshot -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- LEFT COLUMN (Main Large Card) -->
+    <div class="poseidon-card space-y-6">
+
+      <!-- Section: InputText -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">InputText</h2>
+        <div class="flex flex-wrap gap-3">
+          <input type="text" pInputText [(ngModel)]="inputTextDefault" placeholder="Default" class="flex-1 min-w-[120px]" />
+          <input type="text" pInputText [(ngModel)]="inputTextDisabled" [disabled]="true" placeholder="Disabled" class="flex-1 min-w-[120px]" />
+          <input type="text" pInputText [(ngModel)]="inputTextInvalid" class="ng-invalid ng-dirty flex-1 min-w-[120px]" placeholder="Invalid" />
+        </div>
+      </div>
+
+      <!-- Section: Icons -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Icons</h2>
+        <p-fluid class="space-y-3">
+          <!-- Icon Left -->
+          <p-iconfield>
+            <p-inputicon styleClass="pi pi-user text-slate-400"></p-inputicon>
+            <input type="text" pInputText [(ngModel)]="iconUsername" placeholder="Username" />
+          </p-iconfield>
+
+          <!-- Icon Right -->
+          <p-iconfield>
+            <input type="text" pInputText [(ngModel)]="iconSearch" placeholder="Search" />
+            <p-inputicon styleClass="pi pi-search text-slate-400"></p-inputicon>
+          </p-iconfield>
+        </p-fluid>
+      </div>
+
+      <!-- Section: Float Label -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Float Label</h2>
+        <p-fluid>
+          <p-floatlabel>
+            <input id="float-username" type="text" pInputText [(ngModel)]="floatUsername" />
+            <label for="float-username">Username</label>
+          </p-floatlabel>
+        </p-fluid>
+      </div>
+
+      <!-- Section: Ifta Label -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Ifta Label</h2>
+        <p-fluid>
+          <p-iftalabel>
+            <input id="ifta-username" type="text" pInputText [(ngModel)]="iftaUsername" />
+            <label for="ifta-username">Username</label>
+          </p-iftalabel>
+        </p-fluid>
+      </div>
+
+      <!-- Section: Textarea -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Textarea</h2>
+        <p-fluid>
+          <textarea pTextarea [(ngModel)]="messageText" rows="4" placeholder="Your Message"></textarea>
+        </p-fluid>
+      </div>
+
+      <!-- Section: AutoComplete -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">AutoComplete</h2>
+        <p-fluid>
+          <p-autocomplete 
+            [(ngModel)]="selectedCountry" 
+            [suggestions]="filteredCountries" 
+            (completeMethod)="filterCountry($event)" 
+            optionLabel="name" 
+            placeholder="Search">
+          </p-autocomplete>
+        </p-fluid>
+      </div>
+
+      <!-- Section: DatePicker -->
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">DatePicker</h2>
+        <p-fluid>
+          <p-datepicker [(ngModel)]="selectedDate" [showIcon]="true" placeholder="Select date"></p-datepicker>
+        </p-fluid>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN (Two Cards) -->
+    <div class="space-y-6">
+
+      <!-- TOP RIGHT CARD: RadioButton, Checkbox, ToggleSwitch -->
+      <div class="poseidon-card space-y-6">
+
+        <!-- RadioButton -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">RadioButton</h2>
+          <div class="flex flex-wrap items-center gap-5">
+            <div class="flex items-center gap-2">
+              <p-radiobutton name="city" value="Chicago" [(ngModel)]="selectedRadioCity" inputId="city1"></p-radiobutton>
+              <label for="city1" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Chicago</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <p-radiobutton name="city" value="Los Angeles" [(ngModel)]="selectedRadioCity" inputId="city2"></p-radiobutton>
+              <label for="city2" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Los Angeles</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <p-radiobutton name="city" value="New York" [(ngModel)]="selectedRadioCity" inputId="city3"></p-radiobutton>
+              <label for="city3" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">New York</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkbox -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Checkbox</h2>
+          <div class="flex flex-wrap items-center gap-5">
+            <div class="flex items-center gap-2">
+              <p-checkbox name="checkCity" value="Chicago" [(ngModel)]="selectedCheckboxCities" inputId="check1"></p-checkbox>
+              <label for="check1" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Chicago</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <p-checkbox name="checkCity" value="Los Angeles" [(ngModel)]="selectedCheckboxCities" inputId="check2"></p-checkbox>
+              <label for="check2" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Los Angeles</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <p-checkbox name="checkCity" value="New York" [(ngModel)]="selectedCheckboxCities" inputId="check3"></p-checkbox>
+              <label for="check3" class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">New York</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ToggleSwitch -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">ToggleSwitch</h2>
+          <div class="flex items-center gap-3">
+            <p-toggleswitch [(ngModel)]="toggleSwitchValue"></p-toggleswitch>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM RIGHT CARD: Listbox, Select, MultiSelect -->
+      <div class="poseidon-card space-y-6">
+
+        <!-- Listbox -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Listbox</h2>
+          <p-fluid>
+            <p-listbox 
+              [options]="listboxCities" 
+              [(ngModel)]="selectedListboxCity" 
+              optionLabel="name" 
+              [filter]="true" 
+              filterPlaceHolder="Search" 
+              [listStyle]="{'max-height': '180px'}">
+            </p-listbox>
+          </p-fluid>
+        </div>
+
+        <!-- Select (Dropdown) -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Select</h2>
+          <p-fluid>
+            <p-select 
+              [options]="selectCities" 
+              [(ngModel)]="selectedSelectCity" 
+              optionLabel="name" 
+              placeholder="Select">
+            </p-select>
+          </p-fluid>
+        </div>
+
+        <!-- MultiSelect -->
+        <div>
+          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">MultiSelect</h2>
+          <p-fluid>
+            <p-multiselect 
+              [options]="countries" 
+              [(ngModel)]="selectedMultiCountries" 
+              optionLabel="name" 
+              placeholder="Select Countries" 
+              [filter]="true">
+            </p-multiselect>
+          </p-fluid>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

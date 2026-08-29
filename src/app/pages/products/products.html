@@ -1,0 +1,65 @@
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+  
+  <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Catálogo DIGEMID</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Gestión de medicamentos y principios activos</p>
+    </div>
+    
+    <div class="flex items-center gap-3 w-full md:w-auto">
+      <div class="relative w-full md:w-64">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          (input)="filterProducts()"
+          class="block w-full pl-10 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-medicare-500 focus:border-medicare-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 sm:text-sm" 
+          placeholder="Buscar principio activo..."
+        >
+      </div>
+      <button class="px-4 py-2 bg-medicare-600 text-white rounded-lg shadow font-medium hover:bg-medicare-700 transition-colors shrink-0">
+        <i class="fa-solid fa-plus mr-2"></i> Nuevo
+      </button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm whitespace-nowrap">
+      <thead class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="px-6 py-4 font-semibold">Cód. DIGEMID</th>
+          <th class="px-6 py-4 font-semibold">Medicamento (Comercial)</th>
+          <th class="px-6 py-4 font-semibold">Principio Activo</th>
+          <th class="px-6 py-4 font-semibold">Forma & Concentración</th>
+          <th class="px-6 py-4 font-semibold">Laboratorio</th>
+          <th class="px-6 py-4 font-semibold text-center">Condición Venta</th>
+          <th class="px-6 py-4 font-semibold text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+        <tr *ngFor="let p of filteredProducts" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-slate-700 dark:text-slate-300">
+          <td class="px-6 py-4 font-mono text-xs">{{ p.digemid }}</td>
+          <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">{{ p.nombreComercial }}</td>
+          <td class="px-6 py-4">{{ p.principioActivo }}</td>
+          <td class="px-6 py-4">{{ p.formaFarma }} / {{ p.concentracion }}</td>
+          <td class="px-6 py-4">{{ p.laboratorio }}</td>
+          <td class="px-6 py-4 text-center">
+            <span *ngIf="p.receta" class="px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+              <i class="fa-solid fa-file-prescription mr-1"></i> Receta
+            </span>
+            <span *ngIf="!p.receta" class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+              <i class="fa-solid fa-check mr-1"></i> Libre
+            </span>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <button class="p-2 text-slate-400 hover:text-medicare-600 dark:hover:text-medicare-400 transition-colors">
+              <i class="fa-regular fa-pen-to-square"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

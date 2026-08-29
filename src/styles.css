@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-surface: #f4fbf4;
+  --color-surface-dim: #d4dcd5;
+  --color-surface-bright: #f4fbf4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eef6ee;
+  --color-surface-container: #e8f0e9;
+  --color-surface-container-high: #e3eae3;
+  --color-surface-container-highest: #dde4dd;
+  --color-on-surface: #161d19;
+  --color-on-surface-variant: #3c4a42;
+  --color-inverse-surface: #2b322d;
+  --color-inverse-on-surface: #ebf3eb;
+  --color-outline: #6c7a71;
+  --color-outline-variant: #bbcabf;
+  --color-primary: #006c49;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #10b981;
+  --color-on-primary-container: #00422b;
+  --color-inverse-primary: #4edea3;
+  --color-secondary: #565e74;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #dae2fd;
+  --color-on-secondary-container: #5c647a;
+  --color-tertiary: #a43a3a;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #fc7c78;
+  --color-error-critical: #ef4444;
+  --color-warning-soon: #f59e0b;
+  --color-success-stable: #10b981;
+
+  --color-medicare-50: #f4fbf4;
+  --color-medicare-100: #e8f0e9;
+  --color-medicare-200: #bbcabf;
+  --color-medicare-300: #4edea3;
+  --color-medicare-400: #10b981;
+  --color-medicare-500: #006c49;
+  --color-medicare-600: #005236;
+  --color-medicare-700: #00422b;
+  --color-medicare-800: #002113;
+  --color-medicare-900: #042f2e;
+  --color-medicare-950: #021a10;
+
+  --color-pharmacy-50: #f0fdf4;
+  --color-pharmacy-100: #dcfce7;
+  --color-pharmacy-200: #bbf7d0;
+  --color-pharmacy-300: #86efac;
+  --color-pharmacy-400: #4ade80;
+  --color-pharmacy-500: #22c55e;
+  --color-pharmacy-600: #16a34a;
+  --color-pharmacy-700: #15803d;
+  --color-pharmacy-800: #166534;
+  --color-pharmacy-900: #14532d;
+  --color-pharmacy-950: #052e16;
+}
+
+:root {
+  --p-border-radius-sm: 6px;
+  --p-border-radius-md: 10px;
+  --p-border-radius-lg: 14px;
+  --p-border-radius-xl: 18px;
+  --p-primary-color: #006c49;
+  --p-primary-hover-color: #005236;
+  --p-primary-active-color: #00422b;
+
+  --layout-bg: #f4fbf4;
+  --layout-header-bg: rgba(244, 251, 244, 0.9);
+  --layout-sidebar-bg: #ffffff;
+  --layout-border: #dde4dd;
+  --layout-text-main: #161d19;
+  --layout-text-muted: #3c4a42;
+}
+
+.dark,
+.dark-mode,
+:root.dark {
+  --layout-bg: #0b1410;
+  --layout-header-bg: rgba(11, 20, 16, 0.9);
+  --layout-sidebar-bg: #111a15;
+  --layout-border: #233129;
+  --layout-text-main: #ebf3eb;
+  --layout-text-muted: #94a3b8;
+}
+
+.layout-wrapper {
+  background-color: var(--layout-bg) !important;
+  color: var(--layout-text-main);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.layout-header {
+  background-color: var(--layout-header-bg) !important;
+  border-bottom: 1px solid var(--layout-border) !important;
+  color: var(--layout-text-main);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.layout-sidebar {
+  background-color: var(--layout-sidebar-bg) !important;
+  border-right: 1px solid var(--layout-border) !important;
+  color: var(--layout-text-main);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+@layer base {
+  body {
+    background-color: #f4fbf4;
+    color: #161d19;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+.dark body,
+.dark-mode body,
+:root.dark body {
+  background-color: #0b1410 !important;
+  color: #ebf3eb !important;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Medicare Clinical Precision Card */
+.medicare-card {
+  background-color: #ffffff;
+  border-radius: 0.75rem; /* 12px */
+  border: 1px solid #dde4dd;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.dark .medicare-card,
+.dark-mode .medicare-card,
+:root.dark .medicare-card {
+  background-color: #111a15 !important;
+  border-color: #233129 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Poseidon Card Aesthetic (Clinical Precision) */
+.poseidon-card {
+  background-color: #ffffff;
+  border-radius: 1.25rem; /* 20px */
+  border: 1px solid #dde4dd;
+  box-shadow: 0 4px 20px -2px rgba(0, 108, 73, 0.03);
+  padding: 1.5rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .poseidon-card,
+.dark-mode .poseidon-card,
+:root.dark .poseidon-card {
+  background-color: #111a15 !important;
+  border-color: #233129 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Custom Medicare Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #bbcabf;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6c7a71;
+}
+.dark ::-webkit-scrollbar-thumb,
+.dark-mode ::-webkit-scrollbar-thumb,
+:root.dark ::-webkit-scrollbar-thumb {
+  background: #233129;
+}
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark-mode ::-webkit-scrollbar-thumb:hover,
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3c4a42;
+}
+
+/* ================= Medicare Sidebar & Navigation Menu Styling ================= */
+.poseidon-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 0.875rem 0.375rem;
+  color: #6c7a71;
+  transition: color 0.2s ease;
+}
+
+.dark .poseidon-group-title,
+.dark-mode .poseidon-group-title,
+:root.dark .poseidon-group-title {
+  color: #8da194;
+}
+
+.poseidon-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem; /* 12px */
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #3c4a42;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.poseidon-menu-item i {
+  font-size: 1.05rem;
+  color: #6c7a71;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.poseidon-menu-item:hover {
+  background-color: #e8f0e9;
+  color: #006c49;
+}
+
+.poseidon-menu-item:hover i {
+  color: #006c49;
+  transform: translateX(2px);
+}
+
+.poseidon-menu-item.active {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+  font-weight: 700 !important;
+}
+
+.poseidon-menu-item.active i {
+  color: #ffffff !important;
+}
+
+/* Dark Mode Sidebar Menu */
+.dark .poseidon-menu-item,
+.dark-mode .poseidon-menu-item,
+:root.dark .poseidon-menu-item {
+  color: #a3b8ab;
+}
+
+.dark .poseidon-menu-item i,
+.dark-mode .poseidon-menu-item i,
+:root.dark .poseidon-menu-item i {
+  color: #7b9183;
+}
+
+.dark .poseidon-menu-item:hover,
+.dark-mode .poseidon-menu-item:hover,
+:root.dark .poseidon-menu-item:hover {
+  background-color: #1a2720;
+  color: #4edea3;
+}
+
+.dark .poseidon-menu-item:hover i,
+.dark-mode .poseidon-menu-item:hover i,
+:root.dark .poseidon-menu-item:hover i {
+  color: #4edea3;
+}
+
+.dark .poseidon-menu-item.active,
+.dark-mode .poseidon-menu-item.active,
+:root.dark .poseidon-menu-item.active {
+  background-color: #006c49 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 108, 73, 0.4) !important;
+  font-weight: 700 !important;
+}
+
+.dark .poseidon-menu-item.active i,
+.dark-mode .poseidon-menu-item.active i,
+:root.dark .poseidon-menu-item.active i {
+  color: #ffffff !important;
+}
+
+

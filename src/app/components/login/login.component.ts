@@ -1,17 +1,21 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule,
-} from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ThemeService } from '../../core/services/theme.service';
+import { AuthService } from '../../core/services/auth.service';
 
-interface CarouselSlide {
-  image: string;
-  title: string;
-  description: string;
+export interface PerfilPrueba {
+  rol: 'ADMIN' | 'QUIMICO' | 'CAJERO';
+  titulo: string;
+  nombre: string;
+  email: string;
+  password: string;
   badge: string;
+  icon: string;
+  colorClass: string;
+  borderClass: string;
+  destinos: string;
 }
 
 @Component({
@@ -19,121 +23,189 @@ interface CarouselSlide {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+  styleUrls: ['./login.component.css']
 })
 export class LoginComponent implements OnInit, OnDestroy {
-  loginForm: FormGroup;
-  showPassword = false;
-  isLoading = false;
-  submitFeedback: { success: boolean; message: string } | null = null;
+  private fb = inject(FormBuilder);
+  private router = inject(Router);
+  public themeService = inject(ThemeService);
+  public authService = inject(AuthService);
 
-  // Carousel Configuration
+  // Perfiles de prueba preconfigurados
+  perfilesPrueba: PerfilPrueba[] = [
+    {
+      rol: 'ADMIN',
+      titulo: 'Administrador',
+      nombre: 'Carlos Mendoza',
+      email: 'admin@medicare.com',
+      password: 'admin123',
+      badge: 'Acceso Total & KPIs',
+      icon: 'fa-solid fa-crown',
+      colorClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60',
+      borderClass: 'border-emerald-300 dark:border-emerald-700',
+      destinos: 'Dashboard, Compras, Inventario, POS'
+    },
+    {
+      rol: 'QUIMICO',
+      titulo: 'Químico Farmacéutico',
+      nombre: 'Dra. Elena Ramos',
+      email: 'quimico@medicare.com',
+      password: 'quimico123',
+      badge: 'DIGEMID & Recetas',
+      icon: 'fa-solid fa-prescription-bottle-medical',
+      colorClass: 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60',
+      borderClass: 'border-purple-300 dark:border-purple-700',
+      destinos: 'Control FEFO, Recetas, Bajas, POS'
+    },
+    {
+      rol: 'CAJERO',
+      titulo: 'Cajero / Vendedor',
+      nombre: 'Juan Pérez',
+      email: 'cajero@medicare.com',
+      password: 'cajero123',
+      badge: 'POS & Arqueo Ciego',
+      icon: 'fa-solid fa-cash-register',
+      colorClass: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60',
+      borderClass: 'border-blue-300 dark:border-blue-700',
+      destinos: 'Punto de Venta POS, Catálogo'
+    }
+  ];
+
+  perfilSeleccionado: PerfilPrueba = this.perfilesPrueba[0];
+
+  loginForm: FormGroup = this.fb.group({
+    email: ['admin@medicare.com', [Validators.required, Validators.email]],
+    password: ['admin123', [Validators.required, Validators.minLength(4)]],
+    sede: ['sede-principal', Validators.required]
+  });
+
+  sedes = [
+    { id: 'sede-principal', nombre: 'Sede Principal - Av. Central 123' },
+    { id: 'sucursal-norte', nombre: 'Sucursal Norte - Av. Norte 456' },
+    { id: 'delivery-express', nombre: 'Delivery Express - Online' }
+  ];
+
+  isSubmitting = false;
+  errorMessage = '';
+
+  // Carousel logic
   currentSlide = 0;
-  private autoPlayInterval: any;
-  private intervalDuration = 5000; // 5 seconds
+  totalSlides = 3;
+  private slideInterval: any;
 
-  slides: CarouselSlide[] = [
-    {
-      image: '/assets/images/carousel-1.jpg',
-      badge: 'Control de Stock Inteligente',
-      title: 'Inventario en Tiempo Real',
-      description:
-        'Monitorea medicamentos, alertas de vencimiento y realiza pedidos inteligentes de forma automatizada.',
-    },
-    {
-      image: '/assets/images/carousel-2.jpg',
-      badge: 'Atención Profesional',
-      title: 'Recetas y Facturación Rápida',
-      description:
-        'Emite facturas electrónicas y gestiona recetas digitales en segundos con nuestra interfaz ágil.',
-    },
-    {
-      image: '/assets/images/carousel-3.jpg',
-      badge: 'Analítica Avanzada',
-      title: 'Reportes y Rendimiento de Ventas',
-      description:
-        'Visualiza gráficos en tiempo real del rendimiento de tu farmacia y toma decisiones basadas en datos.',
-    },
-  ];
+  ngOnInit() {
+    this.startAutoSlide();
+  }
 
-  branches = [
-    { id: 'principal', name: 'Sede Principal (Lima)' },
-    { id: 'norte', name: 'Sucursal Norte' },
-    { id: 'sur', name: 'Sucursal Sur' },
-    { id: 'express', name: 'Medicare Express (Delivery)' },
-  ];
+  ngOnDestroy() {
+    this.stopAutoSlide();
+  }
 
-  constructor(private fb: FormBuilder) {
-    this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      branch: ['principal', [Validators.required]],
-      rememberMe: [false],
+  seleccionarPerfil(perfil: PerfilPrueba, autoSubmit = false) {
+    this.perfilSeleccionado = perfil;
+    this.loginForm.patchValue({
+      email: perfil.email,
+      password: perfil.password
     });
-  }
 
-  ngOnInit(): void {
-    this.startAutoPlay();
-  }
-
-  ngOnDestroy(): void {
-    this.stopAutoPlay();
-  }
-
-  // Carousel Controls
-  startAutoPlay(): void {
-    this.stopAutoPlay();
-    this.autoPlayInterval = setInterval(() => {
-      this.nextSlide();
-    }, this.intervalDuration);
-  }
-
-  stopAutoPlay(): void {
-    if (this.autoPlayInterval) {
-      clearInterval(this.autoPlayInterval);
+    if (autoSubmit) {
+      this.onSubmit();
     }
   }
 
-  nextSlide(): void {
-    this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+  nextSlide() {
+    this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
   }
 
-  prevSlide(): void {
-    this.currentSlide =
-      (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+  prevSlide() {
+    this.currentSlide = (this.currentSlide - 1 + this.totalSlides) % this.totalSlides;
   }
 
-  goToSlide(index: number): void {
+  goToSlide(index: number) {
     this.currentSlide = index;
-    this.startAutoPlay(); // Restart timer
   }
 
-  // Actions
-  togglePasswordVisibility(): void {
-    this.showPassword = !this.showPassword;
+  startAutoSlide() {
+    this.slideInterval = setInterval(() => {
+      this.nextSlide();
+    }, 5000);
   }
 
-  onSubmit(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
+  stopAutoSlide() {
+    if (this.slideInterval) {
+      clearInterval(this.slideInterval);
     }
+  }
 
-    this.isLoading = true;
-    this.submitFeedback = null;
+  onSubmit() {
+    if (this.loginForm.valid) {
+      this.isSubmitting = true;
+      this.errorMessage = '';
+      
+      const formValue = this.loginForm.value;
+      const emailLower = formValue.email.toLowerCase();
 
-    // Simulate API Call
-    setTimeout(() => {
-      this.isLoading = false;
-      const email = this.loginForm.value.email;
+      // Determinar rol según email o perfil seleccionado
+      let rolAsignado: 'ADMIN' | 'QUIMICO' | 'CAJERO' = 'ADMIN';
+      if (emailLower.includes('cajero')) {
+        rolAsignado = 'CAJERO';
+      } else if (emailLower.includes('quimico')) {
+        rolAsignado = 'QUIMICO';
+      } else {
+        rolAsignado = this.perfilSeleccionado?.rol || 'ADMIN';
+      }
 
-      // Simulating a successful login
-      this.submitFeedback = {
-        success: true,
-        message: `¡Bienvenido de nuevo! Iniciando sesión en la sede seleccionada...`,
-      };
+      this.authService.setRole(rolAsignado);
 
-      console.log('Login exitoso:', this.loginForm.value);
-    }, 2000);
+      // Guardar sede activa
+      const selectedSede = this.sedes.find(s => s.id === formValue.sede) || this.sedes[0];
+      this.authService.setSedeActiva({
+        id: selectedSede.id,
+        nombre: selectedSede.nombre,
+        direccion: '',
+        activa: true
+      });
+
+      this.authService.login({
+        email: formValue.email,
+        password: formValue.password
+      }).subscribe({
+        next: (res) => {
+          this.isSubmitting = false;
+          this.redirigirSegunRol(rolAsignado);
+        },
+        error: (err) => {
+          // Fallback mock session para desarrollo local
+          this.isSubmitting = false;
+          this.authService.currentUser.set({
+            token: 'mock-jwt-token-farmacia-2026',
+            usuarioId: 'u-' + rolAsignado.toLowerCase(),
+            email: formValue.email,
+            tenantId: 'tenant-medicare-01',
+            subdominio: 'medicare',
+            nombreComercial: 'Farmacia Medicare',
+            verticalId: 'FARMACIA',
+            esSuperadmin: false
+          });
+          this.redirigirSegunRol(rolAsignado);
+        }
+      });
+    } else {
+      this.loginForm.markAllAsTouched();
+    }
+  }
+
+  private redirigirSegunRol(rol: 'ADMIN' | 'QUIMICO' | 'CAJERO') {
+    if (rol === 'CAJERO') {
+      // El cajero entra directamente al Punto de Venta (POS)
+      this.router.navigate(['/pos']);
+    } else {
+      // El Administrador y Químico ingresan al Dashboard General
+      this.router.navigate(['/dashboard']);
+    }
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
   }
 }
