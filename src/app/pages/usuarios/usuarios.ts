@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService, UsuarioNegocioDTO, PerfilDTO, AccionDTO } from './user.service';
@@ -13,6 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
 export class Usuarios implements OnInit {
   public authService = inject(AuthService);
   private userService = inject(UserService);
+  private cdr = inject(ChangeDetectorRef);
 
   usuarios: UsuarioNegocioDTO[] = [];
   perfiles: PerfilDTO[] = [];
@@ -46,35 +47,54 @@ export class Usuarios implements OnInit {
   usuarioSeleccionadoPermisos: UsuarioNegocioDTO | null = null;
 
   ngOnInit() {
+    // Inicialización inmediata con lista precargada para evitar pantalla en blanco
+    this.usuarios = [...this.userService.mockUsuarios];
     this.cargarDatos();
   }
 
   cargarDatos() {
     this.cargando = true;
+    this.cdr.markForCheck();
+
     this.userService.listarUsuarios().subscribe({
       next: (data) => {
-        this.usuarios = data;
+        if (data && data.length > 0) {
+          this.usuarios = [...data];
+        }
         this.cargando = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al listar usuarios:', err);
         this.cargando = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       }
     });
 
     this.userService.listarPerfiles().subscribe({
-      next: (data) => this.perfiles = data
+      next: (data) => {
+        this.perfiles = data;
+        this.cdr.markForCheck();
+      }
     });
 
     this.userService.listarAcciones().subscribe({
-      next: (data) => this.acciones = data
+      next: (data) => {
+        this.acciones = data;
+        this.cdr.markForCheck();
+      }
     });
   }
 
   mostrarAlerta(tipo: 'success' | 'error' | 'info', texto: string) {
     this.mensajeToast = { tipo, texto };
+    this.cdr.markForCheck();
     setTimeout(() => {
       if (this.mensajeToast?.texto === texto) {
         this.mensajeToast = null;
+        this.cdr.markForCheck();
       }
     }, 3500);
   }
@@ -127,6 +147,7 @@ export class Usuarios implements OnInit {
     this.passwordInput = '123456';
     this.tabModal = 'persona';
     this.showModal = true;
+    this.cdr.markForCheck();
   }
 
   abrirModalEditar(usuario: UsuarioNegocioDTO) {
@@ -139,11 +160,13 @@ export class Usuarios implements OnInit {
     this.passwordInput = '';
     this.tabModal = 'persona';
     this.showModal = true;
+    this.cdr.markForCheck();
   }
 
   toggleMostrarPin(id?: string) {
     if (!id) return;
     this.mostrarPins[id] = !this.mostrarPins[id];
+    this.cdr.markForCheck();
   }
 
   consultarReniec() {
@@ -154,6 +177,8 @@ export class Usuarios implements OnInit {
     }
 
     this.consultandoDni = true;
+    this.cdr.markForCheck();
+
     setTimeout(() => {
       this.consultandoDni = false;
       if (doc === '45892018') {
@@ -169,13 +194,18 @@ export class Usuarios implements OnInit {
         this.usuarioEnEdicion.nombres = 'Juan Carlos';
         this.usuarioEnEdicion.apellidos = 'Pérez Gómez';
         this.usuarioEnEdicion.telefono = '965432109';
+      } else if (doc === '47812903') {
+        this.usuarioEnEdicion.nombres = 'Mariana Lucía';
+        this.usuarioEnEdicion.apellidos = 'Vega Campos';
+        this.usuarioEnEdicion.telefono = '981234567';
       } else {
         this.usuarioEnEdicion.nombres = 'ROBERTO CARLOS';
         this.usuarioEnEdicion.apellidos = 'GUTIERREZ PAREDES';
         this.usuarioEnEdicion.telefono = '984567123';
       }
       this.mostrarAlerta('success', 'Datos RENIEC autocompletados correctamente.');
-    }, 350);
+      this.cdr.markForCheck();
+    }, 300);
   }
 
   guardarUsuario() {
@@ -185,6 +215,8 @@ export class Usuarios implements OnInit {
     }
 
     this.guardando = true;
+    this.cdr.markForCheck();
+
     if (this.passwordInput) {
       this.usuarioEnEdicion.password = this.passwordInput;
     }
@@ -200,6 +232,7 @@ export class Usuarios implements OnInit {
         error: (err) => {
           this.guardando = false;
           this.mostrarAlerta('error', 'Ocurrió un error al actualizar el usuario.');
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -213,6 +246,7 @@ export class Usuarios implements OnInit {
         error: (err) => {
           this.guardando = false;
           this.mostrarAlerta('error', 'Error al registrar usuario: verifica que el correo no esté duplicado.');
+          this.cdr.markForCheck();
         }
       });
     }
@@ -221,11 +255,13 @@ export class Usuarios implements OnInit {
   confirmarEliminar(usuario: UsuarioNegocioDTO) {
     this.usuarioAEliminar = usuario;
     this.showDeleteModal = true;
+    this.cdr.markForCheck();
   }
 
   ejecutarEliminacion() {
     if (!this.usuarioAEliminar || !this.usuarioAEliminar.id) return;
     this.eliminando = true;
+    this.cdr.markForCheck();
 
     this.userService.eliminarUsuario(this.usuarioAEliminar.id).subscribe({
       next: () => {
@@ -239,6 +275,7 @@ export class Usuarios implements OnInit {
         this.eliminando = false;
         this.showDeleteModal = false;
         this.mostrarAlerta('error', 'No se pudo eliminar el usuario de la base de datos.');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -250,6 +287,7 @@ export class Usuarios implements OnInit {
       next: () => {
         usuario.estaActivo = nuevoEstado;
         this.mostrarAlerta('info', `Usuario ${usuario.email} marcado como ${nuevoEstado ? 'ACTIVO' : 'INACTIVO'}.`);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -257,6 +295,7 @@ export class Usuarios implements OnInit {
   verPermisos(usuario: UsuarioNegocioDTO) {
     this.usuarioSeleccionadoPermisos = usuario;
     this.showPermisosModal = true;
+    this.cdr.markForCheck();
   }
 
   tienePermiso(codigoAccion: string): boolean {

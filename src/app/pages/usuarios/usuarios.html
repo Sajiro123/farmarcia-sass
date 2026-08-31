@@ -122,14 +122,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-          @if (cargando) {
-            <tr>
-              <td colspan="7" class="p-8 text-center text-slate-400">
-                <i class="pi pi-spin pi-spinner text-2xl text-emerald-600 block mb-2"></i>
-                <span>Cargando lista de usuarios desde la base de datos Master...</span>
-              </td>
-            </tr>
-          } @else if (usuariosFiltrados.length === 0) {
+          @if (usuariosFiltrados.length === 0 && !cargando) {
             <tr>
               <td colspan="7" class="p-8 text-center text-slate-400">
                 <i class="pi pi-user-times text-2xl text-slate-300 block mb-2"></i>

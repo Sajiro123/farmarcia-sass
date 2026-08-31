@@ -49,11 +49,11 @@ export class UserService {
   private http = inject(HttpClient);
   private masterApiUrl = 'http://localhost:8081/api/v1/usuarios-negocio';
 
-  // Datos de prueba con 3 usuarios por cada perfil (9 en total)
-  private mockUsuarios: UsuarioNegocioDTO[] = [
+  // 9 usuarios de prueba iniciales (3 por perfil)
+  public mockUsuarios: UsuarioNegocioDTO[] = [
     // 1. ADMINISTRADORES
     {
-      id: 'usr-001',
+      id: 'f4a94356-bd22-4804-bcac-7e3963de3769',
       email: 'admin@medicare.com',
       pinSeguridad: '1234',
       estaActivo: true,
@@ -69,7 +69,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_TICKET_ANULAR', 'POS_ARQUEO_CERRAR', 'POS_RECETA_VALIDAR', 'INVENTARIO_FEFO_VER', 'INVENTARIO_BAJAS_EMITIR', 'COMPRAS_FACTURA_REGISTRAR', 'COMPRAS_REORDEN_PPR', 'COMPRAS_CXP_ADMIN', 'DASHBOARD_KPI_FINANZAS', 'USUARIOS_ADMINISTRAR']
     },
     {
-      id: 'usr-002',
+      id: '9e2cbf35-4b50-4d08-a52c-223bea25f171',
       email: 'admin2@medicare.com',
       pinSeguridad: '1234',
       estaActivo: true,
@@ -85,7 +85,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_TICKET_ANULAR', 'POS_ARQUEO_CERRAR', 'POS_RECETA_VALIDAR', 'INVENTARIO_FEFO_VER', 'INVENTARIO_BAJAS_EMITIR', 'COMPRAS_FACTURA_REGISTRAR', 'COMPRAS_REORDEN_PPR', 'COMPRAS_CXP_ADMIN', 'DASHBOARD_KPI_FINANZAS', 'USUARIOS_ADMINISTRAR']
     },
     {
-      id: 'usr-003',
+      id: 'd1050170-94a1-4bc4-943e-27c23f14a7e3',
       email: 'supervisor@medicare.com',
       pinSeguridad: '9999',
       estaActivo: true,
@@ -103,7 +103,7 @@ export class UserService {
 
     // 2. QUÍMICOS FARMACÉUTICOS
     {
-      id: 'usr-004',
+      id: '657a7055-cef9-4aba-9fbb-0e373453a58c',
       email: 'quimico@medicare.com',
       pinSeguridad: '1234',
       estaActivo: true,
@@ -120,7 +120,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_TICKET_ANULAR', 'POS_RECETA_VALIDAR', 'INVENTARIO_FEFO_VER', 'INVENTARIO_BAJAS_EMITIR', 'COMPRAS_REORDEN_PPR']
     },
     {
-      id: 'usr-005',
+      id: '49b4ee9e-e1ff-4c0f-bb59-4ed9fbce548a',
       email: 'quimico2@medicare.com',
       pinSeguridad: '5678',
       estaActivo: true,
@@ -137,7 +137,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_TICKET_ANULAR', 'POS_RECETA_VALIDAR', 'INVENTARIO_FEFO_VER', 'INVENTARIO_BAJAS_EMITIR', 'COMPRAS_REORDEN_PPR']
     },
     {
-      id: 'usr-006',
+      id: '5f6c8332-ac6e-43d7-a309-50d762ca427f',
       email: 'quimico3@medicare.com',
       pinSeguridad: '4321',
       estaActivo: true,
@@ -156,7 +156,7 @@ export class UserService {
 
     // 3. CAJEROS / DISPENSADORES
     {
-      id: 'usr-007',
+      id: '59e8488b-2923-4c48-a434-316a32f9dcb7',
       email: 'cajero@medicare.com',
       pinSeguridad: '0000',
       estaActivo: true,
@@ -172,7 +172,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_ARQUEO_CERRAR', 'INVENTARIO_FEFO_VER']
     },
     {
-      id: 'usr-008',
+      id: '20e611c6-1314-4a90-8020-60b68e0bb363',
       email: 'cajero2@medicare.com',
       pinSeguridad: '0000',
       estaActivo: true,
@@ -188,7 +188,7 @@ export class UserService {
       acciones: ['POS_VENTA_CREAR', 'POS_ARQUEO_CERRAR', 'INVENTARIO_FEFO_VER']
     },
     {
-      id: 'usr-009',
+      id: '86ca687b-7fb3-4f60-8bf1-baf46574864e',
       email: 'cajero3@medicare.com',
       pinSeguridad: '0000',
       estaActivo: true,
@@ -207,18 +207,18 @@ export class UserService {
 
   listarUsuarios(): Observable<UsuarioNegocioDTO[]> {
     return this.http.get<any>(this.masterApiUrl).pipe(
-      map(res => res.data || this.mockUsuarios),
+      map(res => (res && res.data && Array.isArray(res.data) && res.data.length > 0) ? res.data : this.mockUsuarios),
       catchError(() => of(this.mockUsuarios))
     );
   }
 
   crearUsuario(usuario: UsuarioNegocioDTO): Observable<UsuarioNegocioDTO> {
     return this.http.post<any>(this.masterApiUrl, usuario).pipe(
-      map(res => res.data),
+      map(res => (res && res.data) ? res.data : usuario),
       catchError(() => {
         usuario.id = 'usr-' + Date.now();
         usuario.nombreCompleto = `${usuario.nombres} ${usuario.apellidos}`;
-        this.mockUsuarios.push(usuario);
+        this.mockUsuarios.unshift(usuario);
         return of(usuario);
       })
     );
@@ -226,7 +226,7 @@ export class UserService {
 
   actualizarUsuario(id: string, usuario: UsuarioNegocioDTO): Observable<UsuarioNegocioDTO> {
     return this.http.put<any>(`${this.masterApiUrl}/${id}`, usuario).pipe(
-      map(res => res.data),
+      map(res => (res && res.data) ? res.data : usuario),
       catchError(() => {
         const idx = this.mockUsuarios.findIndex(u => u.id === id);
         if (idx !== -1) {
@@ -262,7 +262,11 @@ export class UserService {
 
   listarPerfiles(): Observable<PerfilDTO[]> {
     return this.http.get<any>(`${this.masterApiUrl}/perfiles`).pipe(
-      map(res => res.data || []),
+      map(res => (res && res.data) ? res.data : [
+        { id: '1', codigo: 'ADMIN_NEGOCIO', nombre: 'Administrador de Farmacia', descripcion: 'Acceso total', esSistema: true, estaActivo: true },
+        { id: '2', codigo: 'QUIMICO_FARMACEUTICO', nombre: 'Químico Farmacéutico (Director Técnico)', descripcion: 'DIGEMID y Recetas', esSistema: true, estaActivo: true },
+        { id: '3', codigo: 'CAJERO_VENDEDOR', nombre: 'Cajero / Dispensador', descripcion: 'POS y Atención', esSistema: true, estaActivo: true }
+      ]),
       catchError(() => of([
         { id: '1', codigo: 'ADMIN_NEGOCIO', nombre: 'Administrador de Farmacia', descripcion: 'Acceso total', esSistema: true, estaActivo: true },
         { id: '2', codigo: 'QUIMICO_FARMACEUTICO', nombre: 'Químico Farmacéutico (Director Técnico)', descripcion: 'DIGEMID y Recetas', esSistema: true, estaActivo: true },
@@ -273,7 +277,7 @@ export class UserService {
 
   listarAcciones(): Observable<AccionDTO[]> {
     return this.http.get<any>(`${this.masterApiUrl}/acciones`).pipe(
-      map(res => res.data || []),
+      map(res => (res && res.data) ? res.data : []),
       catchError(() => of([]))
     );
   }
