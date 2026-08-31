@@ -49,7 +49,7 @@ export class UserService {
   private http = inject(HttpClient);
   private masterApiUrl = 'http://localhost:8081/api/v1/usuarios-negocio';
 
-  // Datos de prueba con 3 usuarios por cada perfil
+  // Datos de prueba con 3 usuarios por cada perfil (9 en total)
   private mockUsuarios: UsuarioNegocioDTO[] = [
     // 1. ADMINISTRADORES
     {
@@ -234,6 +234,18 @@ export class UserService {
           this.mockUsuarios[idx].nombreCompleto = `${usuario.nombres} ${usuario.apellidos}`;
         }
         return of(usuario);
+      })
+    );
+  }
+
+  eliminarUsuario(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.masterApiUrl}/${id}`).pipe(
+      catchError(() => {
+        const idx = this.mockUsuarios.findIndex(u => u.id === id);
+        if (idx !== -1) {
+          this.mockUsuarios.splice(idx, 1);
+        }
+        return of(true);
       })
     );
   }

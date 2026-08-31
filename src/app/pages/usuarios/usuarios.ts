@@ -21,6 +21,10 @@ export class Usuarios implements OnInit {
   filtroRol = 'TODOS';
   busqueda = '';
   cargando = false;
+  guardando = false;
+
+  // Toast Notificaciones
+  mensajeToast: { tipo: 'success' | 'error' | 'info'; texto: string } | null = null;
 
   // Modal Crear / Editar
   showModal = false;
@@ -30,6 +34,12 @@ export class Usuarios implements OnInit {
   usuarioEnEdicion: UsuarioNegocioDTO = this.getUsuarioVacio();
   passwordInput = '';
   consultandoDni = false;
+  mostrarPins: { [key: string]: boolean } = {};
+
+  // Modal Eliminar
+  showDeleteModal = false;
+  usuarioAEliminar: UsuarioNegocioDTO | null = null;
+  eliminando = false;
 
   // Modal Permisos / Matriz RBAC
   showPermisosModal = false;
@@ -58,6 +68,15 @@ export class Usuarios implements OnInit {
     this.userService.listarAcciones().subscribe({
       next: (data) => this.acciones = data
     });
+  }
+
+  mostrarAlerta(tipo: 'success' | 'error' | 'info', texto: string) {
+    this.mensajeToast = { tipo, texto };
+    setTimeout(() => {
+      if (this.mensajeToast?.texto === texto) {
+        this.mensajeToast = null;
+      }
+    }, 3500);
   }
 
   get usuariosFiltrados(): UsuarioNegocioDTO[] {
@@ -112,41 +131,60 @@ export class Usuarios implements OnInit {
 
   abrirModalEditar(usuario: UsuarioNegocioDTO) {
     this.modoEdicion = true;
-    this.usuarioEnEdicion = { ...usuario };
+    this.usuarioEnEdicion = { 
+      ...usuario,
+      tipoDocumento: usuario.tipoDocumento || 'DNI',
+      pinSeguridad: usuario.pinSeguridad || '1234'
+    };
     this.passwordInput = '';
     this.tabModal = 'persona';
     this.showModal = true;
   }
 
+  toggleMostrarPin(id?: string) {
+    if (!id) return;
+    this.mostrarPins[id] = !this.mostrarPins[id];
+  }
+
   consultarReniec() {
-    if (!this.usuarioEnEdicion.numeroDocumento || this.usuarioEnEdicion.numeroDocumento.length !== 8) {
-      alert('Ingresa un número de DNI válido de 8 dígitos.');
+    const doc = this.usuarioEnEdicion.numeroDocumento?.trim();
+    if (!doc || doc.length !== 8) {
+      this.mostrarAlerta('error', 'Ingresa un número de DNI válido de 8 dígitos.');
       return;
     }
 
     this.consultandoDni = true;
     setTimeout(() => {
       this.consultandoDni = false;
-      if (this.usuarioEnEdicion.numeroDocumento === '45892018') {
+      if (doc === '45892018') {
         this.usuarioEnEdicion.nombres = 'Carlos Alberto';
         this.usuarioEnEdicion.apellidos = 'Mendoza Ramos';
-      } else if (this.usuarioEnEdicion.numeroDocumento === '41908234') {
+        this.usuarioEnEdicion.telefono = '987654321';
+      } else if (doc === '41908234') {
         this.usuarioEnEdicion.nombres = 'Elena';
         this.usuarioEnEdicion.apellidos = 'Ramos Salazar';
         this.usuarioEnEdicion.nroColegiatura = 'CQFP 14820';
+        this.usuarioEnEdicion.telefono = '976543210';
+      } else if (doc === '70982314') {
+        this.usuarioEnEdicion.nombres = 'Juan Carlos';
+        this.usuarioEnEdicion.apellidos = 'Pérez Gómez';
+        this.usuarioEnEdicion.telefono = '965432109';
       } else {
         this.usuarioEnEdicion.nombres = 'ROBERTO CARLOS';
         this.usuarioEnEdicion.apellidos = 'GUTIERREZ PAREDES';
+        this.usuarioEnEdicion.telefono = '984567123';
       }
-    }, 400);
+      this.mostrarAlerta('success', 'Datos RENIEC autocompletados correctamente.');
+    }, 350);
   }
 
   guardarUsuario() {
     if (!this.usuarioEnEdicion.email || !this.usuarioEnEdicion.nombres || !this.usuarioEnEdicion.apellidos) {
-      alert('Por favor complete los campos obligatorios (Nombres, Apellidos y Correo).');
+      this.mostrarAlerta('error', 'Por favor complete los campos obligatorios: Nombres, Apellidos y Correo.');
       return;
     }
 
+    this.guardando = true;
     if (this.passwordInput) {
       this.usuarioEnEdicion.password = this.passwordInput;
     }
@@ -154,20 +192,55 @@ export class Usuarios implements OnInit {
     if (this.modoEdicion && this.usuarioEnEdicion.id) {
       this.userService.actualizarUsuario(this.usuarioEnEdicion.id, this.usuarioEnEdicion).subscribe({
         next: () => {
-          alert('✅ Usuario actualizado exitosamente en la base de datos Master.');
+          this.guardando = false;
           this.showModal = false;
+          this.mostrarAlerta('success', 'Usuario y Persona actualizados exitosamente en Master DB.');
           this.cargarDatos();
+        },
+        error: (err) => {
+          this.guardando = false;
+          this.mostrarAlerta('error', 'Ocurrió un error al actualizar el usuario.');
         }
       });
     } else {
       this.userService.crearUsuario(this.usuarioEnEdicion).subscribe({
         next: () => {
-          alert('✅ Usuario registrado exitosamente en la base de datos Master.');
+          this.guardando = false;
           this.showModal = false;
+          this.mostrarAlerta('success', 'Nuevo usuario registrado exitosamente en Master DB.');
           this.cargarDatos();
+        },
+        error: (err) => {
+          this.guardando = false;
+          this.mostrarAlerta('error', 'Error al registrar usuario: verifica que el correo no esté duplicado.');
         }
       });
     }
+  }
+
+  confirmarEliminar(usuario: UsuarioNegocioDTO) {
+    this.usuarioAEliminar = usuario;
+    this.showDeleteModal = true;
+  }
+
+  ejecutarEliminacion() {
+    if (!this.usuarioAEliminar || !this.usuarioAEliminar.id) return;
+    this.eliminando = true;
+
+    this.userService.eliminarUsuario(this.usuarioAEliminar.id).subscribe({
+      next: () => {
+        this.eliminando = false;
+        this.showDeleteModal = false;
+        this.mostrarAlerta('success', `Usuario ${this.usuarioAEliminar?.email} eliminado exitosamente.`);
+        this.usuarioAEliminar = null;
+        this.cargarDatos();
+      },
+      error: () => {
+        this.eliminando = false;
+        this.showDeleteModal = false;
+        this.mostrarAlerta('error', 'No se pudo eliminar el usuario de la base de datos.');
+      }
+    });
   }
 
   toggleEstadoUsuario(usuario: UsuarioNegocioDTO) {
@@ -176,6 +249,7 @@ export class Usuarios implements OnInit {
     this.userService.cambiarEstado(usuario.id, nuevoEstado).subscribe({
       next: () => {
         usuario.estaActivo = nuevoEstado;
+        this.mostrarAlerta('info', `Usuario ${usuario.email} marcado como ${nuevoEstado ? 'ACTIVO' : 'INACTIVO'}.`);
       }
     });
   }
