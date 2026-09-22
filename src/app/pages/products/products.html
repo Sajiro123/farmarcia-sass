@@ -1,65 +1,1100 @@
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-  
-  <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
-    <div>
-      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Catálogo DIGEMID</h2>
-      <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Gestión de medicamentos y principios activos</p>
-    </div>
-    
-    <div class="flex items-center gap-3 w-full md:w-auto">
-      <div class="relative w-full md:w-64">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <i class="fa-solid fa-magnifying-glass"></i>
-        </div>
-        <input 
-          type="text" 
-          [(ngModel)]="searchQuery" 
-          (input)="filterProducts()"
-          class="block w-full pl-10 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-medicare-500 focus:border-medicare-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 sm:text-sm" 
-          placeholder="Buscar principio activo..."
-        >
-      </div>
-      <button class="px-4 py-2 bg-medicare-600 text-white rounded-lg shadow font-medium hover:bg-medicare-700 transition-colors shrink-0">
-        <i class="fa-solid fa-plus mr-2"></i> Nuevo
+<div class="min-h-screen bg-slate-50/60 pb-16">
+
+  <!-- TOAST NOTIFICACIÓN FLOTANTE (FONTAWESOME) -->
+  @if (mensajeToast) {
+    <div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-medium transition-all duration-300 transform translate-y-0"
+      [ngClass]="{
+        'bg-emerald-50 border-emerald-200 text-emerald-900': mensajeToast.tipo === 'success',
+        'bg-rose-50 border-rose-200 text-rose-900': mensajeToast.tipo === 'error',
+        'bg-sky-50 border-sky-200 text-sky-900': mensajeToast.tipo === 'info'
+      }">
+      <i class="fa-solid text-lg"
+        [ngClass]="{
+          'fa-circle-check text-emerald-600': mensajeToast.tipo === 'success',
+          'fa-circle-exclamation text-rose-600': mensajeToast.tipo === 'error',
+          'fa-circle-info text-sky-600': mensajeToast.tipo === 'info'
+        }">
+      </i>
+      <span>{{ mensajeToast.texto }}</span>
+      <button (click)="mensajeToast = null" class="ml-3 text-slate-400 hover:text-slate-700">
+        <i class="fa-solid fa-xmark text-sm"></i>
       </button>
     </div>
-  </div>
+  }
 
-  <div class="overflow-x-auto">
-    <table class="w-full text-left text-sm whitespace-nowrap">
-      <thead class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-        <tr>
-          <th class="px-6 py-4 font-semibold">Cód. DIGEMID</th>
-          <th class="px-6 py-4 font-semibold">Medicamento (Comercial)</th>
-          <th class="px-6 py-4 font-semibold">Principio Activo</th>
-          <th class="px-6 py-4 font-semibold">Forma & Concentración</th>
-          <th class="px-6 py-4 font-semibold">Laboratorio</th>
-          <th class="px-6 py-4 font-semibold text-center">Condición Venta</th>
-          <th class="px-6 py-4 font-semibold text-right">Acciones</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-        <tr *ngFor="let p of filteredProducts" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-slate-700 dark:text-slate-300">
-          <td class="px-6 py-4 font-mono text-xs">{{ p.digemid }}</td>
-          <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">{{ p.nombreComercial }}</td>
-          <td class="px-6 py-4">{{ p.principioActivo }}</td>
-          <td class="px-6 py-4">{{ p.formaFarma }} / {{ p.concentracion }}</td>
-          <td class="px-6 py-4">{{ p.laboratorio }}</td>
-          <td class="px-6 py-4 text-center">
-            <span *ngIf="p.receta" class="px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
-              <i class="fa-solid fa-file-prescription mr-1"></i> Receta
-            </span>
-            <span *ngIf="!p.receta" class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
-              <i class="fa-solid fa-check mr-1"></i> Libre
-            </span>
-          </td>
-          <td class="px-6 py-4 text-right">
-            <button class="p-2 text-slate-400 hover:text-medicare-600 dark:hover:text-medicare-400 transition-colors">
-              <i class="fa-regular fa-pen-to-square"></i>
+  <!-- VISTA 1: GRILLA / CATÁLOGO PRINCIPAL (Ruta: /productos) -->
+  @if (vistaActual === 'GRILLA') {
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+      <!-- ENCABEZADO PRINCIPAL -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+              <i class="fa-solid fa-boxes-stacked text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Catálogo de Productos</h1>
+              <p class="text-xs text-slate-500">Fichas maestras, especificaciones técnicas y precios de venta (caja, blíster y unidad) para Medicamentos y Perfumería.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button (click)="cargarProductos()"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+            <i class="fa-solid fa-rotate-right text-xs text-slate-500" [class.fa-spin]="cargando"></i>
+            <span>Actualizar</span>
+          </button>
+
+          <button (click)="irANuevoProducto()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/25 transition-all transform active:scale-95">
+            <i class="fa-solid fa-circle-plus text-sm"></i>
+            <span>+ Nuevo Producto</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTROS Y BUSCADORES INTEGRADOS -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          
+          <!-- Buscador principal -->
+          <div class="md:col-span-5 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text"
+              [(ngModel)]="busquedaGrilla"
+              (ngModelChange)="paginaActual = 1"
+              placeholder="Buscar por nombre comercial, SKU, marca o categoría..."
+              class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+            @if (busquedaGrilla) {
+              <button (click)="busquedaGrilla = ''; paginaActual = 1" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-circle-xmark text-xs"></i>
+              </button>
+            }
+          </div>
+
+          <!-- Filtro Tipo de Producto -->
+          <div class="md:col-span-3">
+            <select [(ngModel)]="filtroTipo"
+              (ngModelChange)="paginaActual = 1"
+              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              <option value="TODOS">📦 Todos los Tipos</option>
+              <option value="MEDICAMENTO">💊 Solo Medicamentos</option>
+              <option value="PERFUME">✨ Solo Perfumería</option>
+            </select>
+          </div>
+
+          <!-- Filtro Condición de Venta -->
+          <div class="md:col-span-2">
+            <select [(ngModel)]="filtroCondicion"
+              (ngModelChange)="paginaActual = 1"
+              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              <option value="TODOS">📋 Toda Condición</option>
+              <option value="RECETA">🔴 Requiere Receta (Rx)</option>
+              <option value="VENTA_LIBRE">🟢 Venta Libre</option>
+            </select>
+          </div>
+
+          <!-- Ordenar Por -->
+          <div class="md:col-span-2">
+            <select [(ngModel)]="ordenarPor"
+              (ngModelChange)="paginaActual = 1"
+              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              <option value="NOMBRE_ASC">Nombre (A → Z)</option>
+              <option value="NOMBRE_DESC">Nombre (Z → A)</option>
+              <option value="PRECIO_ASC">Precio (Menor → Mayor)</option>
+              <option value="PRECIO_DESC">Precio (Mayor → Menor)</option>
+              <option value="CATEGORIA_ASC">Categoría (A → Z)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Barra de estado de filtros aplicados -->
+        @if (busquedaGrilla || filtroTipo !== 'TODOS' || filtroCondicion !== 'TODOS' || filtroEstado !== 'TODOS') {
+          <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
+              <span class="font-medium text-slate-700">Filtros aplicados:</span>
+              <span>Mostrando {{ productosGrillaFiltrados.length }} de {{ productos.length }} productos</span>
+            </div>
+            <button (click)="limpiarFiltrosGrilla()"
+              class="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-rotate-left text-[11px]"></i>
+              <span>Restablecer filtros</span>
             </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+          </div>
+        }
+      </div>
+
+      <!-- TABLA DE GRILLA ESTILIZADA SIN STOCK (ENFOQUE EXCLUSIVO EN CATÁLOGO & PRECIOS) -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <!-- HEADER ESTILO IMAGEN (Dark Slate suave con iconos temáticos y flechas sort) -->
+            <thead>
+              <tr class="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider border-b border-slate-700">
+                <th (click)="alternarOrden('NOMBRE')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-barcode text-sky-400 text-xs"></i>
+                    <span>TIPO & SKU</span>
+                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                  </div>
+                </th>
+                <th (click)="alternarOrden('NOMBRE')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-pills text-emerald-400 text-xs"></i>
+                    <span>PRODUCTO / FICHA</span>
+                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                  </div>
+                </th>
+                <th (click)="alternarOrden('CATEGORIA')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-teal-300 text-xs"></i>
+                    <span>CATEGORÍA</span>
+                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                  </div>
+                </th>
+                <th (click)="alternarOrden('PRECIO')" class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-2">
+                    <i class="fa-solid fa-hand-holding-dollar text-emerald-300 text-xs"></i>
+                    <span>PRECIOS DE VENTA (S/)</span>
+                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                  </div>
+                </th>
+                <th class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-prescription text-rose-300 text-xs"></i>
+                    <span>CONDICIÓN / DETALLE</span>
+                  </div>
+                </th>
+                <th class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-300 text-xs"></i>
+                    <span>ESTADO</span>
+                  </div>
+                </th>
+                <th class="py-3.5 px-4 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-2">
+                    <i class="fa-solid fa-gear text-slate-400 text-xs"></i>
+                    <span>ACCIONES</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+
+            <!-- CUERPO DE LA TABLA -->
+            <tbody class="divide-y divide-slate-100 text-xs">
+              @for (p of productosPaginados; track p.id) {
+                <tr class="hover:bg-slate-50/90 transition-colors group">
+                  <!-- Tipo & SKU -->
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                      @if (p.tipoProducto === 'MEDICAMENTO') {
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-semibold text-[10px]">
+                          <i class="fa-solid fa-pills text-[10px]"></i>
+                          MED
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/80 font-semibold text-[10px]">
+                          <i class="fa-solid fa-spray-can-sparkles text-[10px]"></i>
+                          PERF
+                        </span>
+                      }
+                      <span class="font-mono text-slate-700 font-semibold text-[11px]">{{ p.sku }}</span>
+                    </div>
+                  </td>
+
+                  <!-- Producto / Ficha con Foto -->
+                  <td class="py-3.5 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs">
+                        @if (p.imagenUrl) {
+                          <img [src]="p.imagenUrl" [alt]="p.nombreComercial" class="max-h-full max-w-full object-contain mix-blend-multiply" />
+                        } @else {
+                          <i class="fa-solid fa-pills text-emerald-600 text-sm"></i>
+                        }
+                      </div>
+                      <div class="min-w-0">
+                        <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                          {{ p.nombreComercial }}
+                        </div>
+                        @if (p.tipoProducto === 'PERFUME' && p.marca) {
+                          <div class="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span class="font-semibold text-slate-700">{{ p.marca }}</span>
+                            @if (p.familiaOlfativa) {
+                              <span>•</span>
+                              <span class="text-purple-600 font-medium">{{ p.familiaOlfativa }}</span>
+                            }
+                          </div>
+                        } @else if (p.principioActivo || p.laboratorio) {
+                          <div class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
+                            {{ p.principioActivo || '' }} {{ p.laboratorio ? '• ' + p.laboratorio : '' }}
+                          </div>
+                        } @else if (p.descripcion) {
+                          <div class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
+                            {{ p.descripcion }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Categoría -->
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px]">
+                      <i class="fa-solid fa-tag text-[9px] text-slate-400"></i>
+                      {{ p.categoriaNombre || 'General' }}
+                    </span>
+                  </td>
+
+                  <!-- Precios Desglosados: Caja, Blíster y Unidad para Medicamento / Frasco para Perfumes -->
+                  <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                    @if (p.tipoProducto === 'PERFUME') {
+                      <div class="flex flex-col items-end">
+                        <span class="font-mono font-bold text-purple-900 text-xs">
+                          S/ {{ (p.precioVenta || p.precioUnidad || p.precioCaja || 0) | number:'1.2-2' }}
+                        </span>
+                        <span class="text-[10px] text-purple-600 font-medium">Frasco / Und</span>
+                      </div>
+                    } @else {
+                      <div class="flex flex-col items-end gap-1">
+                        @if (p.precioCaja && p.precioCaja > 0) {
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-500 uppercase font-semibold">Caja:</span>
+                            <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ p.precioCaja | number:'1.2-2' }}</span>
+                          </div>
+                        }
+                        @if (p.precioBlister && p.precioBlister > 0) {
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-emerald-700 uppercase font-semibold">Blíster:</span>
+                            <span class="font-mono font-bold text-emerald-700 text-xs">S/ {{ p.precioBlister | number:'1.2-2' }}</span>
+                          </div>
+                        }
+                        @if (p.precioUnidad && p.precioUnidad > 0) {
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-500 uppercase font-semibold">Unidad:</span>
+                            <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ p.precioUnidad | number:'1.2-2' }}</span>
+                          </div>
+                        } @else if (!p.precioCaja && !p.precioBlister) {
+                          <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ (p.precioVenta || 0) | number:'1.2-2' }}</span>
+                        }
+                      </div>
+                    }
+                  </td>
+
+                  <!-- Condición / Detalle -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    @if (p.tipoProducto === 'MEDICAMENTO') {
+                      @if (p.requiereReceta) {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 text-[10px] font-bold">
+                          <i class="fa-solid fa-file-prescription text-xs"></i>
+                          Bajo Receta (Rx)
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold">
+                          <i class="fa-solid fa-circle-check text-xs"></i>
+                          Venta Libre
+                        </span>
+                      }
+                    } @else {
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] font-medium">
+                        <i class="fa-solid fa-droplet text-xs"></i>
+                        {{ p.volumenMl }} ml • {{ p.generoObjetivo || 'UNISEX' }}
+                      </span>
+                    }
+                  </td>
+
+                  <!-- Estado -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    @if (p.estaActivo) {
+                      <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle text-[7px] text-emerald-500"></i>
+                        Activo
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                        <i class="fa-solid fa-circle text-[7px] text-slate-300"></i>
+                        Inactivo
+                      </span>
+                    }
+                  </td>
+
+                  <!-- Acciones -->
+                  <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button (click)="editarProducto(p)"
+                        title="Editar ficha"
+                        class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors">
+                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                      </button>
+                      <button (click)="eliminarProducto(p)"
+                        title="Eliminar del catálogo"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="py-14 text-center text-slate-400">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                      <i class="fa-solid fa-box-open text-2xl"></i>
+                    </div>
+                    <p class="font-medium text-slate-700 mb-1">No hay productos registrados en el catálogo</p>
+                    <p class="text-xs text-slate-400 mb-4">Comienza registrando un nuevo medicamento o producto de perfumería.</p>
+                    <button (click)="irANuevoProducto()"
+                      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm">
+                      <i class="fa-solid fa-circle-plus text-xs"></i>
+                      Registrar Producto Ahora
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+
+            <!-- FILA DE TOTAL GENERAL (SIN COLUMNA STOCK) -->
+            @if (productosGrillaFiltrados.length > 0) {
+              <tfoot>
+                <tr class="border-t-2 border-slate-200 bg-slate-50/75 text-slate-900 font-bold text-xs">
+                  <td colspan="3" class="py-3.5 px-4 uppercase tracking-wider font-extrabold text-slate-800">
+                    TOTAL GENERAL ({{ productosGrillaFiltrados.length }} PRODUCTOS EN CATÁLOGO)
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-mono font-black text-slate-900 text-sm whitespace-nowrap">
+                    S/ {{ totalPrecioGeneral | number:'1.2-2' }} (Ref.)
+                  </td>
+                  <td colspan="3" class="py-3.5 px-4 text-right text-[11px] text-slate-500 font-medium">
+                    Catálogo Maestro Desvinculado de Stock Físico (Ver Módulo Inventario)
+                  </td>
+                </tr>
+              </tfoot>
+            }
+          </table>
+        </div>
+
+        <!-- BARRA DE PAGINACIÓN INFERIOR -->
+        <div class="py-3.5 px-6 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div>
+            Mostrando
+            <strong class="text-slate-800">{{ productosGrillaFiltrados.length === 0 ? 0 : (paginaActual - 1) * itemsPorPagina + 1 }}</strong> a
+            <strong class="text-slate-800">{{ paginaActual * itemsPorPagina > productosGrillaFiltrados.length ? productosGrillaFiltrados.length : paginaActual * itemsPorPagina }}</strong>
+            de <strong class="text-slate-800">{{ productosGrillaFiltrados.length }}</strong> registros
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button (click)="cambiarPagina(1)"
+              [disabled]="paginaActual === 1"
+              title="Primera página"
+              class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all">
+              <i class="fa-solid fa-angles-left text-[10px]"></i>
+            </button>
+
+            <button (click)="cambiarPagina(paginaActual - 1)"
+              [disabled]="paginaActual === 1"
+              title="Página anterior"
+              class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all">
+              <i class="fa-solid fa-angle-left text-[10px]"></i>
+            </button>
+
+            <span class="min-w-7 h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center justify-center text-xs shadow-xs">
+              {{ paginaActual }}
+            </span>
+
+            <button (click)="cambiarPagina(paginaActual + 1)"
+              [disabled]="paginaActual >= totalPaginas"
+              title="Página siguiente"
+              class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all">
+              <i class="fa-solid fa-angle-right text-[10px]"></i>
+            </button>
+
+            <button (click)="cambiarPagina(totalPaginas)"
+              [disabled]="paginaActual >= totalPaginas"
+              title="Última página"
+              class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all">
+              <i class="fa-solid fa-angles-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- VISTA 2: FORMULARIO INTERACTIVO DE REGISTRO / EDICIÓN (Ruta: /productos/nuevo) -->
+  @else {
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+      <!-- NAVEGACIÓN Y BREADCRUMB -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <button (click)="volverAGrilla()"
+            class="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors mb-2 group">
+            <i class="fa-solid fa-arrow-left text-xs group-hover:-translate-x-1 transition-transform"></i>
+            <span>Volver al Catálogo de Productos</span>
+          </button>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+            {{ esEdicion ? ('Editar Producto: ' + (productoForm.nombreComercial || '')) : 'Registro de Nuevo Producto' }}
+          </h1>
+          <p class="text-xs text-slate-500">
+            {{ esEdicion ? 'Actualiza los precios de venta y especificaciones de la ficha técnica registrada.' : 'Configura la ficha técnica y precios fraccionados para ventas y catálogo.' }}
+          </p>
+        </div>
+
+        <!-- Selector de Tipo en el Header: SOLO VISIBLE AL CREAR NUEVO -->
+        @if (!esEdicion) {
+          <div class="flex items-center bg-slate-200/60 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
+            <button (click)="seleccionarTipo('MEDICAMENTO')"
+              [class.bg-white]="tipoSeleccionado === 'MEDICAMENTO'"
+              [class.text-emerald-800]="tipoSeleccionado === 'MEDICAMENTO'"
+              [class.shadow-sm]="tipoSeleccionado === 'MEDICAMENTO'"
+              [class.text-slate-600]="tipoSeleccionado !== 'MEDICAMENTO'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all">
+              <i class="fa-solid fa-pills text-xs text-emerald-600"></i>
+              Modo Medicamento
+            </button>
+            <button (click)="seleccionarTipo('PERFUME')"
+              [class.bg-white]="tipoSeleccionado === 'PERFUME'"
+              [class.text-purple-800]="tipoSeleccionado === 'PERFUME'"
+              [class.shadow-sm]="tipoSeleccionado === 'PERFUME'"
+              [class.text-slate-600]="tipoSeleccionado !== 'PERFUME'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all">
+              <i class="fa-solid fa-spray-can-sparkles text-xs text-purple-600"></i>
+              Modo Perfume
+            </button>
+          </div>
+        } @else {
+          <!-- Badge Bloqueado de Tipo en Modo Edición -->
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold"
+            [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-purple-50 text-purple-800 border-purple-200'">
+            <i class="fa-solid" [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'"></i>
+            <span>{{ tipoSeleccionado === 'MEDICAMENTO' ? 'Ficha de Medicamento' : 'Ficha de Perfumería' }}</span>
+            <span class="text-[10px] opacity-75 font-medium ml-1">(Tipo no modificable)</span>
+          </div>
+        }
+      </div>
+
+      <!-- GRID PRINCIPAL DE 2 COLUMNAS (FORMULARIO + PREVIEW CARD) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+        <!-- COLUMNA IZQUIERDA: FORMULARIO (8 COLS) -->
+        <div class="lg:col-span-8 space-y-6">
+
+          <!-- SELECTOR TIPO DE PRODUCTO (SOLO CUANDO NO ES EDICIÓN) -->
+          @if (!esEdicion) {
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                Selecciona el Tipo de Producto a Registrar
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Card Medicamento -->
+                <div (click)="seleccionarTipo('MEDICAMENTO')"
+                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex items-start gap-3.5"
+                  [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30' : 'bg-slate-100 text-slate-600'">
+                    <i class="fa-solid fa-pills text-lg"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm text-slate-900">Medicamento</span>
+                      @if (tipoSeleccionado === 'MEDICAMENTO') {
+                        <i class="fa-solid fa-circle text-[8px] text-emerald-500"></i>
+                      }
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Fármacos, jarabes y pastillas para salud humana con control de receta médica.</p>
+                  </div>
+                </div>
+
+                <!-- Card Perfume / Fragancia -->
+                <div (click)="seleccionarTipo('PERFUME')"
+                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex items-start gap-3.5"
+                  [ngClass]="tipoSeleccionado === 'PERFUME' ? 'border-purple-500 bg-purple-50/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    [ngClass]="tipoSeleccionado === 'PERFUME' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30' : 'bg-slate-100 text-slate-600'">
+                    <i class="fa-solid fa-spray-can-sparkles text-lg"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm text-slate-900">Perfume / Fragancia</span>
+                      @if (tipoSeleccionado === 'PERFUME') {
+                        <i class="fa-solid fa-circle text-[8px] text-purple-500"></i>
+                      }
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Perfumes, colonias y lociones con especificación de marca, familia y volumen en ml.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- SECCIÓN 1: DATOS GENERALES (COMPARTIDOS) -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+              <h2 class="text-base font-bold text-slate-900">1. Datos Generales del Producto</h2>
+              <p class="text-xs text-slate-500">Información básica visible en el catálogo y punto de venta.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Nombre Comercial -->
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Comercial *</label>
+                <input type="text"
+                  [(ngModel)]="productoForm.nombreComercial"
+                  placeholder="Ej. Paracetamol 500mg ó Sauvage Dior EDP 100ml"
+                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+              </div>
+
+              <!-- SKU / Código -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">SKU / Código Único *</label>
+                <div class="flex gap-2">
+                  <input type="text"
+                    [(ngModel)]="productoForm.sku"
+                    placeholder="Ej. MED-101"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  <button type="button"
+                    (click)="productoForm.sku = generarSkuAutomatico(tipoSeleccionado)"
+                    title="Generar SKU aleatorio"
+                    class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                    <span>Auto</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Categoría -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Categoría</label>
+                <input type="text"
+                  [(ngModel)]="productoForm.categoriaNombre"
+                  placeholder="Ej. Analgésicos, Cuidado Personal, Fragancias, etc."
+                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              </div>
+
+              <!-- Ubicación Almacén -->
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Ubicación / Estante de Tienda</label>
+                <input type="text"
+                  [(ngModel)]="productoForm.ubicacionAlmacen"
+                  placeholder="Ej. Vitrina A-1, Pasillo 3, Gaveta 12"
+                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              </div>
+
+              <!-- Descripción -->
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción / Indicaciones Comerciales</label>
+                <textarea rows="2"
+                  [(ngModel)]="productoForm.descripcion"
+                  placeholder="Detalles sobre presentación, beneficios o notas adicionales..."
+                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN: FOTOGRAFÍA DEL PRODUCTO (SUPABASE STORAGE 1 GB) -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-cloud-arrow-up text-sky-600"></i>
+                  <span>Fotografía del Producto (Supabase Storage 1 GB)</span>
+                </h2>
+                <p class="text-xs text-slate-500">Sube la foto de la caja o blíster para mostrarla en las tarjetas del Punto de Venta.</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-sky-50 text-sky-800 border border-sky-200">
+                1 GB Gratis en la Nube
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+              <!-- Vista Previa de la Imagen -->
+              <div class="h-36 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center p-3 relative group overflow-hidden">
+                @if (productoForm.imagenUrl) {
+                  <img [src]="productoForm.imagenUrl" alt="Vista previa producto" class="max-h-full max-w-full object-contain mix-blend-multiply" />
+                  <button type="button" (click)="quitarImagen()" title="Quitar imagen"
+                    class="absolute top-2 right-2 w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                } @else {
+                  <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-1">
+                    <i class="fa-solid fa-image text-2xl"></i>
+                  </div>
+                  <span class="text-[11px] text-slate-400 font-medium">Sin imagen asignada</span>
+                }
+              </div>
+
+              <!-- Dropzone y Selector de Archivo -->
+              <div class="md:col-span-2 space-y-3">
+                <label class="border-2 border-dashed border-slate-300 hover:border-sky-500 rounded-2xl p-4 flex items-center gap-3.5 cursor-pointer bg-slate-50/50 hover:bg-sky-50/30 transition-all">
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="onArchivoImagenSeleccionado($event)" class="hidden" />
+                  <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                    @if (subiendoImagen) {
+                      <i class="fa-solid fa-spinner fa-spin text-base"></i>
+                    } @else {
+                      <i class="fa-solid fa-arrow-up-from-bracket text-base"></i>
+                    }
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800">
+                      {{ subiendoImagen ? 'Subiendo imagen a Supabase Storage...' : 'Haz clic para seleccionar archivo desde tu dispositivo' }}
+                    </p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Soporta PNG, JPG, WEBP y SVG (hasta 5 MB por archivo)</p>
+                  </div>
+                </label>
+
+                <!-- Campo de URL Alternativo -->
+                <div class="flex items-center gap-2">
+                  <input type="text"
+                    [(ngModel)]="productoForm.imagenUrl"
+                    placeholder="O pega directamente un enlace de imagen (https://...)..."
+                    class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: PRECIOS DE VENTA (CONDICIONAL MEDICAMENTO VS PERFUME) -->
+          @if (tipoSeleccionado === 'MEDICAMENTO') {
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-bold text-slate-900">2. Estructura de Precios de Venta (S/)</h2>
+                  <p class="text-xs text-slate-500">Configura precios independientes por unidad, blíster y caja completa para dispensación rápida.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Dispensación POS
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Precio por Caja -->
+                <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+                  <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-box text-slate-500 text-xs"></i>
+                    <span>Precio por Caja</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">S/</span>
+                    <input type="number" step="0.10"
+                      [(ngModel)]="productoForm.precioCaja"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">Presentación en empaque cerrado</span>
+                </div>
+
+                <!-- Precio por Blíster -->
+                <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+                  <label class="block text-xs font-bold text-emerald-800 mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-tablets text-emerald-600 text-xs"></i>
+                    <span>Precio por Blíster</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">S/</span>
+                    <input type="number" step="0.10"
+                      [(ngModel)]="productoForm.precioBlister"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">Tira fraccionada de pastillas</span>
+                </div>
+
+                <!-- Precio por Unidad / Pastilla -->
+                <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+                  <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-pills text-slate-500 text-xs"></i>
+                    <span>Precio por Unidad</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">S/</span>
+                    <input type="number" step="0.10"
+                      [(ngModel)]="productoForm.precioUnidad"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">Pastilla o unidad suelta al menudeo</span>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <!-- PERFUMERÍA: PRECIO DE VENTA ÚNICO POR FRASCO / UNIDAD -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-spray-can-sparkles text-purple-600"></i>
+                    <span>2. Precio de Venta (S/)</span>
+                  </h2>
+                  <p class="text-xs text-slate-500">Configura el precio de venta al público por frasco o unidad de fragancia (sin fraccionamiento en blíster).</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-purple-50 text-purple-700 border border-purple-200">
+                  Perfumería
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-purple-50/40 p-4 rounded-xl border border-purple-200/80">
+                  <label class="block text-xs font-bold text-purple-950 mb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-tag text-purple-600 text-xs"></i>
+                    <span>Precio por Frasco / Botella (S/) *</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-purple-400">S/</span>
+                    <input type="number" step="0.50"
+                      [(ngModel)]="productoForm.precioVenta"
+                      (ngModelChange)="onPrecioPerfumeChange($event)"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-sm font-mono font-bold text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-purple-700/80 mt-1 block">Precio comercial de la unidad completa en mostrador y POS</span>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- SECCIÓN: CONDICIÓN RECETA MÉDICA (MEDICAMENTOS) -->
+          @if (tipoSeleccionado === 'MEDICAMENTO') {
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+              <label class="flex items-center gap-3.5 p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 cursor-pointer transition-colors">
+                <input type="checkbox"
+                  [(ngModel)]="productoForm.requiereReceta"
+                  class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 focus:ring-offset-0">
+                <div>
+                  <div class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <span>¿Requiere Receta Médica Obligatoria (Rx)?</span>
+                    <i class="fa-solid fa-file-prescription text-rose-500 text-xs"></i>
+                  </div>
+                  <p class="text-[11px] text-slate-500">Si está marcado, el sistema solicitará número de receta o colegiatura médica en el punto de venta (POS).</p>
+                </div>
+              </label>
+            </div>
+          }
+
+          <!-- SECCIÓN 3: ESPECIFICACIONES DE FRAGANCIA (SOLO PERFUMERÍA) -->
+          @if (tipoSeleccionado === 'PERFUME') {
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-bold text-slate-900">3. Especificación de Fragancia (Perfumería)</h2>
+                  <p class="text-xs text-slate-500">Campos especializados para perfumes, colonias y cosmética.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-purple-50 text-purple-700 border border-purple-200">
+                  PERFUME
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Marca -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Marca / Casa Diseñadora *</label>
+                  <input type="text"
+                    [(ngModel)]="productoForm.marca"
+                    placeholder="Ej. Dior, Chanel, Paco Rabanne, Carolina Herrera"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                </div>
+
+                <!-- Familia Olfativa -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Familia Olfativa</label>
+                  <select [(ngModel)]="productoForm.familiaOlfativa"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                    <option value="Amaderado Aromático">Amaderado Aromático</option>
+                    <option value="Floral Frutal">Floral Frutal</option>
+                    <option value="Cítrico Fresco">Cítrico Fresco</option>
+                    <option value="Oriental Especiado">Oriental Especiado</option>
+                    <option value="Chipre Gourmand">Chipre Gourmand</option>
+                    <option value="Acuático Marino">Acuático Marino</option>
+                  </select>
+                </div>
+
+                <!-- Volumen ml -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Volumen / Presentación (ml)</label>
+                  <div class="relative">
+                    <input type="number"
+                      [(ngModel)]="productoForm.volumenMl"
+                      placeholder="100"
+                      class="w-full pr-10 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">ml</span>
+                  </div>
+                </div>
+
+                <!-- Género -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Público / Género Objetivo</label>
+                  <select [(ngModel)]="productoForm.generoObjetivo"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                    <option value="UNISEX">Unisex (Para todos)</option>
+                    <option value="HOMBRE">Masculino / Hombre</option>
+                    <option value="MUJER">Femenino / Mujer</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- BOTONES DE ACCIÓN -->
+          <div class="flex items-center justify-end gap-3 pt-2">
+            @if (!esEdicion) {
+              <button type="button"
+                (click)="limpiarCampos()"
+                class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-all">
+                Limpiar Formulario
+              </button>
+            } @else {
+              <button type="button"
+                (click)="volverAGrilla()"
+                class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-all">
+                Cancelar Edición
+              </button>
+            }
+
+            <button type="button"
+              (click)="guardarProducto()"
+              [disabled]="guardando"
+              class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-semibold shadow-md transition-all transform active:scale-95 disabled:opacity-50"
+              [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/25' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-600/25'">
+              <i class="fa-solid" [class.fa-spinner]="guardando" [class.fa-spin]="guardando" [class.fa-floppy-disk]="!guardando"></i>
+              <span>{{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Producto' : 'Guardar en Catálogo') }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: FICHA TÉCNICA EN VIVO (4 COLS STICKY) -->
+        <div class="lg:col-span-4 lg:sticky lg:top-8 space-y-4">
+          
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
+            <!-- Header de la tarjeta con badge dinámico -->
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between"
+              [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-gradient-to-r from-emerald-50/80 to-teal-50/50' : 'bg-gradient-to-r from-purple-50/80 to-pink-50/50'">
+              <span class="text-[11px] font-bold tracking-wider uppercase text-slate-600 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full animate-ping"
+                  [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-500' : 'bg-purple-500'"></span>
+                Ficha Técnica en Vivo
+              </span>
+              
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'">
+                {{ tipoSeleccionado }}
+              </span>
+            </div>
+
+            <!-- Contenido de vista previa -->
+            <div class="p-5 space-y-4">
+              
+              <!-- Imagen Destacada del Producto en la Ficha Técnica -->
+              <div class="h-44 w-full bg-slate-50/90 rounded-2xl border border-slate-200/80 flex items-center justify-center overflow-hidden p-3 relative group">
+                @if (productoForm.imagenUrl) {
+                  <img [src]="productoForm.imagenUrl" [alt]="productoForm.nombreComercial || 'Producto'"
+                    class="max-h-full max-w-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
+                    (error)="productoForm.imagenUrl = ''" />
+                  <span class="absolute bottom-2 right-2 px-2 py-0.5 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-semibold rounded-md flex items-center gap-1">
+                    <i class="fa-solid fa-image text-[8px] text-emerald-400"></i> Imagen asignada
+                  </span>
+                } @else {
+                  <div class="flex flex-col items-center justify-center text-center p-3">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-2"
+                      [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 text-emerald-500' : 'bg-purple-50 text-purple-500'">
+                      <i class="fa-solid text-xl" [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'"></i>
+                    </div>
+                    <p class="text-xs font-bold text-slate-700">Sin fotografía asignada</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Sube una foto o ingresa una URL</p>
+                  </div>
+                }
+              </div>
+
+              <!-- Header del producto con miniatura -->
+              <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden"
+                  [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-purple-50 border-purple-200 text-purple-600'">
+                  @if (productoForm.imagenUrl) {
+                    <img [src]="productoForm.imagenUrl" [alt]="productoForm.nombreComercial" class="max-h-full max-w-full object-contain p-0.5 mix-blend-multiply" />
+                  } @else {
+                    <i class="fa-solid text-lg"
+                      [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'">
+                    </i>
+                  }
+                </div>
+                <div class="min-w-0">
+                  <span class="font-mono text-[10px] font-semibold text-slate-400 block">
+                    SKU: {{ productoForm.sku || '---' }}
+                  </span>
+                  <h3 class="text-sm font-bold text-slate-900 leading-tight truncate" [title]="productoForm.nombreComercial">
+                    {{ productoForm.nombreComercial || 'Nombre del Producto' }}
+                  </h3>
+                  <span class="text-[11px] text-slate-500 truncate block">
+                    {{ productoForm.categoriaNombre || 'Sin categoría' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Precios Destacados en Ficha Técnica -->
+              @if (tipoSeleccionado === 'MEDICAMENTO') {
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Precios de Venta Sugeridos</span>
+                  <div class="grid grid-cols-3 gap-2 text-center">
+                    <!-- Caja -->
+                    <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                      <span class="text-[10px] font-semibold text-slate-500 block">Caja</span>
+                      <span class="font-mono font-bold text-slate-900 text-xs">
+                        S/ {{ (productoForm.precioCaja || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                    <!-- Blíster -->
+                    <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                      <span class="text-[10px] font-semibold text-emerald-700 block">Blíster</span>
+                      <span class="font-mono font-bold text-emerald-700 text-xs">
+                        S/ {{ (productoForm.precioBlister || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                    <!-- Unidad -->
+                    <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                      <span class="text-[10px] font-semibold text-slate-500 block">Unidad</span>
+                      <span class="font-mono font-bold text-slate-900 text-xs">
+                        S/ {{ (productoForm.precioUnidad || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <!-- Perfume: Precio de Venta Sugerido Único -->
+                <div class="bg-purple-50/50 rounded-xl p-3.5 border border-purple-100 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Precio de Venta Sugerido</span>
+                    <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-100 text-purple-800">
+                      Frasco / Unidad
+                    </span>
+                  </div>
+                  <div class="bg-white p-3 rounded-lg border border-purple-100 shadow-2xs flex items-center justify-between">
+                    <div>
+                      <span class="text-[11px] font-semibold text-slate-500 block">Precio al Público:</span>
+                      <span class="text-[10px] text-slate-400">{{ productoForm.volumenMl || 100 }} ml • {{ productoForm.generoObjetivo || 'UNISEX' }}</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono font-black text-purple-900 text-lg">
+                        S/ {{ (productoForm.precioVenta || productoForm.precioUnidad || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Atributos específicos según tipo -->
+              <div class="space-y-2.5 text-xs">
+                @if (tipoSeleccionado === 'MEDICAMENTO') {
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Condición de Venta:</span>
+                    @if (productoForm.requiereReceta) {
+                      <span class="inline-flex items-center gap-1.5 font-bold text-rose-600">
+                        <i class="fa-solid fa-file-prescription text-xs"></i>
+                        Requiere Receta (Rx)
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle-check text-xs"></i>
+                        Venta Libre
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Marca / Diseñador:</span>
+                    <strong class="text-slate-800">{{ productoForm.marca || 'No especificado' }}</strong>
+                  </div>
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Familia Olfativa:</span>
+                    <strong class="text-purple-700">{{ productoForm.familiaOlfativa || 'Amaderado' }}</strong>
+                  </div>
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Presentación:</span>
+                    <strong class="text-slate-800">{{ productoForm.volumenMl || 100 }} ml ({{ productoForm.generoObjetivo }})</strong>
+                  </div>
+                }
+
+                @if (productoForm.ubicacionAlmacen) {
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Ubicación Tienda:</span>
+                    <span class="font-medium text-slate-700">{{ productoForm.ubicacionAlmacen }}</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Descripción (EL TEXTO CONSERVADO) -->
+              @if (productoForm.descripcion) {
+                <div class="bg-slate-50 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed border border-slate-100 italic">
+                  "{{ productoForm.descripcion }}"
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- BOTÓN RÁPIDO PARA VOLVER -->
+          <button (click)="volverAGrilla()"
+            class="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-solid fa-table-cells text-xs"></i>
+            <span>Ver Catálogo Completo</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- SECCIÓN INFERIOR: REGISTROS RECIENTES -->
+      @if (productos.length > 0) {
+        <div class="mt-12 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-slate-500 text-sm"></i>
+              <h3 class="text-sm font-bold text-slate-800">Productos Registrados Recientemente</h3>
+            </div>
+            <button (click)="volverAGrilla()" class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+              <span>Ver todos en el catálogo</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
+                  <th class="pb-2">SKU</th>
+                  <th class="pb-2">Producto</th>
+                  <th class="pb-2">Tipo</th>
+                  <th class="pb-2 text-right">Precios (Caja / Blíster / Unidad)</th>
+                  <th class="pb-2 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                @for (p of productosRecientesFiltrados; track p.id) {
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2.5 font-mono text-slate-600">{{ p.sku }}</td>
+                    <td class="py-2.5 font-medium text-slate-800">{{ p.nombreComercial }}</td>
+                    <td class="py-2.5">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                        [ngClass]="p.tipoProducto === 'MEDICAMENTO' ? 'bg-emerald-50 text-emerald-700' : 'bg-purple-50 text-purple-700'">
+                        {{ p.tipoProducto }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 text-right font-mono font-bold text-slate-900">
+                      @if (p.precioCaja) { C: S/ {{ p.precioCaja | number:'1.2-2' }} }
+                      @if (p.precioBlister) { | B: S/ {{ p.precioBlister | number:'1.2-2' }} }
+                      @if (p.precioUnidad) { | U: S/ {{ p.precioUnidad | number:'1.2-2' }} }
+                      @if (!p.precioCaja && !p.precioBlister && !p.precioUnidad) { S/ {{ (p.precioVenta || 0) | number:'1.2-2' }} }
+                    </td>
+                    <td class="py-2.5 text-right">
+                      <button (click)="editarProducto(p)" class="text-emerald-600 hover:text-emerald-800 font-medium">
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
 </div>

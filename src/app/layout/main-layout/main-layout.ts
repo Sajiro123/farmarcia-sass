@@ -1,14 +1,16 @@
-﻿import { Component, inject, computed } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { Sede } from '../../core/models/auth.model';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './main-layout.html',
   styleUrls: ['./main-layout.scss']
 })
@@ -20,6 +22,9 @@ export class MainLayout {
   sidebarCollapsed = false;
   mobileMenuOpen = false;
   currentRoute = '';
+
+  // Modal Selector de Sucursales (Multi-Sede)
+  showSedesModal = false;
 
   constructor() {
     this.currentRoute = this.router.url;
@@ -33,12 +38,6 @@ export class MainLayout {
 
   get breadcrumbs(): { section: string; title: string } {
     const url = this.currentRoute;
-    if (url.includes('/uikit/input') || url.includes('/inputs')) {
-      return { section: 'UI Kit', title: 'Input' };
-    }
-    if (url.includes('/formlayout')) {
-      return { section: 'UI Kit', title: 'Form Layout' };
-    }
     if (url.includes('/pos')) {
       return { section: 'Operaciones', title: 'Punto de Venta POS' };
     }
@@ -47,6 +46,12 @@ export class MainLayout {
     }
     if (url.includes('/inventario')) {
       return { section: 'Inventario', title: 'Control de Lotes & FEFO' };
+    }
+    if (url.includes('/reportes')) {
+      return { section: 'Auditoría', title: 'Reportes de Ventas & Caja' };
+    }
+    if (url.includes('/clientes')) {
+      return { section: 'Fidelización', title: 'Base de Datos de Clientes' };
     }
     return { section: 'Dashboards', title: 'Resumen General' };
   }
@@ -57,6 +62,20 @@ export class MainLayout {
 
   toggleMobileMenu() {
     this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  abrirModalSedes() {
+    if (this.authService.activeRole() === 'ADMIN') {
+      this.showSedesModal = true;
+    }
+  }
+
+  cambiarSede(sede: Sede) {
+    if (this.authService.activeRole() !== 'ADMIN') {
+      return;
+    }
+    this.authService.setSedeActiva(sede);
+    this.showSedesModal = false;
   }
 
   logout() {

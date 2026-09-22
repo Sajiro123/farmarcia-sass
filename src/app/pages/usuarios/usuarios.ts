@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService, UsuarioNegocioDTO, PerfilDTO, AccionDTO } from './user.service';
 import { AuthService } from '../../core/services/auth.service';
+import { SedeService, SedeDTO } from '../../core/services/sede.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -13,11 +14,13 @@ import { AuthService } from '../../core/services/auth.service';
 export class Usuarios implements OnInit {
   public authService = inject(AuthService);
   private userService = inject(UserService);
+  private sedeService = inject(SedeService);
   private cdr = inject(ChangeDetectorRef);
 
   usuarios: UsuarioNegocioDTO[] = [];
   perfiles: PerfilDTO[] = [];
   acciones: AccionDTO[] = [];
+  sedes: SedeDTO[] = [];
 
   filtroRol = 'TODOS';
   busqueda = '';
@@ -34,7 +37,6 @@ export class Usuarios implements OnInit {
   
   usuarioEnEdicion: UsuarioNegocioDTO = this.getUsuarioVacio();
   passwordInput = '';
-  consultandoDni = false;
   mostrarPins: { [key: string]: boolean } = {};
 
   // Modal Eliminar
@@ -45,10 +47,10 @@ export class Usuarios implements OnInit {
   // Modal Permisos / Matriz RBAC
   showPermisosModal = false;
   usuarioSeleccionadoPermisos: UsuarioNegocioDTO | null = null;
+  permisosSeleccionados = new Set<string>();
+  guardandoPermisos = false;
 
   ngOnInit() {
-    // Inicialización inmediata con lista precargada para evitar pantalla en blanco
-    this.usuarios = [...this.userService.mockUsuarios];
     this.cargarDatos();
   }
 
@@ -58,9 +60,7 @@ export class Usuarios implements OnInit {
 
     this.userService.listarUsuarios().subscribe({
       next: (data) => {
-        if (data && data.length > 0) {
-          this.usuarios = [...data];
-        }
+        this.usuarios = data ? [...data] : [];
         this.cargando = false;
         this.cdr.markForCheck();
         this.cdr.detectChanges();
@@ -86,6 +86,13 @@ export class Usuarios implements OnInit {
         this.cdr.markForCheck();
       }
     });
+
+    this.sedeService.listarSedes().subscribe({
+      next: (data) => {
+        this.sedes = data || [];
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   mostrarAlerta(tipo: 'success' | 'error' | 'info', texto: string) {
@@ -101,50 +108,73 @@ export class Usuarios implements OnInit {
 
   get usuariosFiltrados(): UsuarioNegocioDTO[] {
     return this.usuarios.filter(u => {
-      const matchRol = this.filtroRol === 'TODOS' || u.perfilCodigo === this.filtroRol;
+      let matchRol = true;
+      if (this.filtroRol === 'PERSONAL') {
+        matchRol = !u.tieneUsuario;
+      } else if (this.filtroRol === 'CON_CUENTA') {
+        matchRol = !!u.tieneUsuario;
+      } else if (this.filtroRol !== 'TODOS') {
+        matchRol = u.tieneUsuario === true && u.perfilCodigo === this.filtroRol;
+      }
+
       const q = this.busqueda.toLowerCase().trim();
       const matchTexto = !q || 
         (u.nombreCompleto && u.nombreCompleto.toLowerCase().includes(q)) ||
-        u.email.toLowerCase().includes(q) ||
+        (u.nombres && u.nombres.toLowerCase().includes(q)) ||
+        (u.apellidos && u.apellidos.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
         (u.numeroDocumento && u.numeroDocumento.includes(q)) ||
-        (u.nroColegiatura && u.nroColegiatura.toLowerCase().includes(q));
+        (u.nroColegiatura && u.nroColegiatura.toLowerCase().includes(q)) ||
+        (u.sedeNombre && u.sedeNombre.toLowerCase().includes(q));
       return matchRol && matchTexto;
     });
   }
 
+  get totalPersonal(): number {
+    return this.usuarios.filter(u => !u.tieneUsuario).length;
+  }
+
+  get totalConCuenta(): number {
+    return this.usuarios.filter(u => u.tieneUsuario).length;
+  }
+
   get totalAdmins(): number {
-    return this.usuarios.filter(u => u.perfilCodigo === 'ADMIN_NEGOCIO').length;
+    return this.usuarios.filter(u => u.tieneUsuario && u.perfilCodigo === 'ADMIN_NEGOCIO').length;
   }
 
   get totalQuimicos(): number {
-    return this.usuarios.filter(u => u.perfilCodigo === 'QUIMICO_FARMACEUTICO').length;
+    return this.usuarios.filter(u => u.tieneUsuario && u.perfilCodigo === 'QUIMICO_FARMACEUTICO').length;
   }
 
   get totalCajeros(): number {
-    return this.usuarios.filter(u => u.perfilCodigo === 'CAJERO_VENDEDOR').length;
+    return this.usuarios.filter(u => u.tieneUsuario && u.perfilCodigo === 'CAJERO_VENDEDOR').length;
   }
 
   getUsuarioVacio(): UsuarioNegocioDTO {
+    const sedeDef = this.sedes[0] || { id: '11111111-1111-1111-1111-111111111111', nombre: 'Sede Cajamarca Central' };
     return {
-      email: '',
-      password: '',
-      pinSeguridad: '1234',
+      tieneUsuario: false,
       estaActivo: true,
-      perfilCodigo: 'CAJERO_VENDEDOR',
       tipoDocumento: 'DNI',
       numeroDocumento: '',
       nombres: '',
       apellidos: '',
       telefono: '',
       direccion: '',
-      nroColegiatura: ''
+      nroColegiatura: '',
+      email: '',
+      password: '',
+      pinSeguridad: '1234',
+      perfilCodigo: 'CAJERO_VENDEDOR',
+      sedeId: sedeDef.id,
+      sedeNombre: sedeDef.nombre
     };
   }
 
   abrirModalNuevo() {
     this.modoEdicion = false;
     this.usuarioEnEdicion = this.getUsuarioVacio();
-    this.passwordInput = '123456';
+    this.passwordInput = '';
     this.tabModal = 'persona';
     this.showModal = true;
     this.cdr.markForCheck();
@@ -152,15 +182,35 @@ export class Usuarios implements OnInit {
 
   abrirModalEditar(usuario: UsuarioNegocioDTO) {
     this.modoEdicion = true;
+    const sId = usuario.sedeId || this.sedes[0]?.id || '11111111-1111-1111-1111-111111111111';
+    const sNombre = usuario.sedeNombre || this.sedes.find(s => s.id === sId)?.nombre || 'Sede Cajamarca Central';
     this.usuarioEnEdicion = { 
       ...usuario,
       tipoDocumento: usuario.tipoDocumento || 'DNI',
-      pinSeguridad: usuario.pinSeguridad || '1234'
+      pinSeguridad: usuario.pinSeguridad || '1234',
+      sedeId: sId,
+      sedeNombre: sNombre
     };
     this.passwordInput = '';
     this.tabModal = 'persona';
     this.showModal = true;
     this.cdr.markForCheck();
+  }
+
+  onSedeChange() {
+    const seleccionada = this.sedes.find(s => s.id === this.usuarioEnEdicion.sedeId);
+    if (seleccionada) {
+      this.usuarioEnEdicion.sedeNombre = seleccionada.nombre;
+    }
+  }
+
+  obtenerNombreSede(usuario: UsuarioNegocioDTO): string {
+    if (usuario.sedeNombre) return usuario.sedeNombre;
+    if (usuario.sedeId) {
+      const s = this.sedes.find(item => item.id === usuario.sedeId);
+      if (s) return s.nombre;
+    }
+    return 'Sede Cajamarca Central';
   }
 
   toggleMostrarPin(id?: string) {
@@ -169,83 +219,51 @@ export class Usuarios implements OnInit {
     this.cdr.markForCheck();
   }
 
-  consultarReniec() {
-    const doc = this.usuarioEnEdicion.numeroDocumento?.trim();
-    if (!doc || doc.length !== 8) {
-      this.mostrarAlerta('error', 'Ingresa un número de DNI válido de 8 dígitos.');
-      return;
-    }
-
-    this.consultandoDni = true;
-    this.cdr.markForCheck();
-
-    setTimeout(() => {
-      this.consultandoDni = false;
-      if (doc === '45892018') {
-        this.usuarioEnEdicion.nombres = 'Carlos Alberto';
-        this.usuarioEnEdicion.apellidos = 'Mendoza Ramos';
-        this.usuarioEnEdicion.telefono = '987654321';
-      } else if (doc === '41908234') {
-        this.usuarioEnEdicion.nombres = 'Elena';
-        this.usuarioEnEdicion.apellidos = 'Ramos Salazar';
-        this.usuarioEnEdicion.nroColegiatura = 'CQFP 14820';
-        this.usuarioEnEdicion.telefono = '976543210';
-      } else if (doc === '70982314') {
-        this.usuarioEnEdicion.nombres = 'Juan Carlos';
-        this.usuarioEnEdicion.apellidos = 'Pérez Gómez';
-        this.usuarioEnEdicion.telefono = '965432109';
-      } else if (doc === '47812903') {
-        this.usuarioEnEdicion.nombres = 'Mariana Lucía';
-        this.usuarioEnEdicion.apellidos = 'Vega Campos';
-        this.usuarioEnEdicion.telefono = '981234567';
-      } else {
-        this.usuarioEnEdicion.nombres = 'ROBERTO CARLOS';
-        this.usuarioEnEdicion.apellidos = 'GUTIERREZ PAREDES';
-        this.usuarioEnEdicion.telefono = '984567123';
-      }
-      this.mostrarAlerta('success', 'Datos RENIEC autocompletados correctamente.');
-      this.cdr.markForCheck();
-    }, 300);
-  }
-
   guardarUsuario() {
-    if (!this.usuarioEnEdicion.email || !this.usuarioEnEdicion.nombres || !this.usuarioEnEdicion.apellidos) {
-      this.mostrarAlerta('error', 'Por favor complete los campos obligatorios: Nombres, Apellidos y Correo.');
+    const nombres = this.usuarioEnEdicion.nombres?.trim();
+    const apellidos = this.usuarioEnEdicion.apellidos?.trim();
+
+    if (!nombres || !apellidos) {
+      this.mostrarAlerta('error', 'Por favor complete los campos obligatorios: Nombres y Apellidos.');
       return;
     }
 
     this.guardando = true;
     this.cdr.markForCheck();
 
-    if (this.passwordInput) {
-      this.usuarioEnEdicion.password = this.passwordInput;
-    }
-
-    if (this.modoEdicion && this.usuarioEnEdicion.id) {
-      this.userService.actualizarUsuario(this.usuarioEnEdicion.id, this.usuarioEnEdicion).subscribe({
+    if (!this.usuarioEnEdicion.id) {
+      // REGISTRAR PERSONAL EN NÓMINA (Farmacia crea su propio personal)
+      this.usuarioEnEdicion.tieneUsuario = false;
+      this.userService.crearPersonal(this.usuarioEnEdicion).subscribe({
         next: () => {
           this.guardando = false;
           this.showModal = false;
-          this.mostrarAlerta('success', 'Usuario y Persona actualizados exitosamente en Master DB.');
+          this.mostrarAlerta('success', `Personal ${nombres} ${apellidos} registrado exitosamente en la nómina.`);
           this.cargarDatos();
         },
         error: (err) => {
+          console.error('Error al registrar personal:', err);
           this.guardando = false;
-          this.mostrarAlerta('error', 'Ocurrió un error al actualizar el usuario.');
+          this.mostrarAlerta('error', 'Ocurrió un error al registrar el personal.');
           this.cdr.markForCheck();
         }
       });
     } else {
-      this.userService.crearUsuario(this.usuarioEnEdicion).subscribe({
+      // ACTUALIZAR DATOS DE PERSONAL O USUARIO
+      if (this.passwordInput) {
+        this.usuarioEnEdicion.password = this.passwordInput;
+      }
+      this.userService.actualizarUsuario(this.usuarioEnEdicion.id, this.usuarioEnEdicion).subscribe({
         next: () => {
           this.guardando = false;
           this.showModal = false;
-          this.mostrarAlerta('success', 'Nuevo usuario registrado exitosamente en Master DB.');
+          this.mostrarAlerta('success', 'Datos del colaborador actualizados exitosamente.');
           this.cargarDatos();
         },
         error: (err) => {
+          console.error('Error al actualizar datos:', err);
           this.guardando = false;
-          this.mostrarAlerta('error', 'Error al registrar usuario: verifica que el correo no esté duplicado.');
+          this.mostrarAlerta('error', 'Ocurrió un error al actualizar los datos del colaborador.');
           this.cdr.markForCheck();
         }
       });
@@ -260,21 +278,27 @@ export class Usuarios implements OnInit {
 
   ejecutarEliminacion() {
     if (!this.usuarioAEliminar || !this.usuarioAEliminar.id) return;
+    const idAEliminar = this.usuarioAEliminar.id;
+    const nombre = this.usuarioAEliminar.nombreCompleto || this.usuarioAEliminar.email || 'Colaborador';
     this.eliminando = true;
     this.cdr.markForCheck();
 
-    this.userService.eliminarUsuario(this.usuarioAEliminar.id).subscribe({
+    this.userService.eliminarUsuario(idAEliminar).subscribe({
       next: () => {
         this.eliminando = false;
         this.showDeleteModal = false;
-        this.mostrarAlerta('success', `Usuario ${this.usuarioAEliminar?.email} eliminado exitosamente.`);
+        this.usuarios = this.usuarios.filter(u => u.id !== idAEliminar);
+        this.mostrarAlerta('success', `Colaborador ${nombre} eliminado exitosamente de la base de datos.`);
         this.usuarioAEliminar = null;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
         this.cargarDatos();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al eliminar usuario:', err);
         this.eliminando = false;
         this.showDeleteModal = false;
-        this.mostrarAlerta('error', 'No se pudo eliminar el usuario de la base de datos.');
+        this.mostrarAlerta('error', 'No se pudo eliminar el colaborador de la base de datos.');
         this.cdr.markForCheck();
       }
     });
@@ -292,15 +316,178 @@ export class Usuarios implements OnInit {
     });
   }
 
+  get accionesAgrupadas(): { modulo: string; titulo: string; icono: string; color: string; acciones: AccionDTO[] }[] {
+    const ordenModulos = ['POS', 'INVENTARIO', 'COMPRAS', 'DASHBOARD', 'SEGURIDAD'];
+    const metaModulos: Record<string, { titulo: string; icono: string; color: string }> = {
+      'POS': {
+        titulo: 'Punto de Venta (POS) & Caja',
+        icono: 'pi-shopping-cart',
+        color: 'emerald'
+      },
+      'INVENTARIO': {
+        titulo: 'Inventario, Lotes & DIGEMID (FEFO)',
+        icono: 'pi-box',
+        color: 'purple'
+      },
+      'COMPRAS': {
+        titulo: 'Compras & Cuentas por Pagar (CxP)',
+        icono: 'pi-truck',
+        color: 'blue'
+      },
+      'DASHBOARD': {
+        titulo: 'Finanzas, Reportes & Rentabilidad',
+        icono: 'pi-chart-line',
+        color: 'amber'
+      },
+      'SEGURIDAD': {
+        titulo: 'Seguridad, Usuarios & Roles',
+        icono: 'pi-shield',
+        color: 'indigo'
+      }
+    };
+
+    const agrupado: Record<string, AccionDTO[]> = {};
+    for (const acc of this.acciones) {
+      const mod = acc.modulo || 'OTROS';
+      if (!agrupado[mod]) agrupado[mod] = [];
+      agrupado[mod].push(acc);
+    }
+
+    const resultado: { modulo: string; titulo: string; icono: string; color: string; acciones: AccionDTO[] }[] = [];
+
+    // Primero los módulos conocidos en orden
+    for (const m of ordenModulos) {
+      if (agrupado[m] && agrupado[m].length > 0) {
+        resultado.push({
+          modulo: m,
+          titulo: metaModulos[m].titulo,
+          icono: metaModulos[m].icono,
+          color: metaModulos[m].color,
+          acciones: agrupado[m]
+        });
+      }
+    }
+
+    // Luego otros módulos si existiesen
+    for (const m of Object.keys(agrupado)) {
+      if (!ordenModulos.includes(m)) {
+        resultado.push({
+          modulo: m,
+          titulo: `Módulo: ${m}`,
+          icono: 'pi-folder',
+          color: 'slate',
+          acciones: agrupado[m]
+        });
+      }
+    }
+
+    return resultado;
+  }
+
   verPermisos(usuario: UsuarioNegocioDTO) {
     this.usuarioSeleccionadoPermisos = usuario;
+    this.permisosSeleccionados = new Set<string>(usuario.acciones || []);
     this.showPermisosModal = true;
     this.cdr.markForCheck();
   }
 
   tienePermiso(codigoAccion: string): boolean {
-    if (!this.usuarioSeleccionadoPermisos) return false;
-    if (this.usuarioSeleccionadoPermisos.perfilCodigo === 'ADMIN_NEGOCIO') return true;
-    return (this.usuarioSeleccionadoPermisos.acciones || []).includes(codigoAccion);
+    return this.permisosSeleccionados.has(codigoAccion);
+  }
+
+  togglePermiso(codigoAccion: string) {
+    if (this.permisosSeleccionados.has(codigoAccion)) {
+      this.permisosSeleccionados.delete(codigoAccion);
+    } else {
+      this.permisosSeleccionados.add(codigoAccion);
+    }
+    this.cdr.markForCheck();
+  }
+
+  todosHabilitadosEnModulo(acciones: AccionDTO[]): boolean {
+    if (!acciones || acciones.length === 0) return false;
+    return acciones.every(a => this.permisosSeleccionados.has(a.codigo));
+  }
+
+  algunoHabilitadoEnModulo(acciones: AccionDTO[]): boolean {
+    if (!acciones || acciones.length === 0) return false;
+    return acciones.some(a => this.permisosSeleccionados.has(a.codigo));
+  }
+
+  toggleModulo(acciones: AccionDTO[]) {
+    const todos = this.todosHabilitadosEnModulo(acciones);
+    if (todos) {
+      acciones.forEach(a => this.permisosSeleccionados.delete(a.codigo));
+    } else {
+      acciones.forEach(a => this.permisosSeleccionados.add(a.codigo));
+    }
+    this.cdr.markForCheck();
+  }
+
+  marcarTodos(habilitar: boolean) {
+    if (habilitar) {
+      this.acciones.forEach(a => this.permisosSeleccionados.add(a.codigo));
+    } else {
+      this.permisosSeleccionados.clear();
+    }
+    this.cdr.markForCheck();
+  }
+
+  restablecerAPerfil() {
+    if (!this.usuarioSeleccionadoPermisos?.id) return;
+    this.guardandoPermisos = true;
+    this.cdr.markForCheck();
+
+    this.userService.actualizarAcciones(this.usuarioSeleccionadoPermisos.id, [], true).subscribe({
+      next: (res) => {
+        this.guardandoPermisos = false;
+        const resData = res?.data;
+        const nuevasAcciones = resData?.acciones || [];
+        if (this.usuarioSeleccionadoPermisos) {
+          this.usuarioSeleccionadoPermisos.acciones = nuevasAcciones;
+          this.usuarioSeleccionadoPermisos.tienePermisosPersonalizados = false;
+          this.permisosSeleccionados = new Set<string>(nuevasAcciones);
+        }
+        this.mostrarAlerta('success', 'Permisos restablecidos a la configuración base del perfil.');
+        this.cargarDatos();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al restablecer permisos:', err);
+        this.guardandoPermisos = false;
+        this.mostrarAlerta('error', 'No se pudieron restablecer los permisos por defecto.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  guardarPermisos() {
+    if (!this.usuarioSeleccionadoPermisos?.id) return;
+    this.guardandoPermisos = true;
+    this.cdr.markForCheck();
+
+    const accionesArray = Array.from(this.permisosSeleccionados);
+
+    this.userService.actualizarAcciones(this.usuarioSeleccionadoPermisos.id, accionesArray, false).subscribe({
+      next: (res) => {
+        this.guardandoPermisos = false;
+        const resData = res?.data;
+        const accionesFinales = resData?.acciones || accionesArray;
+        if (this.usuarioSeleccionadoPermisos) {
+          this.usuarioSeleccionadoPermisos.acciones = accionesFinales;
+          this.usuarioSeleccionadoPermisos.tienePermisosPersonalizados = true;
+        }
+        this.mostrarAlerta('success', 'Permisos actualizados y guardados correctamente en Master DB.');
+        this.showPermisosModal = false;
+        this.cargarDatos();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al guardar permisos:', err);
+        this.guardandoPermisos = false;
+        this.mostrarAlerta('error', 'Ocurrió un error al guardar los permisos en Master API.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 }

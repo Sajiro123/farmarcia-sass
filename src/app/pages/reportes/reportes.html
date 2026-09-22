@@ -1,0 +1,700 @@
+<div class="min-h-screen bg-slate-50/60 pb-16">
+
+  <!-- TOAST DE NOTIFICACIÓN DE AUDITORÍA -->
+  @if (mensajeToast) {
+    <div class="fixed top-20 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-xs font-bold transition-all duration-300 animate-slide-up"
+      [ngClass]="{
+        'bg-emerald-50 border-emerald-300 text-emerald-900': mensajeToast.tipo === 'success',
+        'bg-amber-50 border-amber-300 text-amber-900': mensajeToast.tipo === 'warning',
+        'bg-rose-50 border-rose-300 text-rose-900': mensajeToast.tipo === 'error'
+      }">
+      <i class="fa-solid text-base"
+        [ngClass]="{
+          'fa-circle-check text-emerald-600': mensajeToast.tipo === 'success',
+          'fa-triangle-exclamation text-amber-600': mensajeToast.tipo === 'warning',
+          'fa-circle-xmark text-rose-600': mensajeToast.tipo === 'error'
+        }">
+      </i>
+      <span>{{ mensajeToast.texto }}</span>
+      <button (click)="mensajeToast = null" class="ml-3 text-slate-400 hover:text-slate-700 cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+    <!-- ENCABEZADO PRINCIPAL (SOLO ADMINISTRADOR) -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <i class="fa-solid fa-chart-line text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Reportes de Ventas & Auditoría de Caja</h1>
+            <p class="text-xs text-slate-500">Supervisión administrativa de turnos, aperturas de caja, cajeros asignados y arqueo diario de ventas.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button (click)="imprimirReporte()"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer">
+          <i class="fa-solid fa-print text-xs text-slate-500"></i>
+          <span>Imprimir Reporte</span>
+        </button>
+
+        <button (click)="cargarDatos()"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
+          <i class="fa-solid fa-rotate-right text-xs"></i>
+          <span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETA DESTACADA: AUDITORÍA DEL TURNO (SOLO SE MUESTRA SI CORRESPONDE AL DÍA DE HOY) -->
+    @if (turnoActual && esTurnoDeHoy) {
+      <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-800 rounded-3xl p-5 text-white mb-6 shadow-xl border border-slate-700/80 animate-slide-up">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700/80">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg"
+              [ngClass]="turnoActual.cajaAbierta ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40' : 'bg-rose-500/20 text-rose-400 ring-2 ring-rose-500/40'">
+              <i class="fa-solid" [ngClass]="turnoActual.cajaAbierta ? 'fa-cash-register animate-pulse' : 'fa-lock'"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md"
+                  [ngClass]="turnoActual.cajaAbierta ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'">
+                  {{ turnoActual.cajaAbierta ? 'Turno Activo • Caja Abierta' : 'Turno Finalizado • Caja Cerrada' }}
+                </span>
+                <span class="text-xs text-slate-400">• {{ turnoActual.sede }}</span>
+              </div>
+              <p class="text-sm font-bold text-white mt-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-user-tie text-emerald-400 text-xs"></i>
+                <span>Cajero Asignado: <strong>{{ turnoActual.cajeroActual }}</strong></span>
+              </p>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Fondo Sencillo Apertura</span>
+            <p class="text-xl font-black font-mono text-emerald-400 mt-0.5">S/ {{ turnoActual.fondoInicial | number:'1.2-2' }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Hora de Apertura:</span>
+            <p class="font-mono font-bold text-slate-200 mt-0.5">
+              <i class="fa-regular fa-clock text-slate-400 mr-1"></i>
+              {{ turnoActual.fechaApertura | date:'short' }}
+            </p>
+          </div>
+
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Estado del Turno:</span>
+            <p class="font-bold mt-0.5" [ngClass]="turnoActual.cajaAbierta ? 'text-emerald-400' : 'text-slate-300'">
+              <i class="fa-solid fa-circle text-[8px] mr-1" [ngClass]="turnoActual.cajaAbierta ? 'text-emerald-400' : 'text-rose-400'"></i>
+              {{ turnoActual.cajaAbierta ? 'Abierto y Cobrando' : 'Cerrado' }}
+            </p>
+          </div>
+
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tickets Emitidos en Turno:</span>
+            <p class="font-mono font-black text-slate-100 mt-0.5">
+              {{ totalTicketsEmitidos }} ventas
+            </p>
+          </div>
+
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Vendido en Turno:</span>
+            <p class="font-mono font-black text-emerald-400 mt-0.5 text-sm">
+              S/ {{ totalVentasHoy | number:'1.2-2' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- TARJETAS KPI DE VENTAS Y MÉTODOS DE PAGO -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
+      <!-- Total Ventas -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Total Ventas (S/)</span>
+          <p class="text-xl font-black text-slate-900 font-mono mt-0.5">S/ {{ totalVentasHoy | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Efectivo Físico -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Efectivo en Caja</span>
+          <p class="text-xl font-black text-teal-700 font-mono mt-0.5">S/ {{ totalEfectivo | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Yape -->
+      <div class="bg-white rounded-2xl border border-purple-200/80 p-4 shadow-sm flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-mobile-screen"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-purple-600 block tracking-wider">Total Yape</span>
+          <p class="text-xl font-black text-purple-700 font-mono mt-0.5">S/ {{ totalYape | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Plin -->
+      <div class="bg-white rounded-2xl border border-cyan-200/80 p-4 shadow-sm flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-cyan-600 block tracking-wider">Total Plin</span>
+          <p class="text-xl font-black text-cyan-700 font-mono mt-0.5">S/ {{ totalPlin | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Tarjetas POS -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-credit-card"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-sky-600 block tracking-wider">Tarjetas (POS)</span>
+          <p class="text-xl font-black text-sky-700 font-mono mt-0.5">S/ {{ totalTarjeta | number:'1.2-2' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTROS Y BUSCADORES DE REPORTES CON INPUT DE CALENDARIO -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+        
+        <!-- Buscador -->
+        <div class="md:col-span-3 relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text"
+            [(ngModel)]="busqueda"
+            (ngModelChange)="aplicarFiltros()"
+            placeholder="Buscar por # ticket, DNI o cliente..."
+            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+          @if (busqueda) {
+            <button (click)="busqueda = ''; aplicarFiltros()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i class="fa-solid fa-circle-xmark text-xs"></i>
+            </button>
+          }
+        </div>
+
+        <!-- FILTRO DE FECHA: INPUT CALENDARIO -->
+        <div class="md:col-span-3 flex items-center gap-1.5">
+          <div class="relative flex-1">
+            <i class="fa-regular fa-calendar absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-600 text-xs pointer-events-none"></i>
+            <input type="date"
+              [(ngModel)]="fechaSeleccionada"
+              (ngModelChange)="modoFecha = 'CALENDARIO'; aplicarFiltros()"
+              class="w-full pl-7 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer" />
+          </div>
+
+          <!-- Botones rápidos de fecha -->
+          <button (click)="seleccionarHoy()"
+            [ngClass]="modoFecha === 'CALENDARIO' && fechaSeleccionada === '2026-09-15' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+            class="px-2.5 py-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer whitespace-nowrap">
+            Hoy
+          </button>
+          <button (click)="seleccionarTodoHistorico()"
+            [ngClass]="modoFecha === 'TODOS' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+            class="px-2.5 py-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer whitespace-nowrap">
+            Todo
+          </button>
+        </div>
+
+        <!-- Filtro Sede / Sucursal -->
+        <div class="md:col-span-2">
+          <select [(ngModel)]="filtroSede"
+            (ngModelChange)="aplicarFiltros()"
+            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+            <option value="TODAS">📍 Todas las Sedes</option>
+            @for (s of listaSedes; track s) {
+              <option [value]="s">🏢 {{ s }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Filtro Método de Pago -->
+        <div class="md:col-span-2">
+          <select [(ngModel)]="filtroMetodo"
+            (ngModelChange)="aplicarFiltros()"
+            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+            <option value="TODOS">💳 Todo Método</option>
+            <option value="Efectivo">💵 Efectivo</option>
+            <option value="Yape">📱 Yape</option>
+            <option value="Plin">📲 Plin</option>
+            <option value="Tarjeta">💳 Tarjeta (POS)</option>
+            <option value="Mixto">⭐ Pago Mixto</option>
+          </select>
+        </div>
+
+        <!-- Filtro Estado -->
+        <div class="md:col-span-2">
+          <select [(ngModel)]="filtroEstado"
+            (ngModelChange)="aplicarFiltros()"
+            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+            <option value="TODOS">🛡️ Todos Estados</option>
+            <option value="EMITIDO">✅ Emitidos</option>
+            <option value="ANULADO">❌ Anulados</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Barra de estado de filtros aplicados -->
+      @if (busqueda || modoFecha !== 'CALENDARIO' || filtroMetodo !== 'TODOS' || filtroEstado !== 'TODOS' || filtroSede !== 'TODAS') {
+        <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
+            <span class="font-medium text-slate-700">Filtros aplicados:</span>
+            <span>Mostrando {{ ventasFiltradas.length }} de {{ ventas.length }} ventas registradas</span>
+          </div>
+          <button (click)="limpiarFiltros()"
+            class="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-arrow-rotate-left text-[11px]"></i>
+            <span>Restablecer filtros</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- TABLA DE GRILLA ESTILIZADA (DARK SLATE HEADER + FONTAWESOME) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <!-- HEADER DARK SLATE -->
+          <thead>
+            <tr class="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider border-b border-slate-700">
+              <th class="py-3.5 px-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-receipt text-sky-400 text-xs"></i>
+                  <span>N° TICKET</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-clock text-amber-300 text-xs"></i>
+                  <span>HORA & FECHA</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-user text-emerald-400 text-xs"></i>
+                  <span>CLIENTE & DNI</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-wallet text-purple-400 text-xs"></i>
+                  <span>MÉTODO DE PAGO</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-building text-slate-300 text-xs"></i>
+                  <span>SEDE</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <i class="fa-solid fa-sack-dollar text-emerald-300 text-xs"></i>
+                  <span>TOTAL (S/)</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-shield-halved text-sky-300 text-xs"></i>
+                  <span>ESTADO</span>
+                </div>
+              </th>
+              <th class="py-3.5 px-4 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <i class="fa-solid fa-gear text-slate-400 text-xs"></i>
+                  <span>ACCIONES</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+
+          <!-- CUERPO DE LA TABLA -->
+          <tbody class="divide-y divide-slate-100 text-xs">
+            @for (ticket of ventasPaginadas; track ticket.id; let i = $index) {
+              <tr class="hover:bg-slate-50/90 transition-colors group">
+                <!-- N° Ticket -->
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <span class="font-mono font-black text-slate-900 text-xs bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                    {{ ticket.id }}
+                  </span>
+                </td>
+
+                <!-- Fecha y Hora -->
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <div>
+                    <span class="font-mono font-bold text-slate-800 text-xs">
+                      {{ ticket.fecha | date:'shortTime' }}
+                    </span>
+                    <p class="text-[10px] text-slate-400 mt-0.5">
+                      {{ ticket.fecha | date:'mediumDate' }}
+                    </p>
+                  </div>
+                </td>
+
+                <!-- Cliente & DNI -->
+                <td class="py-3.5 px-4">
+                  <div>
+                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                      {{ ticket.cliente }}
+                    </div>
+                    <div class="text-[11px] font-mono text-slate-500 mt-0.5">
+                      DNI/RUC: {{ ticket.dni || 'Sin Documento' }}
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Método de Pago -->
+                <td class="py-3.5 px-4">
+                  @if (ticket.metodo.includes('Mixto') || (ticket.desglose && ticket.desglose.length > 1)) {
+                    <div class="space-y-1.5">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold border bg-amber-50 text-amber-800 border-amber-300">
+                        <i class="fa-solid fa-sliders text-amber-600"></i>
+                        <span>Pago Mixto</span>
+                      </span>
+                      <!-- Desglose de cada medio de pago participante -->
+                      <div class="space-y-1">
+                        @for (dp of ticket.desglose; track $index) {
+                          <div class="flex items-center gap-1.5 text-[10px] bg-slate-50 border border-slate-200/90 rounded px-2 py-0.5 whitespace-nowrap">
+                            <i class="fa-solid" [ngClass]="{
+                              'fa-money-bill text-teal-600': dp.metodo.toLowerCase() === 'efectivo',
+                              'fa-mobile-screen text-purple-600': dp.metodo.toLowerCase() === 'yape',
+                              'fa-mobile-screen-button text-cyan-600': dp.metodo.toLowerCase() === 'plin',
+                              'fa-credit-card text-sky-600': dp.metodo.toLowerCase().includes('tarjeta'),
+                              'fa-building-columns text-indigo-600': dp.metodo.toLowerCase().includes('transferencia')
+                            }"></i>
+                            <span class="font-bold text-slate-700">{{ dp.metodo }}:</span>
+                            <span class="font-mono font-bold text-slate-900">S/ {{ dp.monto | number:'1.2-2' }}</span>
+                            @if (dp.referencia) {
+                              <span class="text-[9px] font-mono text-slate-400">({{ dp.referencia }})</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  } @else {
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap"
+                      [ngClass]="{
+                        'bg-teal-50 text-teal-800 border-teal-200': ticket.metodo.toLowerCase().includes('efectivo'),
+                        'bg-purple-50 text-purple-800 border-purple-200': ticket.metodo.toLowerCase().includes('yape'),
+                        'bg-cyan-50 text-cyan-800 border-cyan-200': ticket.metodo.toLowerCase().includes('plin'),
+                        'bg-sky-50 text-sky-800 border-sky-200': ticket.metodo.toLowerCase().includes('tarjeta'),
+                        'bg-indigo-50 text-indigo-800 border-indigo-200': ticket.metodo.toLowerCase().includes('transferencia')
+                      }">
+                      <i class="fa-solid" [ngClass]="{
+                        'fa-money-bill text-teal-600': ticket.metodo.toLowerCase().includes('efectivo'),
+                        'fa-mobile-screen text-purple-600': ticket.metodo.toLowerCase().includes('yape'),
+                        'fa-mobile-screen-button text-cyan-600': ticket.metodo.toLowerCase().includes('plin'),
+                        'fa-credit-card text-sky-600': ticket.metodo.toLowerCase().includes('tarjeta'),
+                        'fa-building-columns text-indigo-600': ticket.metodo.toLowerCase().includes('transferencia')
+                      }"></i>
+                      {{ ticket.metodo }}
+                    </span>
+                    @if (ticket.desglose && ticket.desglose.length > 0 && ticket.desglose[0].referencia) {
+                      <p class="text-[9px] font-mono text-slate-400 mt-0.5">Ref: {{ ticket.desglose[0].referencia }}</p>
+                    }
+                  }
+                </td>
+
+                <!-- Sede -->
+                <td class="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
+                  <i class="fa-solid fa-location-dot text-[10px] text-slate-400 mr-1"></i>
+                  {{ ticket.sede || 'Sede Cajamarca Central' }}
+                </td>
+
+                <!-- Total S/ -->
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                  <span class="font-mono font-black text-sm"
+                    [ngClass]="ticket.estado === 'ANULADO' ? 'text-slate-400 line-through' : 'text-slate-900'">
+                    S/ {{ ticket.total | number:'1.2-2' }}
+                  </span>
+                </td>
+
+                <!-- Estado -->
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                    [ngClass]="ticket.estado === 'EMITIDO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'">
+                    <i class="fa-solid" [ngClass]="ticket.estado === 'EMITIDO' ? 'fa-circle-check text-emerald-600' : 'fa-ban text-rose-600'"></i>
+                    {{ ticket.estado }}
+                  </span>
+                </td>
+
+                <!-- Acciones (Ver Detalle y Corregir Medio de Pago) -->
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <!-- BOTÓN CORREGIR MÉTODO DE PAGO -->
+                    @if (ticket.estado === 'EMITIDO') {
+                      <button (click)="abrirModalCorregirPago(ticket)"
+                        title="Corregir error en medio de pago (ej: Plin / Efectivo)"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-bold transition-all cursor-pointer">
+                        <i class="fa-solid fa-pen-to-square"></i> Corregir Pago
+                      </button>
+                    }
+
+                    <!-- BOTÓN VER DETALLE -->
+                    <button (click)="verDetalle(ticket)"
+                      title="Ver Detalle del Ticket"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 rounded-lg text-[10px] font-bold transition-all cursor-pointer">
+                      <i class="fa-solid fa-eye"></i> Detalle
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="py-14 text-center text-slate-400">
+                  <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-receipt text-2xl"></i>
+                  </div>
+                  <p class="font-medium text-slate-700 mb-1">No se encontraron ventas para los filtros seleccionados</p>
+                  <p class="text-xs text-slate-400">Selecciona otra fecha en el calendario o haz clic en "Todo" para ver el histórico.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+
+          <!-- FILA DE TOTALES EN FOOTER -->
+          @if (ventasFiltradas.length > 0) {
+            <tfoot>
+              <tr class="border-t-2 border-slate-200 bg-slate-50/80 text-slate-900 font-bold text-xs">
+                <td colspan="5" class="py-3.5 px-4 uppercase tracking-wider font-extrabold text-slate-800">
+                  TOTAL RECAUDADO ({{ totalTicketsEmitidos }} TICKETS EMITIDOS)
+                </td>
+                <td class="py-3.5 px-4 text-right font-mono font-black text-emerald-700 text-base whitespace-nowrap">
+                  S/ {{ totalVentasHoy | number:'1.2-2' }}
+                </td>
+                <td colspan="2" class="py-3.5 px-4 text-right text-[11px] text-slate-500 font-medium">
+                  Auditoría Administrativa • Sincronización Supabase
+                </td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+
+      <!-- BARRA DE PAGINACIÓN INFERIOR -->
+      <div class="py-3.5 px-6 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div>
+          Mostrando
+          <strong class="text-slate-800">{{ ventasFiltradas.length === 0 ? 0 : (paginaActual - 1) * itemsPorPagina + 1 }}</strong> a
+          <strong class="text-slate-800">{{ paginaActual * itemsPorPagina > ventasFiltradas.length ? ventasFiltradas.length : paginaActual * itemsPorPagina }}</strong>
+          de <strong class="text-slate-800">{{ ventasFiltradas.length }}</strong> registros
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button (click)="cambiarPagina(1)"
+            [disabled]="paginaActual === 1"
+            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
+            <i class="fa-solid fa-angles-left text-[10px]"></i>
+          </button>
+
+          <button (click)="cambiarPagina(paginaActual - 1)"
+            [disabled]="paginaActual === 1"
+            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
+            <i class="fa-solid fa-angle-left text-[10px]"></i>
+          </button>
+
+          <span class="min-w-7 h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center justify-center text-xs shadow-xs">
+            {{ paginaActual }}
+          </span>
+
+          <button (click)="cambiarPagina(paginaActual + 1)"
+            [disabled]="paginaActual >= totalPaginas"
+            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
+            <i class="fa-solid fa-angle-right text-[10px]"></i>
+          </button>
+
+          <button (click)="cambiarPagina(totalPaginas)"
+            [disabled]="paginaActual >= totalPaginas"
+            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
+            <i class="fa-solid fa-angles-right text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: DETALLE DE TICKET DE VENTA -->
+@if (showDetalleModal && ticketSeleccionado) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-slide-up">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-receipt text-emerald-600"></i> Detalle de Venta
+          </h3>
+          <p class="text-xs font-mono text-slate-500 font-bold mt-0.5">{{ ticketSeleccionado.id }} • {{ ticketSeleccionado.fecha | date:'medium' }}</p>
+        </div>
+        <button (click)="showDetalleModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+        <p>Cliente: <strong>{{ ticketSeleccionado.cliente }}</strong></p>
+        <p>DNI/RUC: <strong class="font-mono">{{ ticketSeleccionado.dni }}</strong></p>
+        <p>Sede: {{ ticketSeleccionado.sede }}</p>
+        <p>Método de Pago: <strong>{{ ticketSeleccionado.metodo }}</strong></p>
+        @if (ticketSeleccionado.desglose && ticketSeleccionado.desglose.length > 0) {
+          <div class="mt-2 pt-2 border-t border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Desglose de Pago Recibido:</span>
+            @for (dp of ticketSeleccionado.desglose; track $index) {
+              <div class="flex justify-between items-center text-[11px] font-medium text-slate-700 bg-white px-2.5 py-1 rounded border border-slate-200">
+                <span class="font-bold flex items-center gap-1.5">
+                  <i class="fa-solid" [ngClass]="{
+                    'fa-money-bill text-teal-600': dp.metodo.toLowerCase() === 'efectivo',
+                    'fa-mobile-screen text-purple-600': dp.metodo.toLowerCase() === 'yape',
+                    'fa-mobile-screen-button text-cyan-600': dp.metodo.toLowerCase() === 'plin',
+                    'fa-credit-card text-sky-600': dp.metodo.toLowerCase().includes('tarjeta'),
+                    'fa-building-columns text-indigo-600': dp.metodo.toLowerCase().includes('transferencia')
+                  }"></i>
+                  <span>{{ dp.metodo }}</span>
+                  @if (dp.referencia) {
+                    <span class="text-[9px] font-normal text-slate-400 font-mono">(Ref: {{ dp.referencia }})</span>
+                  }
+                </span>
+                <span class="font-mono font-bold text-slate-900">S/ {{ dp.monto | number:'1.2-2' }}</span>
+              </div>
+            }
+          </div>
+        }
+        @if (ticketSeleccionado.anulacionInfo) {
+          <div class="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px]">
+            <p class="font-bold">❌ Ticket Anulado por: {{ ticketSeleccionado.anulacionInfo.autorizadoPor }}</p>
+            <p>Motivo: {{ ticketSeleccionado.anulacionInfo.motivo }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Ítems Vendidos & Descuento de Unidades</label>
+        @for (item of ticketSeleccionado.items; track $index) {
+          <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <p class="font-bold text-slate-800">{{ item.nombre }}</p>
+              <p class="text-[10px] text-slate-500">
+                Cant: {{ item.cantidad }} • <span class="text-emerald-700 font-bold">Descontó {{ item.unidadesTotales }} unid.</span>
+              </p>
+            </div>
+            <span class="font-mono font-bold text-slate-900">S/ {{ item.subtotal | number:'1.2-2' }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-1 font-mono">
+        <div class="flex justify-between"><span>Subtotal:</span><span>S/ {{ ticketSeleccionado.subtotal | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between"><span>IGV (18%):</span><span>S/ {{ ticketSeleccionado.igv | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between text-sm font-black text-emerald-800 border-t border-emerald-200 pt-1">
+          <span>TOTAL:</span><span>S/ {{ ticketSeleccionado.total | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button (click)="showDetalleModal = false" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL: CORREGIR MÉTODO DE PAGO (SOLUCIÓN A ERROR DEL CAJERO) -->
+@if (showCorregirPagoModal && ticketACorregir) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-slide-up">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Corregir Medio de Pago</h3>
+            <p class="text-xs text-slate-500">Ticket: <strong class="font-mono text-slate-800">{{ ticketACorregir.id }}</strong></p>
+          </div>
+        </div>
+        <button (click)="showCorregirPagoModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Cliente:</span>
+          <span class="font-bold text-slate-800">{{ ticketACorregir.cliente }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Monto Total:</span>
+          <span class="font-mono font-black text-emerald-700 text-sm">S/ {{ ticketACorregir.total | number:'1.2-2' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Método Registrado Erróneo:</span>
+          <span class="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">{{ ticketACorregir.metodo }}</span>
+        </div>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">
+            Nuevo Método de Pago Correcto <span class="text-rose-500">*</span>
+          </label>
+          <select [(ngModel)]="nuevoMetodoPago"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+            <option value="Yape">📱 Yape (Billetera BCP)</option>
+            <option value="Plin">📲 Plin (Billetera Interbank / BBVA / Scotiabank)</option>
+            <option value="Efectivo">💵 Efectivo Físico</option>
+            <option value="Tarjeta">💳 Tarjeta Débito / Crédito (POS)</option>
+            <option value="Transferencia">🏦 Transferencia Bancaria</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">
+            N° de Operación / Referencia (Opcional para Plin / Yape):
+          </label>
+          <input [(ngModel)]="referenciaPago"
+            placeholder="Ej: OP-849204 o últimos 4 dígitos"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
+        </div>
+      </div>
+
+      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500">
+        <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i>
+        Esta corrección recalcula automáticamente los totales de Efectivo y Billeteras Digitales del día sin alterar el kardex de stock.
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-100">
+        <button (click)="showCorregirPagoModal = false"
+          class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer">
+          Cancelar
+        </button>
+        <button (click)="confirmarCorreccionPago()"
+          class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs cursor-pointer shadow-sm">
+          Guardar Corrección
+        </button>
+      </div>
+    </div>
+  </div>
+}

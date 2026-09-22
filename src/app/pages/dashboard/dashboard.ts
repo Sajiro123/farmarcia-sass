@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
+import { DashboardService } from '../../core/services/dashboard.service';
 
 export interface KpiFarmaceutico {
   label: string;
@@ -31,6 +32,7 @@ export interface ProductoRentable {
 })
 export class Dashboard implements OnInit {
   public authService = inject(AuthService);
+  private dashboardService = inject(DashboardService);
 
   kpis: KpiFarmaceutico[] = [
     {
@@ -115,9 +117,10 @@ export class Dashboard implements OnInit {
   ];
 
   mediosPagoDistribucion = [
-    { metodo: 'Yape / Plin', porcentaje: 48, monto: 1690.30, color: 'bg-purple-500' },
     { metodo: 'Efectivo Contado', porcentaje: 32, monto: 1126.90, color: 'bg-emerald-500' },
-    { metodo: 'Tarjetas (POS)', porcentaje: 20, monto: 704.40, color: 'bg-blue-500' }
+    { metodo: 'Yape (BCP)', porcentaje: 28, monto: 985.80, color: 'bg-purple-500' },
+    { metodo: 'Tarjetas (POS)', porcentaje: 20, monto: 704.40, color: 'bg-blue-500' },
+    { metodo: 'Plin (Interbank/BBVA)', porcentaje: 20, monto: 704.40, color: 'bg-cyan-500' }
   ];
 
   ventasPorCategoria = [
@@ -127,5 +130,13 @@ export class Dashboard implements OnInit {
     { cat: 'Cuidado Personal & Higiene', porcentaje: 18, valor: 'S/ 634.00' }
   ];
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.dashboardService.getKpis().subscribe(data => {
+      if (data) {
+        this.kpis[0].valor = `S/ ${data.ticketPromedio.toFixed(2)}`;
+        this.kpis[1].valor = `S/ ${data.ventasHoy.toFixed(2)}`;
+        this.kpis[2].valor = `${data.mermaPorcentaje}%`;
+      }
+    });
+  }
 }

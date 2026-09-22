@@ -2,37 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
-
-export interface LoteItem {
-  id: number;
-  lote: string;
-  producto: string;
-  principioActivo: string;
-  laboratorio: string;
-  stock: number;
-  vencimiento: string;
-  dias: number;
-  pasillo: string;
-  estante: string;
-  nivel: string;
-  gaveta: string;
-  registroSanitario: string;
-  temperatura: string; // T° Ambiente / Refrigerado
-}
-
-export interface ActaBaja {
-  id: string;
-  fecha: Date;
-  responsable: string;
-  cmpQuimico: string;
-  motivo: string;
-  observaciones: string;
-  loteId: number;
-  producto: string;
-  lote: string;
-  cantidadBaja: number;
-  costoTotalPerdida: number;
-}
+import { InventoryService, LoteItem, ActaBaja } from '../../core/services/inventory.service';
+import { ProductService, ProductoCatalogoItem } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-inventory',
@@ -42,24 +13,83 @@ export interface ActaBaja {
 })
 export class Inventory implements OnInit {
   public authService = inject(AuthService);
+  private inventoryService = inject(InventoryService);
+  private productService = inject(ProductService);
 
-  filtroEstado = 'TODOS';
+  cargando = false;
+  lotesFefo: LoteItem[] = [];
+  productosCatalogo: ProductoCatalogoItem[] = [];
+  actasRegistradas: ActaBaja[] = [];
+
+  // ================= FILTROS Y BÚSQUEDA =================
   busqueda = '';
+  filtroEstado = 'TODOS'; // 'TODOS' | 'OPTIMO' | 'ALERTA' | 'CRITICO' | 'VENCIDO'
+  filtroCondicion = 'TODOS'; // 'TODOS' | 'Ambiente' | '2°C a 8°C (Cadena Frío)' | 'Lugar Fresco y Seco' | 'Caja de Seguridad'
+  ordenarPor: 'FEFO_ASC' | 'FEFO_DESC' | 'PRODUCTO_ASC' | 'STOCK_DESC' | 'STOCK_ASC' = 'FEFO_ASC';
 
-  lotesFefo: LoteItem[] = [
-    { id: 1, lote: 'LT-VENC-01', producto: 'Amoxicilina 500mg', principioActivo: 'Amoxicilina', laboratorio: 'Portugal', stock: 80, vencimiento: '2024-05-10', dias: -104, pasillo: 'P1', estante: 'E3', nivel: 'N2', gaveta: 'G1', registroSanitario: 'EE-04829', temperatura: 'Ambiente' },
-    { id: 2, lote: 'LT-CRIT-99', producto: 'Ibuprofeno 400mg', principioActivo: 'Ibuprofeno', laboratorio: 'Genfar', stock: 15, vencimiento: '2024-09-20', dias: 28, pasillo: 'P1', estante: 'E2', nivel: 'N2', gaveta: 'G4', registroSanitario: 'EE-01928', temperatura: 'Ambiente' },
-    { id: 3, lote: 'LT-ALERT-42', producto: 'Amoxicilina + Clavulánico', principioActivo: 'Amoxicilina + Clavulánico', laboratorio: 'Teva', stock: 60, vencimiento: '2025-10-15', dias: 53, pasillo: 'P1', estante: 'E3', nivel: 'N1', gaveta: 'G2', registroSanitario: 'EE-05819', temperatura: 'Ambiente' },
-    { id: 4, lote: 'LT-202301', producto: 'Paracetamol 500mg', principioActivo: 'Paracetamol', laboratorio: 'Genfar', stock: 450, vencimiento: '2027-12-01', dias: 830, pasillo: 'P1', estante: 'E2', nivel: 'N1', gaveta: 'G1', registroSanitario: 'EE-09182', temperatura: 'Ambiente' },
-    { id: 5, lote: 'LT-B234', producto: 'Aspirina 100mg', principioActivo: 'Ácido Acetilsalicílico', laboratorio: 'Bayer', stock: 200, vencimiento: '2028-01-15', dias: 875, pasillo: 'P2', estante: 'E1', nivel: 'N3', gaveta: 'G2', registroSanitario: 'EE-03912', temperatura: 'Ambiente' },
-    { id: 6, lote: 'LT-INSUL-08', producto: 'Insulina NPH 100UI/ml', principioActivo: 'Insulina Humana', laboratorio: 'Lilly', stock: 24, vencimiento: '2026-03-30', dias: 219, pasillo: 'REFRI-01', estante: 'E1', nivel: 'N1', gaveta: 'G1', registroSanitario: 'EE-07182', temperatura: '2°C a 8°C (Cadena Frío)' }
-  ];
+  // ================= PAGINACIÓN =================
+  paginaActual = 1;
+  itemsPorPagina = 10;
 
-  // Modal de Acta de Bajas
+  // ================= MODAL LOTE (NUEVO / EDITAR) =================
+  showLoteModal = false;
+  modoModalLote: 'NUEVO' | 'EDITAR' = 'NUEVO';
+  loteEnEdicionId: string | number | null = null;
+
+  loteForm = {
+    productoId: '',
+    lote: '',
+    vencimiento: '',
+    stock: 50,
+    pasillo: 'P1',
+    estante: 'E1',
+    nivel: 'N1',
+    gaveta: 'G1',
+    registroSanitario: '',
+    temperatura: 'Ambiente',
+    // Campos específicos para fragancias y perfumes
+    concentracionFragancia: 'Eau de Parfum (EDP)',
+    volumenMl: 100,
+    batchCode: '',
+    destinoUnidad: 'VENTA' as 'VENTA' | 'TESTER',
+    genero: 'Unisex',
+    familiaOlfativa: 'Amaderada'
+  };
+  errorModalLote = '';
+
+  get productoSeleccionado(): ProductoCatalogoItem | undefined {
+    return this.productosCatalogo.find(p => p.id === this.loteForm.productoId);
+  }
+
+  get esProductoPerfume(): boolean {
+    return this.productoSeleccionado?.tipoProducto === 'PERFUME';
+  }
+
+  onProductoChange() {
+    const prod = this.productoSeleccionado;
+    if (prod && prod.tipoProducto === 'PERFUME') {
+      if (prod.volumenMl) this.loteForm.volumenMl = prod.volumenMl;
+      if (prod.familiaOlfativa) this.loteForm.familiaOlfativa = prod.familiaOlfativa;
+      if (prod.generoObjetivo) {
+        this.loteForm.genero = prod.generoObjetivo === 'HOMBRE' ? 'Hombre' : prod.generoObjetivo === 'MUJER' ? 'Mujer' : 'Unisex';
+      }
+      this.loteForm.vencimiento = '';
+      this.loteForm.registroSanitario = '';
+      if (!this.loteForm.batchCode) {
+        this.loteForm.batchCode = 'BC-' + Math.floor(10000 + Math.random() * 90000);
+      }
+    }
+  }
+
+  // ================= MODAL ELIMINAR LOTE =================
+  showEliminarModal = false;
+  loteAEliminar: LoteItem | null = null;
+
+  // ================= MODAL ACTA DE BAJA (DIGEMID / SUNAT) =================
   showBajaModal = false;
   loteSeleccionadoParaBaja: LoteItem | null = null;
   cantidadBaja = 1;
-  motivoBaja = 'Caducidad / Medicamento Vencido';
+  motivoBaja = 'Caducidad / Medicamento Vencido (DIGEMID)';
   motivosDisponibles = [
     'Caducidad / Medicamento Vencido (DIGEMID)',
     'Rotura o Deterioro de Empaque / Frasco',
@@ -71,64 +101,358 @@ export class Inventory implements OnInit {
   cmpQuimico = 'CQFP 14820';
   observacionesBaja = '';
 
-  // Historial de Actas
-  actasRegistradas: ActaBaja[] = [
-    {
-      id: 'ACTA-BAJA-2026-0038',
-      fecha: new Date(Date.now() - 86400000 * 5),
-      responsable: 'Dra. Elena Ramos',
-      cmpQuimico: 'CQFP 14820',
-      motivo: 'Caducidad / Medicamento Vencido (DIGEMID)',
-      observaciones: 'Retiro del anaquel por fecha de vencimiento cumplida.',
-      loteId: 1,
-      producto: 'Amoxicilina 500mg',
-      lote: 'LT-VENC-01',
-      cantidadBaja: 20,
-      costoTotalPerdida: 14.00
-    }
-  ];
-
   showActaImprimirModal = false;
   actaParaImprimir: ActaBaja | null = null;
 
+  // ================= TOAST NOTIFICACIÓN =================
+  mensajeToast: { tipo: 'success' | 'error' | 'info'; texto: string } | null = null;
+  private toastTimeout: any;
+
   ngOnInit() {
-    // Ordenar automáticamente por algoritmo FEFO estricto
-    this.ordenarPorFEFO();
+    this.cargarDatos();
   }
 
-  ordenarPorFEFO() {
-    this.lotesFefo.sort((a, b) => new Date(a.vencimiento).getTime() - new Date(b.vencimiento).getTime());
+  cargarDatos() {
+    this.cargando = true;
+    this.cargarProductosCatalogo();
+    this.cargarLotes();
+    this.cargarActas();
   }
 
-  get lotesFiltrados(): LoteItem[] {
-    return this.lotesFefo.filter(item => {
-      // Filtro de estado
-      const matchEstado = this.filtroEstado === 'TODOS' ||
-        (this.filtroEstado === 'VENCIDO' && item.dias < 0) ||
-        (this.filtroEstado === 'CRITICO' && item.dias >= 0 && item.dias <= 30) ||
-        (this.filtroEstado === 'ALERTA' && item.dias > 30 && item.dias <= 90) ||
-        (this.filtroEstado === 'OPTIMO' && item.dias > 90);
-
-      // Filtro de texto
-      const q = this.busqueda.toLowerCase().trim();
-      const matchTexto = !q || 
-        item.producto.toLowerCase().includes(q) ||
-        item.lote.toLowerCase().includes(q) ||
-        item.principioActivo.toLowerCase().includes(q) ||
-        item.laboratorio.toLowerCase().includes(q);
-
-      return matchEstado && matchTexto;
+  cargarLotes() {
+    this.cargando = true;
+    this.inventoryService.listarLotesFefo().subscribe({
+      next: (lotes) => {
+        this.lotesFefo = lotes;
+        this.cargando = false;
+      },
+      error: () => {
+        this.cargando = false;
+      }
     });
   }
 
-  getBadgeStatus(dias: number) {
-    if (dias < 0) return { class: 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800', icon: 'pi pi-ban', text: 'VENCIDO (BLOQUEADO)' };
-    if (dias <= 30) return { class: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800', icon: 'pi pi-exclamation-triangle', text: 'CRÍTICO (<30 DÍAS)' };
-    if (dias <= 90) return { class: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800', icon: 'pi pi-bell', text: 'ALERTA (≤90 DÍAS)' };
-    return { class: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800', icon: 'pi pi-shield', text: 'ÓPTIMO (>90 DÍAS)' };
+  cargarProductosCatalogo() {
+    this.productService.listarCatalogoActivos().subscribe(prods => {
+      this.productosCatalogo = prods;
+      if (prods.length > 0 && !this.loteForm.productoId) {
+        this.loteForm.productoId = prods[0].id;
+      }
+    });
   }
 
-  // --- ACTA DE BAJAS ---
+  cargarActas() {
+    this.inventoryService.listarActas().subscribe(actas => {
+      this.actasRegistradas = actas;
+    });
+  }
+
+  mostrarToast(tipo: 'success' | 'error' | 'info', texto: string) {
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    this.mensajeToast = { tipo, texto };
+    this.toastTimeout = setTimeout(() => {
+      this.mensajeToast = null;
+    }, 3500);
+  }
+
+  // ================= COMPUTED & GETTERS =================
+  get totalProntoVencer(): number {
+    return this.lotesFefo.filter(item => item.dias >= 0 && item.dias <= 90).length;
+  }
+
+  get totalVencidos(): number {
+    return this.lotesFefo.filter(item => item.dias < 0).length;
+  }
+
+  get totalOptimos(): number {
+    return this.lotesFefo.filter(item => item.dias > 90).length;
+  }
+
+  get totalStockGeneral(): number {
+    return this.lotesFefo.reduce((sum, item) => sum + (item.stock || 0), 0);
+  }
+
+  get totalStockFiltrado(): number {
+    return this.lotesFiltrados.reduce((sum, item) => sum + (item.stock || 0), 0);
+  }
+
+  get lotesFiltrados(): LoteItem[] {
+    let result = [...this.lotesFefo];
+
+    // 1. Filtro de estado FEFO
+    if (this.filtroEstado !== 'TODOS') {
+      result = result.filter(item => {
+        if (this.filtroEstado === 'VENCIDO') return item.dias < 0;
+        if (this.filtroEstado === 'CRITICO') return item.dias >= 0 && item.dias <= 30;
+        if (this.filtroEstado === 'ALERTA') return item.dias > 30 && item.dias <= 90;
+        if (this.filtroEstado === 'OPTIMO') return item.dias > 90;
+        return true;
+      });
+    }
+
+    // 2. Filtro de condición / temperatura
+    if (this.filtroCondicion !== 'TODOS') {
+      result = result.filter(item => item.temperatura === this.filtroCondicion);
+    }
+
+    // 3. Filtro de texto predictivo
+    if (this.busqueda.trim()) {
+      const q = this.busqueda.toLowerCase().trim();
+      result = result.filter(item =>
+        (item.producto && item.producto.toLowerCase().includes(q)) ||
+        (item.lote && item.lote.toLowerCase().includes(q)) ||
+        (item.principioActivo && item.principioActivo.toLowerCase().includes(q)) ||
+        (item.laboratorio && item.laboratorio.toLowerCase().includes(q)) ||
+        (item.registroSanitario && item.registroSanitario.toLowerCase().includes(q)) ||
+        (item.pasillo && item.pasillo.toLowerCase().includes(q))
+      );
+    }
+
+    // 4. Ordenamiento
+    switch (this.ordenarPor) {
+      case 'FEFO_ASC':
+        result.sort((a, b) => new Date(a.vencimiento).getTime() - new Date(b.vencimiento).getTime());
+        break;
+      case 'FEFO_DESC':
+        result.sort((a, b) => new Date(b.vencimiento).getTime() - new Date(a.vencimiento).getTime());
+        break;
+      case 'PRODUCTO_ASC':
+        result.sort((a, b) => (a.producto || '').localeCompare(b.producto || ''));
+        break;
+      case 'STOCK_DESC':
+        result.sort((a, b) => (b.stock || 0) - (a.stock || 0));
+        break;
+      case 'STOCK_ASC':
+        result.sort((a, b) => (a.stock || 0) - (b.stock || 0));
+        break;
+    }
+
+    return result;
+  }
+
+  get totalPaginas(): number {
+    return Math.ceil(this.lotesFiltrados.length / this.itemsPorPagina) || 1;
+  }
+
+  get lotesPaginados(): LoteItem[] {
+    const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+    return this.lotesFiltrados.slice(inicio, inicio + this.itemsPorPagina);
+  }
+
+  cambiarPagina(pagina: number) {
+    if (pagina >= 1 && pagina <= this.totalPaginas) {
+      this.paginaActual = pagina;
+    }
+  }
+
+  alternarOrden(columna: 'FEFO' | 'PRODUCTO' | 'STOCK') {
+    if (columna === 'FEFO') {
+      this.ordenarPor = this.ordenarPor === 'FEFO_ASC' ? 'FEFO_DESC' : 'FEFO_ASC';
+    } else if (columna === 'PRODUCTO') {
+      this.ordenarPor = 'PRODUCTO_ASC';
+    } else if (columna === 'STOCK') {
+      this.ordenarPor = this.ordenarPor === 'STOCK_DESC' ? 'STOCK_ASC' : 'STOCK_DESC';
+    }
+    this.paginaActual = 1;
+  }
+
+  limpiarFiltros() {
+    this.busqueda = '';
+    this.filtroEstado = 'TODOS';
+    this.filtroCondicion = 'TODOS';
+    this.ordenarPor = 'FEFO_ASC';
+    this.paginaActual = 1;
+  }
+
+  getBadgeStatus(dias: number, tipoProducto?: string) {
+    if (tipoProducto === 'PERFUME' || dias >= 90000) {
+      return { class: 'bg-purple-50 text-purple-700 border border-purple-200/80', icon: 'fa-solid fa-spray-can-sparkles', text: 'PERFUMERÍA (NO EXPIRA)' };
+    }
+    if (dias < 0) return { class: 'bg-rose-50 text-rose-700 border border-rose-200/80', icon: 'fa-solid fa-ban', text: 'VENCIDO (BLOQUEADO)' };
+    if (dias <= 30) return { class: 'bg-rose-50 text-rose-600 border border-rose-200/80', icon: 'fa-solid fa-triangle-exclamation', text: 'CRÍTICO (<30 DÍAS)' };
+    if (dias <= 90) return { class: 'bg-amber-50 text-amber-700 border border-amber-200/80', icon: 'fa-solid fa-bell', text: 'ALERTA (≤90 DÍAS)' };
+    return { class: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80', icon: 'fa-solid fa-shield-halved', text: 'ÓPTIMO (>90 DÍAS)' };
+  }
+
+  // ================= ACCIONES: CREAR & EDITAR LOTE =================
+  abrirModalNuevoLote() {
+    this.cargarProductosCatalogo();
+    this.modoModalLote = 'NUEVO';
+    this.loteEnEdicionId = null;
+    this.errorModalLote = '';
+
+    const fechaFutura = new Date();
+    fechaFutura.setFullYear(fechaFutura.getFullYear() + 2);
+
+    const primerProd = this.productosCatalogo.length > 0 ? this.productosCatalogo[0] : null;
+    const esPerf = primerProd?.tipoProducto === 'PERFUME';
+
+    this.loteForm = {
+      productoId: primerProd ? primerProd.id : '',
+      lote: esPerf ? 'BATCH-' + Math.floor(1000 + Math.random() * 9000) : 'LT-' + Math.floor(100000 + Math.random() * 900000),
+      vencimiento: esPerf ? '' : fechaFutura.toISOString().split('T')[0],
+      stock: 50,
+      pasillo: 'P1',
+      estante: 'E1',
+      nivel: 'N1',
+      gaveta: 'G1',
+      registroSanitario: esPerf ? '' : 'EE-' + Math.floor(10000 + Math.random() * 90000),
+      temperatura: 'Ambiente',
+      concentracionFragancia: 'Eau de Parfum (EDP)',
+      volumenMl: primerProd?.volumenMl || 100,
+      batchCode: 'BC-' + Math.floor(10000 + Math.random() * 90000),
+      destinoUnidad: 'VENTA',
+      genero: primerProd?.generoObjetivo === 'HOMBRE' ? 'Hombre' : primerProd?.generoObjetivo === 'MUJER' ? 'Mujer' : 'Unisex',
+      familiaOlfativa: primerProd?.familiaOlfativa || 'Amaderada'
+    };
+
+    if (esPerf) {
+      this.onProductoChange();
+    }
+
+    this.showLoteModal = true;
+  }
+
+  abrirModalEditarLote(item: LoteItem) {
+    this.cargarProductosCatalogo();
+    this.modoModalLote = 'EDITAR';
+    this.loteEnEdicionId = item.id;
+    this.errorModalLote = '';
+
+    const esPerf = item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira';
+
+    this.loteForm = {
+      productoId: item.productoId,
+      lote: item.lote,
+      vencimiento: esPerf ? '' : item.vencimiento,
+      stock: item.stock,
+      pasillo: item.pasillo || 'P1',
+      estante: item.estante || 'E1',
+      nivel: item.nivel || 'N1',
+      gaveta: item.gaveta || 'G1',
+      registroSanitario: item.registroSanitario || '',
+      temperatura: item.temperatura || 'Ambiente',
+      concentracionFragancia: item.concentracionFragancia || 'Eau de Parfum (EDP)',
+      volumenMl: item.volumenMl || 100,
+      batchCode: item.batchCode || '',
+      destinoUnidad: item.destinoUnidad || 'VENTA',
+      genero: item.genero || 'Unisex',
+      familiaOlfativa: item.familiaOlfativa || 'Amaderada'
+    };
+
+    this.showLoteModal = true;
+  }
+
+  guardarLote() {
+    if (!this.loteForm.productoId) {
+      this.errorModalLote = 'Selecciona un producto del catálogo.';
+      return;
+    }
+    if (!this.loteForm.lote.trim()) {
+      this.errorModalLote = this.esProductoPerfume ? 'Ingresa el código o identificador del lote.' : 'Ingresa el número o código de lote.';
+      return;
+    }
+    if (!this.esProductoPerfume && !this.loteForm.vencimiento) {
+      this.errorModalLote = 'Ingresa la fecha de vencimiento.';
+      return;
+    }
+    if (this.loteForm.stock === null || this.loteForm.stock === undefined || this.loteForm.stock < 0) {
+      this.errorModalLote = 'El stock físico debe ser un número válido igual o mayor a cero.';
+      return;
+    }
+
+    const prod = this.productoSeleccionado;
+    const esPerf = this.esProductoPerfume;
+    const nombreProd = prod
+      ? prod.nombreComercial + (prod.concentracion ? ` ${prod.concentracion}` : '')
+      : 'Producto';
+    const principioAct = prod?.principioActivo || (esPerf ? (prod?.marca || 'Perfumería') : 'Genérico');
+    const lab = prod?.laboratorio || (esPerf ? (prod?.marca || 'Cosmética') : 'Laboratorio');
+
+    if (this.modoModalLote === 'NUEVO') {
+      const nuevoItem: LoteItem = {
+        id: 'lote-' + Date.now().toString().slice(-8),
+        productoId: this.loteForm.productoId,
+        tipoProducto: esPerf ? 'PERFUME' : 'MEDICAMENTO',
+        lote: this.loteForm.lote.trim(),
+        producto: nombreProd,
+        principioActivo: principioAct,
+        laboratorio: lab,
+        stock: Number(this.loteForm.stock),
+        vencimiento: esPerf ? 'No expira' : this.loteForm.vencimiento,
+        dias: esPerf ? 99999 : 0,
+        pasillo: esPerf ? '' : this.loteForm.pasillo.trim(),
+        estante: esPerf ? '' : this.loteForm.estante.trim(),
+        nivel: esPerf ? '' : this.loteForm.nivel.trim(),
+        gaveta: esPerf ? '' : this.loteForm.gaveta.trim(),
+        registroSanitario: esPerf ? '' : (this.loteForm.registroSanitario.trim() || 'REG-DIGEMID'),
+        temperatura: esPerf ? 'Ambiente' : this.loteForm.temperatura,
+        concentracionFragancia: esPerf ? this.loteForm.concentracionFragancia : undefined,
+        volumenMl: esPerf ? Number(this.loteForm.volumenMl) : undefined,
+        batchCode: esPerf ? this.loteForm.batchCode.trim() : undefined,
+        destinoUnidad: esPerf ? this.loteForm.destinoUnidad : undefined,
+        genero: esPerf ? this.loteForm.genero : undefined,
+        familiaOlfativa: esPerf ? this.loteForm.familiaOlfativa : undefined
+      };
+
+      this.inventoryService.agregarLote(nuevoItem).subscribe(() => {
+        this.showLoteModal = false;
+        this.cargarLotes();
+        this.mostrarToast('success', `Lote ${nuevoItem.lote} ingresado correctamente (${nuevoItem.stock} unid.).`);
+      });
+    } else {
+      // Modo EDITAR
+      const loteEditado: LoteItem = {
+        id: this.loteEnEdicionId!,
+        productoId: this.loteForm.productoId,
+        tipoProducto: esPerf ? 'PERFUME' : 'MEDICAMENTO',
+        lote: this.loteForm.lote.trim(),
+        producto: nombreProd,
+        principioActivo: principioAct,
+        laboratorio: lab,
+        stock: Number(this.loteForm.stock),
+        vencimiento: esPerf ? 'No expira' : this.loteForm.vencimiento,
+        dias: esPerf ? 99999 : 0,
+        pasillo: esPerf ? '' : this.loteForm.pasillo.trim(),
+        estante: esPerf ? '' : this.loteForm.estante.trim(),
+        nivel: esPerf ? '' : this.loteForm.nivel.trim(),
+        gaveta: esPerf ? '' : this.loteForm.gaveta.trim(),
+        registroSanitario: esPerf ? '' : (this.loteForm.registroSanitario.trim() || 'REG-DIGEMID'),
+        temperatura: esPerf ? 'Ambiente' : this.loteForm.temperatura,
+        concentracionFragancia: esPerf ? this.loteForm.concentracionFragancia : undefined,
+        volumenMl: esPerf ? Number(this.loteForm.volumenMl) : undefined,
+        batchCode: esPerf ? this.loteForm.batchCode.trim() : undefined,
+        destinoUnidad: esPerf ? this.loteForm.destinoUnidad : undefined,
+        genero: esPerf ? this.loteForm.genero : undefined,
+        familiaOlfativa: esPerf ? this.loteForm.familiaOlfativa : undefined
+      };
+
+      this.inventoryService.actualizarLote(loteEditado).subscribe(() => {
+        this.showLoteModal = false;
+        this.cargarLotes();
+        this.mostrarToast('success', `Lote ${loteEditado.lote} actualizado correctamente.`);
+      });
+    }
+  }
+
+  // ================= ACCIONES: ELIMINAR LOTE =================
+  abrirModalEliminar(item: LoteItem) {
+    this.loteAEliminar = item;
+    this.showEliminarModal = true;
+  }
+
+  confirmarEliminarLote() {
+    if (!this.loteAEliminar) return;
+    const codigo = this.loteAEliminar.lote;
+    this.inventoryService.eliminarLote(this.loteAEliminar.id).subscribe(() => {
+      this.showEliminarModal = false;
+      this.loteAEliminar = null;
+      this.cargarLotes();
+      this.mostrarToast('info', `Lote ${codigo} eliminado del inventario.`);
+    });
+  }
+
+  // ================= ACCIONES: ACTA DE BAJAS DIGEMID =================
   openBajaModal(item: LoteItem) {
     this.loteSeleccionadoParaBaja = item;
     this.cantidadBaja = item.stock > 0 ? (item.dias < 0 ? item.stock : 1) : 0;
@@ -142,10 +466,8 @@ export class Inventory implements OnInit {
       return;
     }
 
-    // 1. Descontar de stock
     this.loteSeleccionadoParaBaja.stock -= this.cantidadBaja;
 
-    // 2. Crear Acta Oficial de Baja
     const nuevaActa: ActaBaja = {
       id: 'ACTA-BAJA-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
       fecha: new Date(),
@@ -154,13 +476,19 @@ export class Inventory implements OnInit {
       motivo: this.motivoBaja,
       observaciones: this.observacionesBaja,
       loteId: this.loteSeleccionadoParaBaja.id,
+      productoId: this.loteSeleccionadoParaBaja.productoId,
       producto: this.loteSeleccionadoParaBaja.producto,
       lote: this.loteSeleccionadoParaBaja.lote,
       cantidadBaja: this.cantidadBaja,
       costoTotalPerdida: this.cantidadBaja * 0.50
     };
 
-    this.actasRegistradas.unshift(nuevaActa);
+    this.inventoryService.registrarBajaLote(nuevaActa).subscribe(() => {
+      this.cargarActas();
+      this.cargarLotes();
+      this.mostrarToast('success', `Acta ${nuevaActa.id} registrada exitosamente.`);
+    });
+
     this.showBajaModal = false;
     this.actaParaImprimir = nuevaActa;
     this.showActaImprimirModal = true;

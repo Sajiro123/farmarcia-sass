@@ -1,16 +1,48 @@
 <div class="space-y-6 animate-fade-in relative">
 
-  <!-- Toast Floating Notification -->
+  <!-- Toast Floating Notification (Modern Soft Enterprise Design) -->
   @if (mensajeToast) {
     <div 
+      class="fixed top-20 right-6 z-50 max-w-sm sm:max-w-md w-full p-4 rounded-3xl shadow-xl shadow-slate-900/5 border backdrop-blur-md transition-all duration-300 animate-slide-down flex items-start gap-3.5 bg-white/95 dark:bg-slate-900/95"
       [ngClass]="{
-        'bg-emerald-600 text-white': mensajeToast.tipo === 'success',
-        'bg-rose-600 text-white': mensajeToast.tipo === 'error',
-        'bg-blue-600 text-white': mensajeToast.tipo === 'info'
-      }"
-      class="fixed top-20 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-slide-down">
-      <i class="pi" [ngClass]="mensajeToast.tipo === 'success' ? 'pi-check-circle' : mensajeToast.tipo === 'error' ? 'pi-exclamation-circle' : 'pi-info-circle'"></i>
-      <span>{{ mensajeToast.texto }}</span>
+        'border-emerald-200/90 dark:border-emerald-800/80 ring-1 ring-emerald-500/15': mensajeToast.tipo === 'success',
+        'border-rose-200/90 dark:border-rose-800/80 ring-1 ring-rose-500/15': mensajeToast.tipo === 'error',
+        'border-sky-200/90 dark:border-sky-800/80 ring-1 ring-sky-500/15': mensajeToast.tipo === 'info'
+      }">
+      
+      <!-- Soft Icon Badge -->
+      <div 
+        class="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 text-sm font-bold shadow-2xs border"
+        [ngClass]="{
+          'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400': mensajeToast.tipo === 'success',
+          'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400': mensajeToast.tipo === 'error',
+          'bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400': mensajeToast.tipo === 'info'
+        }">
+        <i class="pi text-sm" [ngClass]="mensajeToast.tipo === 'success' ? 'pi-check' : mensajeToast.tipo === 'error' ? 'pi-exclamation-triangle' : 'pi-info-circle'"></i>
+      </div>
+
+      <!-- Message Content -->
+      <div class="flex-1 pr-1 pt-0.5">
+        <p class="text-[10px] font-black uppercase tracking-wider mb-0.5"
+           [ngClass]="{
+             'text-emerald-700 dark:text-emerald-400': mensajeToast.tipo === 'success',
+             'text-rose-700 dark:text-rose-400': mensajeToast.tipo === 'error',
+             'text-sky-700 dark:text-sky-400': mensajeToast.tipo === 'info'
+           }">
+          {{ mensajeToast.tipo === 'success' ? 'Operación Exitosa' : mensajeToast.tipo === 'error' ? 'Atención' : 'Notificación' }}
+        </p>
+        <p class="text-xs font-medium text-slate-700 dark:text-slate-200 leading-snug">
+          {{ mensajeToast.texto }}
+        </p>
+      </div>
+
+      <!-- Dismiss Button -->
+      <button 
+        type="button" 
+        (click)="mensajeToast = null" 
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 w-6 h-6 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0 mt-0.5">
+        <i class="pi pi-times text-xs"></i>
+      </button>
     </div>
   }
 
@@ -19,87 +51,133 @@
     <div>
       <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
         <i class="pi pi-users text-emerald-600 dark:text-emerald-400 text-2xl"></i>
-        Gestión de Personal & Usuarios (Master DB)
+        Gestión de Personal
       </h1>
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Administración centralizada de cuentas de acceso, datos personales (DNI, CQFP), seguridad PIN y roles RBAC
+        Registro directo de personal en nómina y control de accesos centralizados en Master SaaS
       </p>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2.5">
       <button 
         (click)="cargarDatos()" 
         title="Recargar Lista"
-        class="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-outline-variant dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 flex items-center justify-center cursor-pointer transition-colors">
+        class="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shadow-2xs">
         <i class="pi pi-refresh" [ngClass]="{'pi-spin': cargando}"></i>
       </button>
 
       <button 
-        (click)="abrirModalNuevo()"
-        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer">
+        (click)="abrirModalNuevo()" 
+        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer">
         <i class="pi pi-user-plus text-xs"></i>
-        <span>Nuevo Usuario</span>
+        <span>Registrar Personal</span>
       </button>
     </div>
   </div>
 
+  <!-- Master SaaS Restriction & User Quota Banner (Soft Tone) -->
+  <div class="p-4 bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+    <div class="flex items-start sm:items-center gap-3.5">
+      <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+        <i class="pi pi-id-card text-lg"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 dark:text-white text-xs tracking-tight flex items-center gap-2">
+          <span>Registro de Personal Descentralizado & Cuentas Master SaaS</span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-500/20">Nómina Farmacia</span>
+        </h3>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+          Su farmacia registra directamente a sus colaboradores para nómina y turnos. La habilitación de cuentas de login y roles de sistema (Administrador, Químico, Cajero) es provista por el Administrador Master según su plan contratado.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+      <div class="px-3.5 py-1.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>{{ totalPersonal }} en nómina &nbsp;|&nbsp; {{ totalConCuenta }} con login</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Summary KPI Cards -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant dark:border-slate-700 shadow-2xs">
-      <span class="text-[11px] font-bold uppercase text-slate-400">Total Usuarios</span>
-      <p class="text-2xl font-black text-slate-900 dark:text-white font-mono mt-1">{{ usuarios.length }}</p>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-slate-400">Total Nómina</span>
+      <p class="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{{ usuarios.length }}</p>
     </div>
 
-    <div class="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant dark:border-slate-700 shadow-2xs">
-      <span class="text-[11px] font-bold uppercase text-emerald-600">👑 Administradores</span>
-      <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{{ totalAdmins }}</p>
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">👤 Solo Personal</span>
+      <p class="text-xl font-black text-slate-600 dark:text-slate-300 font-mono mt-0.5">{{ totalPersonal }}</p>
     </div>
 
-    <div class="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant dark:border-slate-700 shadow-2xs">
-      <span class="text-[11px] font-bold uppercase text-purple-600">💊 Químicos Farmacéuticos</span>
-      <p class="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono mt-1">{{ totalQuimicos }}</p>
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">🔑 Con Login</span>
+      <p class="text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">{{ totalConCuenta }}</p>
     </div>
 
-    <div class="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant dark:border-slate-700 shadow-2xs">
-      <span class="text-[11px] font-bold uppercase text-blue-600">🛒 Cajeros / Dispensadores</span>
-      <p class="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono mt-1">{{ totalCajeros }}</p>
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-emerald-600">👑 Admins</span>
+      <p class="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{{ totalAdmins }}</p>
+    </div>
+
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-purple-600">💊 Químicos</span>
+      <p class="text-xl font-black text-purple-600 dark:text-purple-400 font-mono mt-0.5">{{ totalQuimicos }}</p>
+    </div>
+
+    <div class="p-3.5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase text-blue-600">🛒 Cajeros</span>
+      <p class="text-xl font-black text-blue-600 dark:text-blue-400 font-mono mt-0.5">{{ totalCajeros }}</p>
     </div>
   </div>
 
   <!-- Filter & Search Bar -->
-  <div class="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-outline-variant dark:border-slate-700 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-700 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
     <!-- Search -->
     <div class="relative w-full sm:w-80">
       <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
       <input 
         [(ngModel)]="busqueda" 
         placeholder="Buscar por nombre, DNI, email o CQFP..." 
-        class="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant dark:border-slate-600 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl pl-8 pr-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
     </div>
 
     <!-- Role Filter Tabs -->
     <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
       <button 
         (click)="filtroRol = 'TODOS'"
-        [ngClass]="filtroRol === 'TODOS' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-surface-container-low dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        [ngClass]="filtroRol === 'TODOS' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
         class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
         Todos ({{ usuarios.length }})
       </button>
       <button 
+        (click)="filtroRol = 'PERSONAL'"
+        [ngClass]="filtroRol === 'PERSONAL' ? 'bg-slate-700 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
+        👤 Solo Personal ({{ totalPersonal }})
+      </button>
+      <button 
+        (click)="filtroRol = 'CON_CUENTA'"
+        [ngClass]="filtroRol === 'CON_CUENTA' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
+        🔑 Con Login ({{ totalConCuenta }})
+      </button>
+      <button 
         (click)="filtroRol = 'ADMIN_NEGOCIO'"
-        [ngClass]="filtroRol === 'ADMIN_NEGOCIO' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-surface-container-low dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        [ngClass]="filtroRol === 'ADMIN_NEGOCIO' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
         class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
         👑 Admins ({{ totalAdmins }})
       </button>
       <button 
         (click)="filtroRol = 'QUIMICO_FARMACEUTICO'"
-        [ngClass]="filtroRol === 'QUIMICO_FARMACEUTICO' ? 'bg-purple-600 text-white font-bold shadow-xs' : 'bg-surface-container-low dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        [ngClass]="filtroRol === 'QUIMICO_FARMACEUTICO' ? 'bg-purple-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
         class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
         💊 Químicos ({{ totalQuimicos }})
       </button>
       <button 
         (click)="filtroRol = 'CAJERO_VENDEDOR'"
-        [ngClass]="filtroRol === 'CAJERO_VENDEDOR' ? 'bg-blue-600 text-white font-bold shadow-xs' : 'bg-surface-container-low dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+        [ngClass]="filtroRol === 'CAJERO_VENDEDOR' ? 'bg-blue-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
         class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap">
         🛒 Cajeros ({{ totalCajeros }})
       </button>
@@ -107,15 +185,16 @@
   </div>
 
   <!-- Users Table -->
-  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-4">
     <div class="overflow-x-auto">
       <table class="w-full text-xs text-left">
-        <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+        <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-slate-200/90 dark:border-slate-700">
           <tr>
             <th class="p-3">Personal & Nombres</th>
             <th class="p-3">Documento / DNI</th>
-            <th class="p-3">Email de Acceso</th>
-            <th class="p-3">Perfil / Rol</th>
+            <th class="p-3">Cuenta Login</th>
+            <th class="p-3">Cargo / Perfil</th>
+            <th class="p-3">Sede Asignada</th>
             <th class="p-3">Colegiatura / PIN</th>
             <th class="p-3 text-center">Estado</th>
             <th class="p-3 text-center">Acciones</th>
@@ -124,28 +203,31 @@
         <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
           @if (usuariosFiltrados.length === 0 && !cargando) {
             <tr>
-              <td colspan="7" class="p-8 text-center text-slate-400">
+              <td colspan="8" class="p-8 text-center text-slate-400">
                 <i class="pi pi-user-times text-2xl text-slate-300 block mb-2"></i>
-                <span>No se encontraron usuarios registrados con el filtro aplicado.</span>
+                <span>No se encontraron colaboradores con el filtro aplicado.</span>
               </td>
             </tr>
           } @else {
             @for (u of usuariosFiltrados; track u.id) {
-              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+              <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition-colors">
                 <!-- Personal & Nombres -->
                 <td class="p-3">
                   <div class="flex items-center gap-2.5">
                     <div 
                       [ngClass]="{
-                        'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300': u.perfilCodigo === 'ADMIN_NEGOCIO',
-                        'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300': u.perfilCodigo === 'QUIMICO_FARMACEUTICO',
-                        'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300': u.perfilCodigo === 'CAJERO_VENDEDOR'
+                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60': u.tieneUsuario && u.perfilCodigo === 'ADMIN_NEGOCIO',
+                        'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60': u.tieneUsuario && u.perfilCodigo === 'QUIMICO_FARMACEUTICO',
+                        'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60': u.tieneUsuario && u.perfilCodigo === 'CAJERO_VENDEDOR',
+                        'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700': !u.tieneUsuario
                       }"
-                      class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                      <i class="pi" [ngClass]="u.perfilCodigo === 'ADMIN_NEGOCIO' ? 'pi-crown' : u.perfilCodigo === 'QUIMICO_FARMACEUTICO' ? 'pi-shield' : 'pi-user'"></i>
+                      class="w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                      <i class="pi" [ngClass]="!u.tieneUsuario ? 'pi-user' : (u.perfilCodigo === 'ADMIN_NEGOCIO' ? 'pi-crown' : (u.perfilCodigo === 'QUIMICO_FARMACEUTICO' ? 'pi-shield' : 'pi-shopping-cart'))"></i>
                     </div>
                     <div>
-                      <p class="font-bold text-slate-900 dark:text-white leading-tight">{{ u.nombreCompleto || u.email }}</p>
+                      <p class="font-bold text-slate-900 dark:text-white leading-tight">
+                        {{ u.nombreCompleto || (u.nombres ? (u.nombres + ' ' + (u.apellidos || '')) : u.email) }}
+                      </p>
                       <p class="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                         <i class="pi pi-phone text-[9px]"></i> {{ u.telefono || 'Sin teléfono' }}
                         @if (u.direccion) {
@@ -163,26 +245,52 @@
                   <span>{{ u.numeroDocumento || 'No registrado' }}</span>
                 </td>
 
-                <!-- Email de Acceso -->
-                <td class="p-3 font-medium text-slate-600 dark:text-slate-300">
-                  {{ u.email }}
+                <!-- Cuenta Login -->
+                <td class="p-3">
+                  @if (u.tieneUsuario) {
+                    <div class="flex flex-col gap-0.5">
+                      <span class="font-medium text-slate-700 dark:text-slate-200 font-mono text-xs flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        {{ u.email }}
+                      </span>
+                      <span class="text-[9px] text-emerald-600 font-bold uppercase tracking-wider">Cuenta Habilitada</span>
+                    </div>
+                  } @else {
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 inline-flex items-center gap-1.5">
+                      <i class="pi pi-user text-[9px]"></i> Solo Personal (Nómina)
+                    </span>
+                  }
                 </td>
 
                 <!-- Perfil / Rol Badge -->
                 <td class="p-3">
-                  @if (u.perfilCodigo === 'ADMIN_NEGOCIO') {
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      <i class="pi pi-crown text-[9px]"></i> ADMINISTRADOR
-                    </span>
-                  } @else if (u.perfilCodigo === 'QUIMICO_FARMACEUTICO') {
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                      <i class="pi pi-shield text-[9px]"></i> QUÍMICO FARMACÉUTICO
-                    </span>
+                  @if (u.tieneUsuario) {
+                    @if (u.perfilCodigo === 'ADMIN_NEGOCIO') {
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                        <i class="pi pi-crown text-[9px]"></i> ADMINISTRADOR
+                      </span>
+                    } @else if (u.perfilCodigo === 'QUIMICO_FARMACEUTICO') {
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
+                        <i class="pi pi-shield text-[9px]"></i> QUÍMICO FARMACÉUTICO
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
+                        <i class="pi pi-shopping-cart text-[9px]"></i> CAJERO / DISPENSADOR
+                      </span>
+                    }
                   } @else {
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                      <i class="pi pi-shopping-cart text-[9px]"></i> CAJERO / DISPENSADOR
+                    <span class="text-slate-400 dark:text-slate-500 text-[11px] italic flex items-center gap-1">
+                      <i class="pi pi-minus text-[9px]"></i> Nómina Interna
                     </span>
                   }
+                </td>
+
+                <!-- Sede Asignada -->
+                <td class="p-3">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <i class="pi pi-building text-[10px] text-emerald-600 dark:text-emerald-400"></i>
+                    <span>{{ obtenerNombreSede(u) }}</span>
+                  </span>
                 </td>
 
                 <!-- Colegiatura & PIN -->
@@ -190,27 +298,37 @@
                   @if (u.nroColegiatura) {
                     <span class="font-bold text-purple-700 dark:text-purple-300 block mb-0.5">{{ u.nroColegiatura }}</span>
                   }
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] text-slate-500">PIN:</span>
-                    <span class="font-mono font-bold">{{ mostrarPins[u.id || ''] ? (u.pinSeguridad || '1234') : '••••' }}</span>
-                    <button 
-                      (click)="toggleMostrarPin(u.id)" 
-                      class="text-slate-400 hover:text-slate-700 text-[10px] cursor-pointer"
-                      title="Ver/Ocultar PIN">
-                      <i class="pi" [ngClass]="mostrarPins[u.id || ''] ? 'pi-eye-slash' : 'pi-eye'"></i>
-                    </button>
-                  </div>
+                  @if (u.tieneUsuario) {
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[10px] text-slate-500">PIN:</span>
+                      <span class="font-mono font-bold">{{ mostrarPins[u.id || ''] ? (u.pinSeguridad || '1234') : '••••' }}</span>
+                      <button 
+                        (click)="toggleMostrarPin(u.id)" 
+                        class="text-slate-400 hover:text-slate-700 text-[10px] cursor-pointer"
+                        title="Ver/Ocultar PIN">
+                        <i class="pi" [ngClass]="mostrarPins[u.id || ''] ? 'pi-eye-slash' : 'pi-eye'"></i>
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="text-slate-400 text-[10px] italic">Sin PIN</span>
+                  }
                 </td>
 
                 <!-- Estado Activo/Inactivo -->
                 <td class="p-3 text-center">
-                  <button 
-                    (click)="toggleEstadoUsuario(u)"
-                    title="Haga clic para activar o desactivar"
-                    [ngClass]="u.estaActivo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-200' : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 hover:bg-rose-200'"
-                    class="px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all">
-                    {{ u.estaActivo ? 'ACTIVO' : 'INACTIVO' }}
-                  </button>
+                  @if (u.tieneUsuario) {
+                    <button 
+                      (click)="toggleEstadoUsuario(u)"
+                      title="Haga clic para activar o desactivar"
+                      [ngClass]="u.estaActivo ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 hover:bg-rose-100'"
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all">
+                      {{ u.estaActivo ? 'ACTIVO' : 'INACTIVO' }}
+                    </button>
+                  } @else {
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      REGISTRADO
+                    </span>
+                  }
                 </td>
 
                 <!-- Acciones (Editar, Permisos, Eliminar) -->
@@ -218,20 +336,22 @@
                   <div class="flex items-center justify-center gap-1">
                     <button 
                       (click)="abrirModalEditar(u)" 
-                      title="Editar Usuario y Persona"
-                      class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                      title="Editar Colaborador"
+                      class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50/80 dark:hover:bg-slate-700 cursor-pointer transition-colors">
                       <i class="pi pi-user-edit text-xs"></i>
                     </button>
-                    <button 
-                      (click)="verPermisos(u)" 
-                      title="Ver Matriz de Permisos RBAC"
-                      class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
-                      <i class="pi pi-key text-xs"></i>
-                    </button>
+                    @if (u.tieneUsuario) {
+                      <button 
+                        (click)="verPermisos(u)" 
+                        title="Ver Matriz de Permisos RBAC"
+                        class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50/80 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                        <i class="pi pi-key text-xs"></i>
+                      </button>
+                    }
                     <button 
                       (click)="confirmarEliminar(u)" 
-                      title="Eliminar Usuario"
-                      class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                      title="Eliminar de Nómina / Base de Datos"
+                      class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50/80 dark:hover:bg-slate-700 cursor-pointer transition-colors">
                       <i class="pi pi-trash text-xs"></i>
                     </button>
                   </div>
@@ -246,47 +366,68 @@
 
 </div>
 
-<!-- MODAL CREAR / EDITAR USUARIO (PERSONA + USUARIO_NEGOCIO) -->
+<!-- MODAL CREAR PERSONAL / EDITAR COLABORADOR -->
 @if (showModal) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-xl w-full border border-outline-variant dark:border-slate-700 shadow-2xl space-y-5 animate-slide-up max-h-[92vh] overflow-y-auto">
+  <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-xl w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-5 animate-slide-up max-h-[92vh] overflow-y-auto">
       
       <!-- Modal Header -->
-      <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
         <div>
           <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i class="pi" [ngClass]="modoEdicion ? 'pi-user-edit text-blue-600' : 'pi-user-plus text-emerald-600'"></i>
-            {{ modoEdicion ? 'Editar Usuario & Datos Personales' : 'Nuevo Usuario en Master DB' }}
+            <i class="pi text-emerald-600" [ngClass]="modoEdicion ? 'pi-user-edit' : 'pi-user-plus'"></i>
+            {{ modoEdicion ? 'Editar Datos del Personal' : 'Registrar Nuevo Personal / Colaborador' }}
           </h3>
-          <p class="text-[11px] text-slate-400">Vinculación de datos de Persona y Credenciales de Acceso</p>
+          <p class="text-[11px] text-slate-400">
+            {{ modoEdicion ? 'Actualización de datos en nómina de farmacia' : 'Registro directo en la nómina de la farmacia' }}
+          </p>
         </div>
-        <button (click)="showModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer"><i class="pi pi-times"></i></button>
+        <button (click)="showModal = false" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+          <i class="pi pi-times text-xs"></i>
+        </button>
       </div>
 
-      <!-- Navigation Tabs (Persona vs Cuenta) -->
-      <div class="flex p-1 bg-surface-container dark:bg-slate-900 rounded-2xl border border-outline-variant dark:border-slate-700 text-xs font-bold">
-        <button 
-          (click)="tabModal = 'persona'"
-          [ngClass]="tabModal === 'persona' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'"
-          class="flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
-          <i class="pi pi-id-card text-xs"></i> 1. Datos Personales (Persona)
-        </button>
-        <button 
-          (click)="tabModal = 'cuenta'"
-          [ngClass]="tabModal === 'cuenta' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'"
-          class="flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
-          <i class="pi pi-lock text-xs"></i> 2. Cuenta & Perfil (Seguridad)
-        </button>
-      </div>
+      <!-- Navigation Tabs (Only if editing an existing user with active account) -->
+      @if (modoEdicion && usuarioEnEdicion.tieneUsuario) {
+        <div class="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-700 text-xs font-bold">
+          <button 
+            (click)="tabModal = 'persona'"
+            [ngClass]="tabModal === 'persona' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'"
+            class="flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
+            <i class="pi pi-id-card text-xs"></i> 1. Datos Personales
+          </button>
+          <button 
+            (click)="tabModal = 'cuenta'"
+            [ngClass]="tabModal === 'cuenta' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'"
+            class="flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
+            <i class="pi pi-lock text-xs"></i> 2. Cuenta & Perfil (Master)
+          </button>
+        </div>
+      }
+
+      <!-- Soft Informative Banner when creating new Personal -->
+      @if (!modoEdicion) {
+        <div class="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/70 dark:border-emerald-800/50 rounded-2xl flex items-start gap-3 text-xs text-emerald-900 dark:text-emerald-100">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20">
+            <i class="pi pi-info-circle text-sm"></i>
+          </div>
+          <div class="space-y-0.5">
+            <p class="font-bold text-emerald-900 dark:text-emerald-200 text-xs">Nómina Interna de la Farmacia</p>
+            <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              El colaborador quedará registrado para nómina, turnos y control interno. La habilitación de credenciales de acceso al sistema (login) y rol RBAC es gestionada por el Administrador Master según el cupo contratado.
+            </p>
+          </div>
+        </div>
+      }
 
       <!-- TAB 1: DATOS PERSONALES -->
-      @if (tabModal === 'persona') {
+      @if (!modoEdicion || tabModal === 'persona') {
         <div class="space-y-3.5 text-xs">
-          <!-- Documento & RENIEC -->
+          <!-- Documento (Ingreso Manual) -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Tipo Doc:</label>
-              <select [(ngModel)]="usuarioEnEdicion.tipoDocumento" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-bold dark:border-slate-600">
+              <select [(ngModel)]="usuarioEnEdicion.tipoDocumento" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-emerald-500/50">
                 <option value="DNI">DNI (Perú)</option>
                 <option value="CE">Carnet Extranjería</option>
                 <option value="PASAPORTE">Pasaporte</option>
@@ -294,21 +435,11 @@
             </div>
 
             <div class="sm:col-span-2">
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">N° de Documento:</label>
-              <div class="flex gap-1.5">
-                <input 
-                  [(ngModel)]="usuarioEnEdicion.numeroDocumento" 
-                  (keyup.enter)="consultarReniec()"
-                  placeholder="8 dígitos para DNI..." 
-                  class="flex-1 bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-mono font-bold dark:border-slate-600" />
-                <button 
-                  (click)="consultarReniec()" 
-                  [disabled]="consultandoDni"
-                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-1 cursor-pointer">
-                  <i class="pi" [ngClass]="consultandoDni ? 'pi-spin pi-spinner' : 'pi-search'"></i>
-                  <span>RENIEC</span>
-                </button>
-              </div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">N° de Documento *:</label>
+              <input 
+                [(ngModel)]="usuarioEnEdicion.numeroDocumento" 
+                placeholder="Número de documento (ej: 8 dígitos para DNI)..." 
+                class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold focus:ring-2 focus:ring-emerald-500/50" />
             </div>
           </div>
 
@@ -316,11 +447,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Nombres *:</label>
-              <input [(ngModel)]="usuarioEnEdicion.nombres" placeholder="Nombres del empleado" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-medium dark:border-slate-600" />
+              <input [(ngModel)]="usuarioEnEdicion.nombres" placeholder="Nombres del empleado" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-emerald-500/50" />
             </div>
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Apellidos *:</label>
-              <input [(ngModel)]="usuarioEnEdicion.apellidos" placeholder="Apellidos completos" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-medium dark:border-slate-600" />
+              <input [(ngModel)]="usuarioEnEdicion.apellidos" placeholder="Apellidos completos" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-emerald-500/50" />
             </div>
           </div>
 
@@ -328,60 +459,117 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Teléfono / WhatsApp:</label>
-              <input [(ngModel)]="usuarioEnEdicion.telefono" placeholder="Ej: 987654321" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 dark:border-slate-600" />
+              <input [(ngModel)]="usuarioEnEdicion.telefono" placeholder="Ej: 987654321" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-500/50" />
             </div>
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">N° Colegiatura (CQFP / CMP):</label>
-              <input [(ngModel)]="usuarioEnEdicion.nroColegiatura" placeholder="Ej: CQFP 14820 (para Químicos)" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-mono font-bold text-purple-700 dark:text-purple-300 dark:border-slate-600" />
+              <input [(ngModel)]="usuarioEnEdicion.nroColegiatura" placeholder="Ej: CQFP 14820 (opcional)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-purple-700 dark:text-purple-300 focus:ring-2 focus:ring-emerald-500/50" />
             </div>
           </div>
 
           <!-- Dirección -->
           <div>
             <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Dirección Domiciliaria:</label>
-            <input [(ngModel)]="usuarioEnEdicion.direccion" placeholder="Av. / Calle / Distrito" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 dark:border-slate-600" />
+            <input [(ngModel)]="usuarioEnEdicion.direccion" placeholder="Av. / Calle / Distrito" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-500/50" />
           </div>
+
+          <!-- Sede / Sucursal Asignada -->
+          <div class="p-3 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+            <label class="font-bold text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
+              <i class="pi pi-building text-emerald-600 dark:text-emerald-400"></i>
+              <span>Sede / Sucursal Asignada *:</span>
+            </label>
+            <select 
+              [(ngModel)]="usuarioEnEdicion.sedeId" 
+              (change)="onSedeChange()" 
+              class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500/50">
+              @for (s of sedes; track s.id) {
+                <option [value]="s.id">{{ s.nombre }} ({{ s.direccion }})</option>
+              }
+            </select>
+            <p class="text-[10px] text-slate-400">El colaborador pertenecerá y operará formalmente en esta sucursal.</p>
+          </div>
+
+          <!-- Notice when editing person without system account -->
+          @if (modoEdicion && !usuarioEnEdicion.tieneUsuario) {
+            <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center gap-3 text-slate-600 dark:text-slate-400 text-[11px]">
+              <div class="w-7 h-7 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
+                <i class="pi pi-user text-xs"></i>
+              </div>
+              <span>Este colaborador está en nómina sin credenciales de acceso. Para habilitarle una cuenta de sistema, solicítela al Administrador Master.</span>
+            </div>
+          }
         </div>
       }
 
-      <!-- TAB 2: CUENTA & SEGURIDAD -->
-      @if (tabModal === 'cuenta') {
+      <!-- TAB 2: CUENTA & SEGURIDAD (Only visible when editing a user with active login) -->
+      @if (modoEdicion && usuarioEnEdicion.tieneUsuario && tabModal === 'cuenta') {
         <div class="space-y-3.5 text-xs">
+          <div class="p-3 bg-indigo-50/70 dark:bg-indigo-950/25 border border-indigo-200/70 dark:border-indigo-800/50 rounded-2xl flex items-center gap-2.5 text-indigo-900 dark:text-indigo-200 text-xs">
+            <div class="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+              <i class="pi pi-shield text-xs"></i>
+            </div>
+            <span class="font-bold">Cuenta de acceso vinculada y supervisada por Master SaaS</span>
+          </div>
+
           <!-- Email de Acceso -->
           <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Correo Electrónico de Inicio de Sesión *:</label>
-            <input [(ngModel)]="usuarioEnEdicion.email" type="email" placeholder="usuario@medicare.com" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-medium dark:border-slate-600" />
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Correo Electrónico de Inicio de Sesión:</label>
+            <input [(ngModel)]="usuarioEnEdicion.email" type="email" placeholder="usuario@medicare.com" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-emerald-500/50" />
           </div>
 
           <!-- Contraseña -->
           <div>
             <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Contraseña:
-              @if (modoEdicion) { <span class="text-slate-400 font-normal">(Dejar en blanco para no cambiarla)</span> }
+              Nueva Contraseña:
+              <span class="text-slate-400 font-normal">(Dejar en blanco para no cambiarla)</span>
             </label>
-            <input [(ngModel)]="passwordInput" type="password" placeholder="••••••••" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-mono dark:border-slate-600" />
+            <input [(ngModel)]="passwordInput" type="password" placeholder="••••••••" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono focus:ring-2 focus:ring-emerald-500/50" />
           </div>
 
           <!-- Perfil / Rol -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Perfil / Rol Asignado:</label>
-              <select [(ngModel)]="usuarioEnEdicion.perfilCodigo" class="w-full bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-bold dark:border-slate-600">
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-bold text-slate-700 dark:text-slate-300 block">Perfil / Rol Asignado:</label>
+                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  <i class="pi pi-lock text-[9px]"></i> Regulado por Master
+                </span>
+              </div>
+              <select [(ngModel)]="usuarioEnEdicion.perfilCodigo" disabled class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-600 dark:text-slate-300 cursor-not-allowed opacity-80">
                 <option value="ADMIN_NEGOCIO">👑 Administrador de Farmacia</option>
                 <option value="QUIMICO_FARMACEUTICO">💊 Químico Farmacéutico (Q.F.)</option>
                 <option value="CAJERO_VENDEDOR">🛒 Cajero / Dispensador</option>
               </select>
+              <p class="text-[10px] text-slate-400 mt-1">El perfil determina accesos DIGEMID y POS. Solo el Superadmin Master puede reasignarlo.</p>
             </div>
 
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">PIN de Seguridad (4 dígitos):</label>
-              <input [(ngModel)]="usuarioEnEdicion.pinSeguridad" type="password" maxlength="6" placeholder="Ej: 1234" class="w-full text-center bg-white dark:bg-slate-900 border rounded-xl px-3 py-2 font-mono font-bold dark:border-slate-600" />
+              <input [(ngModel)]="usuarioEnEdicion.pinSeguridad" type="password" maxlength="6" placeholder="Ej: 1234" class="w-full text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold focus:ring-2 focus:ring-emerald-500/50" />
               <p class="text-[10px] text-slate-400 mt-0.5">PIN para autorizar anulaciones de tickets en el POS.</p>
             </div>
           </div>
 
+          <!-- Sede Asignada en Tab Cuenta -->
+          <div class="p-3 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+            <label class="font-bold text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
+              <i class="pi pi-building text-indigo-600 dark:text-indigo-400"></i>
+              <span>Sede de Operación / Acceso *:</span>
+            </label>
+            <select 
+              [(ngModel)]="usuarioEnEdicion.sedeId" 
+              (change)="onSedeChange()" 
+              class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/50">
+              @for (s of sedes; track s.id) {
+                <option [value]="s.id">{{ s.nombre }} ({{ s.direccion }})</option>
+              }
+            </select>
+            <p class="text-[10px] text-slate-400">Al iniciar sesión, los colaboradores quedan fijados automáticamente en su sede asignada.</p>
+          </div>
+
           <!-- Estado Activo -->
-          <div class="p-3 bg-surface-container dark:bg-slate-900 rounded-xl flex items-center justify-between">
+          <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
             <div>
               <p class="font-bold text-slate-800 dark:text-white">Estado de la Cuenta</p>
               <p class="text-[10px] text-slate-400">Si está inactivo, no podrá ingresar al sistema</p>
@@ -398,19 +586,19 @@
 
       <!-- Actions -->
       <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-        <button (click)="showModal = false" class="flex-1 py-2.5 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer">
+        <button (click)="showModal = false" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer transition-colors">
           Cancelar
         </button>
         <button 
           (click)="guardarUsuario()" 
           [disabled]="guardando"
-          class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs cursor-pointer shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5">
+          class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs cursor-pointer shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all">
           @if (guardando) {
             <i class="pi pi-spin pi-spinner"></i>
             <span>Guardando...</span>
           } @else {
             <i class="pi pi-check"></i>
-            <span>{{ modoEdicion ? 'Actualizar Usuario' : 'Guardar en Master DB' }}</span>
+            <span>{{ modoEdicion ? 'Guardar Cambios' : 'Registrar Personal' }}</span>
           }
         </button>
       </div>
@@ -419,127 +607,228 @@
   </div>
 }
 
-<!-- MODAL CONFIRMAR ELIMINACIÓN -->
-@if (showDeleteModal && usuarioAEliminar) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-sm w-full border border-outline-variant dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up text-center">
+<!-- MODAL MATRIZ DE PERMISOS RBAC (Dinámica, Interactiva y Personalizable) -->
+@if (showPermisosModal && usuarioSeleccionadoPermisos) {
+  <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-2xl w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up max-h-[92vh] flex flex-col">
       
-      <div class="w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 flex items-center justify-center mx-auto text-2xl">
-        <i class="pi pi-trash"></i>
+      <!-- Modal Header -->
+      <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
+        <div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <i class="pi pi-shield"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Matriz de Permisos & Acciones RBAC</span>
+              </h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Personalización granular de accesos para 
+                <strong class="text-slate-700 dark:text-slate-200">{{ usuarioSeleccionadoPermisos.nombreCompleto || usuarioSeleccionadoPermisos.email }}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          @if (usuarioSeleccionadoPermisos.tienePermisosPersonalizados) {
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
+              <i class="pi pi-wrench text-[9px]"></i> Personalizado
+            </span>
+          } @else {
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              <i class="pi pi-clone text-[9px]"></i> Heredado de Perfil
+            </span>
+          }
+          <button (click)="showPermisosModal = false" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </div>
       </div>
 
-      <div>
-        <h3 class="text-base font-bold text-slate-900 dark:text-white">¿Eliminar Usuario?</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Esta acción eliminará a <strong>{{ usuarioAEliminar.nombreCompleto || usuarioAEliminar.email }}</strong> ({{ usuarioAEliminar.email }}) de la base de datos Master.
-        </p>
+      <!-- Quick Action Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700 shrink-0 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-bold text-slate-600 dark:text-slate-400">Acciones rápidas:</span>
+          <button 
+            type="button" 
+            (click)="marcarTodos(true)"
+            class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-[11px] font-semibold cursor-pointer transition-colors shadow-2xs">
+            <i class="pi pi-check-circle text-emerald-600 mr-1 text-[10px]"></i> Marcar Todos
+          </button>
+          <button 
+            type="button" 
+            (click)="marcarTodos(false)"
+            class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:border-rose-300 text-[11px] font-semibold cursor-pointer transition-colors shadow-2xs">
+            <i class="pi pi-times-circle text-rose-600 mr-1 text-[10px]"></i> Desmarcar Todos
+          </button>
+        </div>
+
+        <button 
+          type="button" 
+          (click)="restablecerAPerfil()"
+          [disabled]="guardandoPermisos"
+          class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+          <i class="pi pi-refresh text-[10px]"></i> Restablecer a Perfil Base
+        </button>
       </div>
 
-      <div class="flex gap-2 pt-2">
-        <button (click)="showDeleteModal = false" class="flex-1 py-2.5 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer">
+      <!-- Modules Accordion / List (Scrollable Area) -->
+      <div class="space-y-3.5 overflow-y-auto pr-1 flex-1 text-xs">
+        @for (mod of accionesAgrupadas; track mod.modulo) {
+          <div class="p-3.5 bg-slate-50/70 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2.5">
+            
+            <!-- Module Title and Group Toggle Button -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs">
+                  <i class="pi" [ngClass]="mod.icono"></i>
+                </div>
+                <span class="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                  {{ mod.titulo }}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-slate-400">
+                  {{ mod.acciones.length }} acción(es)
+                </span>
+                <button 
+                  type="button" 
+                  (click)="toggleModulo(mod.acciones)"
+                  class="text-[10px] px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer"
+                  [ngClass]="todosHabilitadosEnModulo(mod.acciones) ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'">
+                  {{ todosHabilitadosEnModulo(mod.acciones) ? 'Desmarcar Módulo' : 'Marcar Módulo' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Actions Grid inside Module -->
+            <div class="grid grid-cols-1 gap-2 pt-1">
+              @for (acc of mod.acciones; track acc.codigo) {
+                <div 
+                  (click)="togglePermiso(acc.codigo)"
+                  [ngClass]="tienePermiso(acc.codigo) ? 'bg-white dark:bg-slate-800 border-emerald-300 dark:border-emerald-700/60 shadow-2xs' : 'bg-white/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60 opacity-85'"
+                  class="p-2.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer hover:border-emerald-400 transition-all select-none">
+                  
+                  <div class="space-y-0.5 flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-slate-800 dark:text-slate-100 text-xs">
+                        {{ acc.nombre }}
+                      </span>
+                      <span class="font-mono text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        {{ acc.codigo }}
+                      </span>
+                    </div>
+                    @if (acc.descripcion) {
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight truncate">
+                        {{ acc.descripcion }}
+                      </p>
+                    }
+                  </div>
+
+                  <!-- Custom Toggle Switch Indicator -->
+                  <div class="shrink-0 flex items-center gap-2">
+                    <span 
+                      class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full"
+                      [ngClass]="tienePermiso(acc.codigo) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'">
+                      {{ tienePermiso(acc.codigo) ? 'PERMITIDO' : 'DENEGADO' }}
+                    </span>
+                    <div 
+                      class="w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5"
+                      [ngClass]="tienePermiso(acc.codigo) ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+                      <div 
+                        class="w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform"
+                        [ngClass]="tienePermiso(acc.codigo) ? 'translate-x-5' : 'translate-x-0'">
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              }
+            </div>
+
+          </div>
+        }
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 shrink-0">
+        <div class="text-[11px] text-slate-500 dark:text-slate-400">
+          Total asignado: <strong class="text-emerald-600 font-mono">{{ permisosSeleccionados.size }}</strong> de <span class="font-mono">{{ acciones.length }}</span> acciones habilitadas.
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button 
+            type="button"
+            (click)="showPermisosModal = false" 
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer transition-colors">
+            Cancelar
+          </button>
+
+          <button 
+            type="button"
+            (click)="guardarPermisos()" 
+            [disabled]="guardandoPermisos"
+            class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-extrabold cursor-pointer shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all">
+            @if (guardandoPermisos) {
+              <i class="pi pi-spin pi-spinner text-xs"></i>
+              <span>Guardando...</span>
+            } @else {
+              <i class="pi pi-check text-xs"></i>
+              <span>Guardar Permisos RBAC</span>
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMAR ELIMINACIÓN DE COLABORADOR (Soft Tone) -->
+@if (showDeleteModal && usuarioAEliminar) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-700 max-w-md w-full p-6 space-y-4 animate-scale-up">
+      
+      <div class="flex items-start gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0 text-lg">
+          <i class="pi pi-trash"></i>
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-base font-black text-slate-900 dark:text-white">¿Eliminar Colaborador?</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Estás a punto de remover a <strong class="text-slate-800 dark:text-slate-200">{{ usuarioAEliminar.nombreCompleto || usuarioAEliminar.email || 'Colaborador' }}</strong> de la nómina y base de datos Master.
+          </p>
+        </div>
+      </div>
+
+      <div class="p-3 bg-rose-50/70 dark:bg-rose-950/20 rounded-2xl border border-rose-200/70 dark:border-rose-900/40 text-[11px] text-rose-800 dark:text-rose-300 flex items-center gap-2.5">
+        <i class="pi pi-info-circle text-rose-600 shrink-0"></i>
+        <span>Esta operación es permanente y se aplicará directamente en la base de datos.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-700">
+        <button 
+          type="button" 
+          (click)="showDeleteModal = false; usuarioAEliminar = null" 
+          [disabled]="eliminando"
+          class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer disabled:opacity-50">
           Cancelar
         </button>
         <button 
+          type="button" 
           (click)="ejecutarEliminacion()" 
           [disabled]="eliminando"
-          class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-rose-600/20 flex items-center justify-center gap-1.5">
+          class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
           @if (eliminando) {
-            <i class="pi pi-spin pi-spinner"></i>
+            <i class="pi pi-spin pi-spinner text-xs"></i>
             <span>Eliminando...</span>
           } @else {
-            <i class="pi pi-trash"></i>
-            <span>Sí, Eliminar</span>
+            <i class="pi pi-trash text-xs"></i>
+            <span>Sí, Eliminar Colaborador</span>
           }
-        </button>
-      </div>
-
-    </div>
-  </div>
-}
-
-<!-- MODAL MATRIZ DE PERMISOS RBAC -->
-@if (showPermisosModal && usuarioSeleccionadoPermisos) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-lg w-full border border-outline-variant dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
-      
-      <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
-        <div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i class="pi pi-key text-emerald-600"></i> Matriz de Permisos & Acciones RBAC
-          </h3>
-          <p class="text-[11px] text-slate-400">Usuario: <strong>{{ usuarioSeleccionadoPermisos.nombreCompleto }}</strong> ({{ usuarioSeleccionadoPermisos.perfilNombre }})</p>
-        </div>
-        <button (click)="showPermisosModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer"><i class="pi pi-times"></i></button>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <p class="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">Acciones Habilitadas por Módulo:</p>
-        
-        <!-- POS -->
-        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <p class="font-black text-emerald-700 dark:text-emerald-400 uppercase text-[10px]">Módulo: Punto de Venta (POS)</p>
-          <div class="space-y-1">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('POS_VENTA_CREAR')" disabled class="rounded text-emerald-600" />
-              <span>Emitir Ventas y Cobros Fraccionados</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('POS_TICKET_ANULAR')" disabled class="rounded text-emerald-600" />
-              <span>Anular Tickets & Autorizar Devolución (Con PIN)</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('POS_ARQUEO_CERRAR')" disabled class="rounded text-emerald-600" />
-              <span>Cierre de Caja & Arqueo Ciego (Reporte Z)</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('POS_RECETA_VALIDAR')" disabled class="rounded text-emerald-600" />
-              <span>Validar Recetas Médicas / Psicotrópicos DIGEMID</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- INVENTARIO & COMPRAS -->
-        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <p class="font-black text-purple-700 dark:text-purple-400 uppercase text-[10px]">Módulo: Inventario & Compras</p>
-          <div class="space-y-1">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('INVENTARIO_FEFO_VER')" disabled class="rounded text-emerald-600" />
-              <span>Consultar Lotes & Semáforo FEFO</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('INVENTARIO_BAJAS_EMITIR')" disabled class="rounded text-emerald-600" />
-              <span>Emitir Actas Oficiales de Baja y Destrucción DIGEMID</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('COMPRAS_FACTURA_REGISTRAR')" disabled class="rounded text-emerald-600" />
-              <span>Recepcionar Facturas de Droguerías por Cajas</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('COMPRAS_REORDEN_PPR')" disabled class="rounded text-emerald-600" />
-              <span>Punto de Reorden (PPR) & Órdenes de Compra</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- FINANZAS & SEGURIDAD -->
-        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <p class="font-black text-blue-700 dark:text-blue-400 uppercase text-[10px]">Módulo: Finanzas & Seguridad</p>
-          <div class="space-y-1">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('DASHBOARD_KPI_FINANZAS')" disabled class="rounded text-emerald-600" />
-              <span>Ver Utilidades Netas, Costos y Rentabilidad</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" [checked]="tienePermiso('USUARIOS_ADMINISTRAR')" disabled class="rounded text-emerald-600" />
-              <span>Crear y Editar Usuarios en Base de Datos Master</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end pt-2">
-        <button (click)="showPermisosModal = false" class="px-5 py-2.5 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
-          Cerrar
         </button>
       </div>
 

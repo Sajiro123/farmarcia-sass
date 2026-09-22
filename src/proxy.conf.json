@@ -1,0 +1,13 @@
+{
+  "/decolecta-api": {
+    "target": "https://api.decolecta.com",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/decolecta-api": "/v1"
+    },
+    "headers": {
+      "Authorization": "Bearer sk_19378.UWsZ39cBhh6HbrZlBmpURHd9SPniRJMC"
+    }
+  }
+}

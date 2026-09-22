@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/services/auth.service';
+import { SedeService, SedeDTO } from '../../core/services/sede.service';
 
 export interface PerfilPrueba {
   rol: 'ADMIN' | 'QUIMICO' | 'CAJERO';
@@ -30,60 +31,45 @@ export class LoginComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   public themeService = inject(ThemeService);
   public authService = inject(AuthService);
+  private sedeService = inject(SedeService);
 
-  // Perfiles de prueba preconfigurados
+  // Perfiles de acceso rápido sincronizados con saas-master-api y la BD
   perfilesPrueba: PerfilPrueba[] = [
     {
       rol: 'ADMIN',
-      titulo: 'Administrador',
-      nombre: 'Carlos Mendoza',
+      titulo: 'Administrador Farmacia',
+      nombre: 'Carlos Alberto Mendoza',
       email: 'admin@medicare.com',
       password: 'admin123',
-      badge: 'Acceso Total & KPIs',
+      badge: 'Propietario & Finanzas',
       icon: 'fa-solid fa-crown',
       colorClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60',
       borderClass: 'border-emerald-300 dark:border-emerald-700',
       destinos: 'Dashboard, Compras, Inventario, POS'
     },
     {
-      rol: 'QUIMICO',
-      titulo: 'Químico Farmacéutico',
-      nombre: 'Dra. Elena Ramos',
-      email: 'quimico@medicare.com',
-      password: 'quimico123',
-      badge: 'DIGEMID & Recetas',
-      icon: 'fa-solid fa-prescription-bottle-medical',
-      colorClass: 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60',
-      borderClass: 'border-purple-300 dark:border-purple-700',
-      destinos: 'Control FEFO, Recetas, Bajas, POS'
-    },
-    {
-      rol: 'CAJERO',
-      titulo: 'Cajero / Vendedor',
-      nombre: 'Juan Pérez',
-      email: 'cajero@medicare.com',
-      password: 'cajero123',
-      badge: 'POS & Arqueo Ciego',
-      icon: 'fa-solid fa-cash-register',
-      colorClass: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60',
-      borderClass: 'border-blue-300 dark:border-blue-700',
-      destinos: 'Punto de Venta POS, Catálogo'
+      rol: 'ADMIN',
+      titulo: 'Superadmin Master',
+      nombre: 'Superadministrador Global',
+      email: 'superadmin@saascentral.com',
+      password: 'admin123',
+      badge: 'SaaS Master Full Access',
+      icon: 'fa-solid fa-user-gear',
+      colorClass: 'text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60',
+      borderClass: 'border-indigo-300 dark:border-indigo-700',
+      destinos: 'Bypass Total, Acceso a todas las verticales'
     }
   ];
 
-  perfilSeleccionado: PerfilPrueba = this.perfilesPrueba[0];
+  perfilSeleccionado: PerfilPrueba = this.perfilesPrueba[0]; // Administrador por defecto
 
   loginForm: FormGroup = this.fb.group({
-    email: ['admin@medicare.com', [Validators.required, Validators.email]],
-    password: ['admin123', [Validators.required, Validators.minLength(4)]],
-    sede: ['sede-principal', Validators.required]
+    email: ['admin@medicare.com', [Validators.required]],
+    password: ['admin123', [Validators.required]],
+    sede: ['11111111-1111-1111-1111-111111111111', Validators.required]
   });
 
-  sedes = [
-    { id: 'sede-principal', nombre: 'Sede Principal - Av. Central 123' },
-    { id: 'sucursal-norte', nombre: 'Sucursal Norte - Av. Norte 456' },
-    { id: 'delivery-express', nombre: 'Delivery Express - Online' }
-  ];
+  sedes: SedeDTO[] = [];
 
   isSubmitting = false;
   errorMessage = '';
@@ -95,10 +81,23 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.startAutoSlide();
+    this.cargarSedes();
   }
 
   ngOnDestroy() {
     this.stopAutoSlide();
+  }
+
+  cargarSedes() {
+    this.sedeService.listarSedes().subscribe(sedes => {
+      this.sedes = sedes;
+      const sedeActiva = this.authService.activeSede();
+      if (sedeActiva && sedes.some(s => s.id === sedeActiva.id)) {
+        this.loginForm.patchValue({ sede: sedeActiva.id });
+      } else if (sedes.length > 0) {
+        this.loginForm.patchValue({ sede: sedes[0].id });
+      }
+    });
   }
 
   seleccionarPerfil(perfil: PerfilPrueba, autoSubmit = false) {
@@ -137,59 +136,42 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSubmit() {
+  async onSubmit() {
     if (this.loginForm.valid) {
       this.isSubmitting = true;
       this.errorMessage = '';
       
-      const formValue = this.loginForm.value;
-      const emailLower = formValue.email.toLowerCase();
-
-      // Determinar rol según email o perfil seleccionado
-      let rolAsignado: 'ADMIN' | 'QUIMICO' | 'CAJERO' = 'ADMIN';
-      if (emailLower.includes('cajero')) {
-        rolAsignado = 'CAJERO';
-      } else if (emailLower.includes('quimico')) {
-        rolAsignado = 'QUIMICO';
-      } else {
-        rolAsignado = this.perfilSeleccionado?.rol || 'ADMIN';
-      }
-
-      this.authService.setRole(rolAsignado);
+      const formValue = this.loginForm.getRawValue();
 
       // Guardar sede activa
-      const selectedSede = this.sedes.find(s => s.id === formValue.sede) || this.sedes[0];
+      const selectedSede = this.sedes.find(s => s.id === formValue.sede) || this.sedes[0] || {
+        id: '11111111-1111-1111-1111-111111111111',
+        nombre: 'Sede Cajamarca Central',
+        direccion: 'Av. Central 123, Cajamarca',
+        activa: true
+      };
+      
       this.authService.setSedeActiva({
         id: selectedSede.id,
         nombre: selectedSede.nombre,
-        direccion: '',
+        direccion: selectedSede.direccion || '',
         activa: true
-      });
+      }, true);
 
-      this.authService.login({
-        email: formValue.email,
-        password: formValue.password
-      }).subscribe({
-        next: (res) => {
-          this.isSubmitting = false;
-          this.redirigirSegunRol(rolAsignado);
-        },
-        error: (err) => {
-          // Fallback mock session para desarrollo local
-          this.isSubmitting = false;
-          this.authService.currentUser.set({
-            token: 'mock-jwt-token-farmacia-2026',
-            usuarioId: 'u-' + rolAsignado.toLowerCase(),
-            email: formValue.email,
-            tenantId: 'tenant-medicare-01',
-            subdominio: 'medicare',
-            nombreComercial: 'Farmacia Medicare',
-            verticalId: 'FARMACIA',
-            esSuperadmin: false
-          });
-          this.redirigirSegunRol(rolAsignado);
+      try {
+        const res = await this.authService.loginAsync(formValue.email, formValue.password);
+        this.isSubmitting = false;
+
+        if (res.success && res.user) {
+          const role = this.authService.activeRole();
+          this.redirigirSegunRol(role);
+        } else {
+          this.errorMessage = res.message || 'Credenciales inválidas o negocio suspendido.';
         }
-      });
+      } catch (e: any) {
+        this.isSubmitting = false;
+        this.errorMessage = e.message || 'Error de conexión con SaaS Master API.';
+      }
     } else {
       this.loginForm.markAllAsTouched();
     }

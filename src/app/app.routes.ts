@@ -5,10 +5,10 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { Pos } from './pages/pos/pos';
 import { Products } from './pages/products/products';
 import { Inventory } from './pages/inventory/inventory';
-import { FormlayoutDemo } from './pages/formlayout/formlayout';
-import { UIKitInputDemo } from './pages/uikit-input/uikit-input';
+import { Customers } from './pages/customers/customers';
 import { Compras } from './pages/compras/compras';
 import { Usuarios } from './pages/usuarios/usuarios';
+import { Reportes } from './pages/reportes/reportes';
 import { inject } from '@angular/core';
 import { AuthService } from './core/services/auth.service';
 import { Router } from '@angular/router';
@@ -36,12 +36,16 @@ export const routes: Routes = [
       { path: 'dashboard', component: Dashboard },
       { path: 'pos', component: Pos },
       { path: 'productos', component: Products },
+      { path: 'productos/nuevo', component: Products },
+      { path: 'productos/editar/:id', component: Products },
+      { path: 'products', redirectTo: 'productos' },
+      { path: 'products/nuevo', redirectTo: 'productos/nuevo' },
+      { path: 'productos/editar/:id', redirectTo: 'productos/editar/:id' },
       { path: 'inventario', component: Inventory },
+      { path: 'clientes', component: Customers },
       { path: 'compras', component: Compras },
       { path: 'usuarios', component: Usuarios },
-      { path: 'formlayout', component: FormlayoutDemo },
-      { path: 'uikit/input', component: UIKitInputDemo },
-      { path: 'inputs', component: UIKitInputDemo },
+      { path: 'reportes', component: Reportes }
     ]
   },
   { path: '**', redirectTo: 'login' }
