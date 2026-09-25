@@ -205,7 +205,18 @@ export class AuthService {
   }
 
   sedesDisponibles = signal<Sede[]>([
-    { id: '11111111-1111-1111-1111-111111111111', nombre: 'Sede Cajamarca Central', direccion: 'Av. Central 123, Cajamarca', activa: true }
+    {
+      id: '11111111-1111-1111-1111-111111111111',
+      nombre: 'Sede Cajamarca Central',
+      direccion: 'Av. Central 123, Cajamarca',
+      activa: true
+    },
+    {
+      id: '45fca103-2669-48b8-8a1c-7e5380da5e1f',
+      nombre: 'Sede Baños del Inca (Cajamarca 2)',
+      direccion: 'Av. Manco Cápac 450, Baños del Inca, Cajamarca',
+      activa: true
+    }
   ]);
 
   getSedes(): Sede[] {
@@ -215,8 +226,6 @@ export class AuthService {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           parsed = parsed.filter(s => 
-            s.id !== '33333333-3333-3333-3333-333333333333' && 
-            s.id !== '22222222-2222-2222-2222-222222222222' &&
             !s.nombre?.toLowerCase().includes('olivos') &&
             !s.nombre?.toLowerCase().includes('miraflores') &&
             !s.nombre?.toLowerCase().includes('lima centro')
@@ -326,6 +335,32 @@ export class AuthService {
         if (liveSedes.length > 0) this.setSedeActiva(liveSedes[0], true);
       }
     });
+
+    // Sincronizar sedes directamente desde Supabase si está configurado
+    const client = this.supabaseService.client;
+    if (this.supabaseService.isConfigured && client) {
+      client
+        .from('sucursales')
+        .select('*')
+        .eq('esta_activo', true)
+        .order('es_principal', { ascending: false })
+        .then(res => {
+          if (res.data && res.data.length > 0) {
+            const live: Sede[] = res.data.map((s: any) => ({
+              id: s.id,
+              nombre: s.nombre,
+              direccion: s.direccion || '',
+              activa: s.esta_activo ?? true
+            }));
+            this.sedesDisponibles.set(live);
+            localStorage.setItem('medicare_sedes_sucursales', JSON.stringify(live));
+            const actual = this.activeSede();
+            if (!actual || !live.some(s => s.id === actual.id)) {
+              this.setSedeActiva(live[0], true);
+            }
+          }
+        });
+    }
 
     if (roleData) {
       this.activeRole.set(roleData);

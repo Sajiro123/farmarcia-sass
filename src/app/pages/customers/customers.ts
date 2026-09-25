@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomerService, CustomerPuntos } from '../../core/services/customer.service';
 import { VentaService } from '../../core/services/venta.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-customers',
@@ -13,12 +14,17 @@ import { VentaService } from '../../core/services/venta.service';
 export class Customers implements OnInit {
   private customerService = inject(CustomerService);
   private ventaService = inject(VentaService);
+  private authService = inject(AuthService);
 
   clientes: CustomerPuntos[] = [];
   clientesFiltrados: CustomerPuntos[] = [];
 
   busqueda = '';
   ordenarPor: 'PUNTOS_DESC' | 'PUNTOS_ASC' | 'NOMBRE_ASC' = 'PUNTOS_DESC';
+
+  // Filtro por Sede (Sedes independientes)
+  filtroSede = 'TODAS';
+  listaSedes: string[] = [];
 
   // Paginación
   paginaActual = 1;
@@ -44,6 +50,7 @@ export class Customers implements OnInit {
   clienteFormDireccion = '';
   clienteFormFechaNacimiento = ''; // Opcional
   clienteFormPuntos = 0;
+  clienteFormSede = 'Sede Cajamarca Central';
   errorFormulario = '';
 
   // Notificaciones Toast
@@ -59,7 +66,24 @@ export class Customers implements OnInit {
   }
 
   ngOnInit() {
+    this.cargarSedes();
+    const sedeActiva = this.authService.activeSede();
+    if (sedeActiva && sedeActiva.nombre) {
+      this.filtroSede = sedeActiva.nombre;
+      this.clienteFormSede = sedeActiva.nombre;
+    }
     this.cargarDatos();
+  }
+
+  cargarSedes() {
+    const set = new Set<string>();
+    this.authService.getSedes().forEach(s => {
+      if (s.nombre) set.add(s.nombre);
+    });
+    this.listaSedes = Array.from(set);
+    if (this.listaSedes.length === 0) {
+      this.listaSedes = ['Sede Cajamarca Central', 'Sede Baños del Inca (Cajamarca 2)'];
+    }
   }
 
   cargarDatos() {
@@ -70,13 +94,24 @@ export class Customers implements OnInit {
   aplicarFiltros() {
     let result = [...this.clientes];
     
+    // Filtro por Sede (Sedes independientes)
+    if (this.filtroSede !== 'TODAS') {
+      result = result.filter(c => 
+        c.sedeNombre === this.filtroSede ||
+        c.ultimaSede === this.filtroSede ||
+        c.sedesCompradas?.includes(this.filtroSede)
+      );
+    }
+
     if (this.busqueda.trim()) {
       const q = this.busqueda.toLowerCase();
       result = result.filter(c => 
         c.nombre.toLowerCase().includes(q) || 
         c.id.includes(q) ||
         (c.celular && c.celular.includes(q)) ||
-        (c.email && c.email.toLowerCase().includes(q))
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.ultimaSede && c.ultimaSede.toLowerCase().includes(q)) ||
+        (c.sedeNombre && c.sedeNombre.toLowerCase().includes(q))
       );
     }
 
@@ -92,9 +127,9 @@ export class Customers implements OnInit {
   }
 
   calcularKPIs() {
-    this.totalClientes = this.clientes.length;
-    this.totalPuntosEmitidos = this.clientes.reduce((sum, c) => sum + c.puntosAcumulados, 0);
-    this.mejoresClientes = this.clientes.filter(c => c.puntosAcumulados >= 50).length;
+    this.totalClientes = this.clientesFiltrados.length;
+    this.totalPuntosEmitidos = this.clientesFiltrados.reduce((sum, c) => sum + c.puntosAcumulados, 0);
+    this.mejoresClientes = this.clientesFiltrados.filter(c => c.puntosAcumulados >= 50).length;
   }
 
   get clientesPaginados() {
@@ -115,6 +150,7 @@ export class Customers implements OnInit {
   limpiarFiltros() {
     this.busqueda = '';
     this.ordenarPor = 'PUNTOS_DESC';
+    this.filtroSede = 'TODAS';
     this.aplicarFiltros();
   }
 
@@ -124,7 +160,10 @@ export class Customers implements OnInit {
     const mapa = new Map<string, any>();
     list.forEach(v => {
       if (v && v.id && !mapa.has(v.id)) {
-        mapa.set(v.id, v);
+        mapa.set(v.id, {
+          ...v,
+          sede: v.sede || cliente.ultimaSede || cliente.sedeNombre || 'Sede Cajamarca Central'
+        });
       }
     });
     this.historialVentas = Array.from(mapa.values());
@@ -140,6 +179,7 @@ export class Customers implements OnInit {
     this.clienteFormDireccion = '';
     this.clienteFormFechaNacimiento = '';
     this.clienteFormPuntos = 0;
+    this.clienteFormSede = (this.filtroSede !== 'TODAS' ? this.filtroSede : (this.authService.activeSede()?.nombre || 'Sede Cajamarca Central'));
     this.errorFormulario = '';
     this.showCustomerModal = true;
   }
@@ -153,6 +193,7 @@ export class Customers implements OnInit {
     this.clienteFormDireccion = c.direccion || '';
     this.clienteFormFechaNacimiento = c.fechaNacimiento || '';
     this.clienteFormPuntos = c.puntosAcumulados;
+    this.clienteFormSede = c.ultimaSede || c.sedeNombre || this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
     this.errorFormulario = '';
     this.showCustomerModal = true;
   }
@@ -191,12 +232,15 @@ export class Customers implements OnInit {
       email: this.clienteFormEmail?.trim() || undefined,
       direccion: this.clienteFormDireccion?.trim() || undefined,
       fechaNacimiento: this.clienteFormFechaNacimiento ? this.clienteFormFechaNacimiento.trim() : undefined,
-      puntosAcumulados: Number(this.clienteFormPuntos) || 0
+      puntosAcumulados: Number(this.clienteFormPuntos) || 0,
+      sedeNombre: this.clienteFormSede,
+      ultimaSede: this.clienteFormSede,
+      sedesCompradas: [this.clienteFormSede]
     };
 
     this.customerService.addOrUpdateCustomer(clienteActualizado);
     this.mostrarToast('success', this.modoModal === 'NUEVO'
-      ? `✅ Cliente "${nombre}" registrado exitosamente.`
+      ? `✅ Cliente "${nombre}" registrado exitosamente en ${this.clienteFormSede}.`
       : `✅ Información del cliente "${nombre}" actualizada exitosamente.`);
 
     this.showCustomerModal = false;

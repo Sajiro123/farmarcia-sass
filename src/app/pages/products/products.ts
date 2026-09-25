@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { ProductService, ProductoCatalogoItem, TipoProducto } from '../../core/services/product.service';
+import { CategoryService, CategoriaItem, mapIdTipoToTipoProducto, mapTipoProductoToIdTipo } from '../../core/services/category.service';
 import { StorageService } from '../../core/services/storage.service';
 
 @Component({
@@ -15,6 +16,7 @@ import { StorageService } from '../../core/services/storage.service';
 })
 export class Products implements OnInit {
   private productService = inject(ProductService);
+  private categoryService = inject(CategoryService);
   public storageService = inject(StorageService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -42,11 +44,29 @@ export class Products implements OnInit {
   cargando = false;
   guardando = false;
 
+  // Gestión de Categorías
+  categorias: CategoriaItem[] = [];
+  cargandoCategorias = false;
+  mostrarModalCategorias = false; // Modal que contiene la tabla completa de categorías
+  mostrarModalNuevaCategoria = false; // Modal rápido para agregar categoría desde el select
+  mostrarFormularioNuevaCategoriaEnTabla = false; // Toggle para el formulario dentro de la tabla modal
+  busquedaCategoriaTabla = '';
+  filtroTipoCategoriaTabla: 'TODOS' | 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = 'TODOS';
+  categoriaEnEdicionId: string | null = null;
+  guardandoCategoria = false;
+  categoriaForm: Partial<CategoriaItem> = {
+    nombre: '',
+    idtipoproducto: 1,
+    tipoAsociado: 'MEDICAMENTO',
+    descripcion: ''
+  };
+
   // Filtros de la Grilla
   busquedaGrilla = '';
-  filtroTipo: 'TODOS' | 'MEDICAMENTO' | 'PERFUME' = 'TODOS';
+  filtroTipo: 'TODOS' | 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = 'TODOS';
   filtroCondicion: 'TODOS' | 'RECETA' | 'VENTA_LIBRE' = 'TODOS';
   filtroEstado: 'TODOS' | 'ACTIVO' | 'INACTIVO' = 'TODOS';
+  filtroCategoria: string = 'TODOS';
   ordenarPor: 'NOMBRE_ASC' | 'NOMBRE_DESC' | 'PRECIO_ASC' | 'PRECIO_DESC' | 'CATEGORIA_ASC' = 'NOMBRE_ASC';
 
   // Búsqueda en tabla de recientes (vista nuevo)
@@ -58,6 +78,7 @@ export class Products implements OnInit {
 
   ngOnInit(): void {
     this.detectarRutaActual();
+    this.cargarCategorias();
     this.cargarProductos();
 
     // Escuchar cambios de ruta para alternar entre /productos, /productos/nuevo y /productos/editar/:id
@@ -68,6 +89,22 @@ export class Products implements OnInit {
       });
   }
 
+  cargarCategorias(): void {
+    this.cargandoCategorias = true;
+    this.categoryService.listarCategorias().subscribe({
+      next: (cats) => {
+        this.categorias = cats;
+        this.cargandoCategorias = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al cargar categorías:', err);
+        this.cargandoCategorias = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   cargarProductos(): void {
     this.cargando = true;
     this.cdr.markForCheck();
@@ -75,6 +112,13 @@ export class Products implements OnInit {
       next: (items) => {
         this.productos = items;
         this.cargando = false;
+        // Sincronizar categorías de productos existentes
+        items.forEach(p => {
+          if (p.categoriaNombre) {
+            this.categoryService.asegurarCategoriaExiste(p.categoriaNombre, p.tipoProducto);
+          }
+        });
+        this.cargarCategorias();
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -194,9 +238,10 @@ export class Products implements OnInit {
       return {
         id: '',
         tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: '',
+        categoriaNombre: 'Analgésicos',
         nombreComercial: '',
         sku: this.generarSkuAutomatico('MEDICAMENTO'),
+        codigoBarra: '',
         precioVenta: 0,
         precioUnidad: 0,
         precioBlister: 0,
@@ -206,13 +251,14 @@ export class Products implements OnInit {
         estaActivo: true,
         requiereReceta: false
       };
-    } else {
+    } else if (tipo === 'PERFUME') {
       return {
         id: '',
         tipoProducto: 'PERFUME',
-        categoriaNombre: '',
+        categoriaNombre: 'Perfumería Fina',
         nombreComercial: '',
         sku: this.generarSkuAutomatico('PERFUME'),
+        codigoBarra: '',
         precioVenta: 0,
         precioUnidad: 0,
         precioBlister: 0,
@@ -221,9 +267,22 @@ export class Products implements OnInit {
         descripcion: '',
         estaActivo: true,
         marca: '',
-        familiaOlfativa: 'Amaderado Aromático',
-        volumenMl: 100,
         generoObjetivo: 'UNISEX'
+      };
+    } else {
+      return {
+        id: '',
+        tipoProducto: 'OTROS',
+        categoriaNombre: 'Cuidado Personal / Higiene',
+        nombreComercial: '',
+        sku: this.generarSkuAutomatico('OTROS'),
+        codigoBarra: '',
+        precioVenta: 0,
+        precioUnidad: 0,
+        ubicacionAlmacen: '',
+        descripcion: '',
+        estaActivo: true,
+        marca: ''
       };
     }
   }
@@ -264,7 +323,7 @@ export class Products implements OnInit {
   }
 
   generarSkuAutomatico(tipo: TipoProducto): string {
-    const prefijo = tipo === 'MEDICAMENTO' ? 'MED' : 'PERF';
+    const prefijo = tipo === 'MEDICAMENTO' ? 'MED' : (tipo === 'PERFUME' ? 'PERF' : 'OTR');
     const rand = Math.floor(100 + Math.random() * 900);
     return `${prefijo}-${rand}`;
   }
@@ -308,6 +367,20 @@ export class Products implements OnInit {
         this.mostrarAlerta('error', 'Por favor complete la Marca / Casa perfumista del producto.');
         return;
       }
+    } else if (this.tipoSeleccionado === 'OTROS') {
+      const pUnidad = Number(this.productoForm.precioUnidad) || 0;
+      const pCaja = Number(this.productoForm.precioCaja) || 0;
+      const pVenta = Number(this.productoForm.precioVenta) || 0;
+
+      if (pUnidad <= 0 && pCaja <= 0 && pVenta <= 0) {
+        this.mostrarAlerta('error', 'Debe registrar al menos un precio de venta para el producto.');
+        return;
+      }
+
+      this.productoForm.precioVenta = pUnidad > 0 ? pUnidad : (pCaja > 0 ? pCaja : pVenta);
+      if (!this.productoForm.precioUnidad) this.productoForm.precioUnidad = this.productoForm.precioVenta;
+      if (!this.productoForm.precioCaja) this.productoForm.precioCaja = this.productoForm.precioVenta;
+      this.productoForm.precioBlister = 0;
     } else {
       const pUnidad = Number(this.productoForm.precioUnidad) || 0;
       const pBlister = Number(this.productoForm.precioBlister) || 0;
@@ -357,6 +430,12 @@ export class Products implements OnInit {
       this.productoForm.precioUnidad = precio;
       this.productoForm.precioCaja = precio;
       this.productoForm.precioBlister = 0;
+    } else if (p.tipoProducto === 'OTROS') {
+      const precio = p.precioVenta || p.precioUnidad || p.precioCaja || 0;
+      if (!this.productoForm.precioVenta) this.productoForm.precioVenta = precio;
+      if (!this.productoForm.precioUnidad) this.productoForm.precioUnidad = precio;
+      if (!this.productoForm.precioCaja) this.productoForm.precioCaja = precio;
+      this.productoForm.precioBlister = 0;
     }
     this.productoIdEnEdicion = p.id;
     this.vistaActual = 'EDITAR';
@@ -364,6 +443,18 @@ export class Products implements OnInit {
     this.mostrarAlerta('info', `Editando ficha técnica de: ${p.nombreComercial}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.cdr.markForCheck();
+  }
+
+  alternarEstadoProducto(p: ProductoCatalogoItem, event?: Event): void {
+    if (event) event.stopPropagation();
+    p.estaActivo = !p.estaActivo;
+    this.productService.guardarEnCatalogo(p).subscribe({
+      next: (actualizado) => {
+        this.mostrarAlerta(actualizado.estaActivo ? 'success' : 'info',
+          `Producto "${actualizado.nombreComercial}" ${actualizado.estaActivo ? 'activado' : 'desactivado'}.`);
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   eliminarProducto(p: ProductoCatalogoItem): void {
@@ -402,6 +493,10 @@ export class Products implements OnInit {
     return this.productos.filter(p => p.tipoProducto === 'PERFUME').length;
   }
 
+  get totalOtros(): number {
+    return this.productos.filter(p => p.tipoProducto === 'OTROS').length;
+  }
+
   get totalConReceta(): number {
     return this.productos.filter(p => p.tipoProducto === 'MEDICAMENTO' && p.requiereReceta).length;
   }
@@ -430,6 +525,11 @@ export class Products implements OnInit {
       if (this.filtroEstado === 'ACTIVO' && !p.estaActivo) return false;
       if (this.filtroEstado === 'INACTIVO' && p.estaActivo) return false;
 
+      // Filtro por Categoría
+      if (this.filtroCategoria !== 'TODOS' && p.categoriaNombre !== this.filtroCategoria) {
+        return false;
+      }
+
       // Buscador predictivo general
       const q = this.busquedaGrilla.toLowerCase().trim();
       if (!q) return true;
@@ -437,8 +537,10 @@ export class Products implements OnInit {
       return (
         (p.nombreComercial && p.nombreComercial.toLowerCase().includes(q)) ||
         (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
         (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
         (p.marca && p.marca.toLowerCase().includes(q)) ||
+        (p.categoriaNombre && p.categoriaNombre.toLowerCase().includes(q)) ||
         (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
         (p.descripcion && p.descripcion.toLowerCase().includes(q)) ||
         (p.familiaOlfativa && p.familiaOlfativa.toLowerCase().includes(q)) ||
@@ -479,6 +581,7 @@ export class Products implements OnInit {
     return this.productosRecientes.filter(p =>
       p.nombreComercial.toLowerCase().includes(q) ||
       p.sku.toLowerCase().includes(q) ||
+      (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
       (p.marca && p.marca.toLowerCase().includes(q))
     );
   }
@@ -488,6 +591,7 @@ export class Products implements OnInit {
     this.filtroTipo = 'TODOS';
     this.filtroCondicion = 'TODOS';
     this.filtroEstado = 'TODOS';
+    this.filtroCategoria = 'TODOS';
     this.ordenarPor = 'NOMBRE_ASC';
     this.paginaActual = 1;
     this.cdr.markForCheck();
@@ -523,6 +627,213 @@ export class Products implements OnInit {
       this.ordenarPor = this.ordenarPor === 'CATEGORIA_ASC' ? 'NOMBRE_ASC' : 'CATEGORIA_ASC';
     }
     this.paginaActual = 1;
+    this.cdr.markForCheck();
+  }
+
+  // ==========================================
+  // GESTIÓN DE CATEGORÍAS (SELECT & TABLA)
+  // ==========================================
+
+  get categoriasFiltradasParaForm(): CategoriaItem[] {
+    return this.categorias.filter(c =>
+      c.estaActiva !== false && (c.tipoAsociado === this.tipoSeleccionado || c.tipoAsociado === 'TODOS')
+    );
+  }
+
+  estaEnCategoriasFiltradas(nombre: string): boolean {
+    if (!nombre) return false;
+    const n = nombre.toLowerCase().trim();
+    return this.categoriasFiltradasParaForm.some(c => c.nombre.toLowerCase().trim() === n);
+  }
+
+  get categoriasTablaFiltradas(): CategoriaItem[] {
+    return this.categorias.filter(c => {
+      if (this.filtroTipoCategoriaTabla !== 'TODOS' && c.tipoAsociado !== this.filtroTipoCategoriaTabla && c.tipoAsociado !== 'TODOS') {
+        return false;
+      }
+      const q = this.busquedaCategoriaTabla.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        c.nombre.toLowerCase().includes(q) ||
+        (c.codigo && c.codigo.toLowerCase().includes(q)) ||
+        (c.descripcion && c.descripcion.toLowerCase().includes(q))
+      );
+    });
+  }
+
+  contarProductosPorCategoria(nombreCat: string): number {
+    if (!nombreCat) return 0;
+    const nom = nombreCat.toLowerCase().trim();
+    return this.productos.filter(p => (p.categoriaNombre || '').toLowerCase().trim() === nom).length;
+  }
+
+  abrirModalGestionCategorias(abrirCreacionDirecta = false): void {
+    this.mostrarModalCategorias = true;
+    this.mostrarFormularioNuevaCategoriaEnTabla = abrirCreacionDirecta;
+    this.categoriaEnEdicionId = null;
+    const idTipo = mapTipoProductoToIdTipo(this.tipoSeleccionado);
+    this.categoriaForm = {
+      nombre: '',
+      idtipoproducto: idTipo,
+      tipoAsociado: this.tipoSeleccionado || 'MEDICAMENTO',
+      descripcion: ''
+    };
+    this.cdr.markForCheck();
+  }
+
+  cerrarModalCategorias(): void {
+    this.mostrarModalCategorias = false;
+    this.mostrarFormularioNuevaCategoriaEnTabla = false;
+    this.categoriaEnEdicionId = null;
+    this.cdr.markForCheck();
+  }
+
+  abrirModalNuevaCategoriaRapida(): void {
+    this.categoriaEnEdicionId = null;
+    const idTipo = mapTipoProductoToIdTipo(this.tipoSeleccionado);
+    this.categoriaForm = {
+      nombre: '',
+      idtipoproducto: idTipo,
+      tipoAsociado: this.tipoSeleccionado || 'MEDICAMENTO',
+      descripcion: ''
+    };
+    this.mostrarModalNuevaCategoria = true;
+    this.cdr.markForCheck();
+  }
+
+  cerrarModalNuevaCategoriaRapida(): void {
+    this.mostrarModalNuevaCategoria = false;
+    this.cdr.markForCheck();
+  }
+
+  onTipoProductoModalChange(idTipo: any): void {
+    const num = Number(idTipo);
+    this.categoriaForm.idtipoproducto = num;
+    this.categoriaForm.tipoAsociado = mapIdTipoToTipoProducto(num);
+    this.cdr.markForCheck();
+  }
+
+  onCategoriaSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    if (target && target.value === '__NUEVA_CATEGORIA__') {
+      this.productoForm.categoriaNombre = '';
+      this.abrirModalNuevaCategoriaRapida();
+    }
+  }
+
+  guardarCategoriaDesdeModal(esModalRapido = false): void {
+    const nom = (this.categoriaForm.nombre || '').trim();
+    if (!nom) {
+      this.mostrarAlerta('error', 'Por favor ingresa el nombre de la categoría.');
+      return;
+    }
+
+    this.guardandoCategoria = true;
+    this.cdr.markForCheck();
+
+    const idTipo = this.categoriaForm.idtipoproducto !== undefined && this.categoriaForm.idtipoproducto !== null
+      ? Number(this.categoriaForm.idtipoproducto)
+      : mapTipoProductoToIdTipo(this.categoriaForm.tipoAsociado || this.tipoSeleccionado);
+
+    const tipoDestino = mapIdTipoToTipoProducto(idTipo);
+
+    const payload: Partial<CategoriaItem> = {
+      id: this.categoriaEnEdicionId || undefined,
+      nombre: nom,
+      idtipoproducto: idTipo,
+      tipoAsociado: tipoDestino,
+      descripcion: (this.categoriaForm.descripcion || '').trim()
+    };
+
+    this.categoryService.guardarCategoria(payload).subscribe({
+      next: (catGuardada) => {
+        this.guardandoCategoria = false;
+
+        // Actualizar o agregar inmediatamente en la lista local en memoria
+        const idx = this.categorias.findIndex(c => c.id === catGuardada.id || c.nombre.toLowerCase().trim() === catGuardada.nombre.toLowerCase().trim());
+        if (idx >= 0) {
+          this.categorias[idx] = catGuardada;
+        } else {
+          this.categorias.unshift(catGuardada);
+        }
+
+        if (esModalRapido) {
+          this.productoForm.categoriaNombre = catGuardada.nombre;
+          this.cerrarModalNuevaCategoriaRapida();
+          this.mostrarAlerta('success', `¡Categoría "${catGuardada.nombre}" registrada con éxito (idtipoproducto: ${catGuardada.idtipoproducto}) y autoseleccionada!`);
+          this.cdr.markForCheck();
+
+          // Asegurar autoselección en el select de la plantilla tras el ciclo de detección
+          setTimeout(() => {
+            this.productoForm.categoriaNombre = catGuardada.nombre;
+            this.cdr.markForCheck();
+          }, 50);
+        } else {
+          if (this.vistaActual !== 'GRILLA') {
+            this.productoForm.categoriaNombre = catGuardada.nombre;
+          }
+          const idTipoActual = mapTipoProductoToIdTipo(this.tipoSeleccionado);
+          this.categoriaForm = { nombre: '', idtipoproducto: idTipoActual, tipoAsociado: this.tipoSeleccionado, descripcion: '' };
+          this.categoriaEnEdicionId = null;
+          this.mostrarFormularioNuevaCategoriaEnTabla = false;
+          this.mostrarAlerta('success', `¡Categoría "${catGuardada.nombre}" guardada con éxito (idtipoproducto: ${catGuardada.idtipoproducto})!`);
+          this.cdr.markForCheck();
+        }
+
+        // Sincronizar catálogo de categorías completo en segundo plano
+        this.cargarCategorias();
+      },
+      error: (err) => {
+        console.error('Error al guardar categoría:', err);
+        this.guardandoCategoria = false;
+        this.mostrarAlerta('error', 'Ocurrió un error al guardar la categoría.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  editarCategoriaEnTabla(cat: CategoriaItem): void {
+    this.categoriaEnEdicionId = cat.id;
+    this.categoriaForm = {
+      nombre: cat.nombre,
+      tipoAsociado: cat.tipoAsociado,
+      descripcion: cat.descripcion || ''
+    };
+    this.mostrarFormularioNuevaCategoriaEnTabla = true;
+    this.cdr.markForCheck();
+  }
+
+  eliminarCategoriaEnTabla(cat: CategoriaItem): void {
+    const totalVinculados = this.contarProductosPorCategoria(cat.nombre);
+    const mensaje = totalVinculados > 0
+      ? `Atención: Esta categoría tiene ${totalVinculados} producto(s) vinculado(s) en el catálogo. ¿Deseas eliminar "${cat.nombre}" de todos modos?`
+      : `¿Estás seguro de eliminar la categoría "${cat.nombre}"?`;
+
+    if (!confirm(mensaje)) return;
+
+    this.categoryService.eliminarCategoria(cat.id).subscribe({
+      next: () => {
+        this.cargarCategorias();
+        if (this.productoForm.categoriaNombre === cat.nombre) {
+          this.productoForm.categoriaNombre = '';
+        }
+        this.mostrarAlerta('success', `Categoría "${cat.nombre}" eliminada correctamente.`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  seleccionarCategoriaDesdeTabla(cat: CategoriaItem): void {
+    if (this.vistaActual === 'GRILLA') {
+      this.filtroCategoria = cat.nombre;
+      this.paginaActual = 1;
+      this.cerrarModalCategorias();
+      this.mostrarAlerta('info', `Filtro aplicado: Mostrando productos de categoría "${cat.nombre}".`);
+    } else {
+      this.productoForm.categoriaNombre = cat.nombre;
+      this.cerrarModalCategorias();
+      this.mostrarAlerta('success', `Categoría "${cat.nombre}" seleccionada para el producto.`);
+    }
     this.cdr.markForCheck();
   }
 }

@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { Observable, of } from 'rxjs';
+import { Observable, of, from, map, catchError } from 'rxjs';
 
-export type TipoProducto = 'MEDICAMENTO' | 'PERFUME';
+export type TipoProducto = 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
 
 export interface ProductoCatalogoItem {
   id: string;
@@ -11,10 +11,11 @@ export interface ProductoCatalogoItem {
   categoriaNombre?: string;
   nombreComercial: string;
   sku: string;
-  precioVenta: number; // Precio general o por unidad
-  precioUnidad?: number; // Precio por pastilla / unidad individual
-  precioBlister?: number; // Precio por blíster
-  precioCaja?: number; // Precio por caja completa
+  codigoBarra?: string;
+  precioVenta: number;
+  precioUnidad?: number;
+  precioBlister?: number;
+  precioCaja?: number;
   unidadesPorCaja?: number;
   unidadesPorBlister?: number;
   stockDisponible?: number;
@@ -22,20 +23,20 @@ export interface ProductoCatalogoItem {
   descripcion: string;
   estaActivo: boolean;
   creadoEn?: string;
-  imagenUrl?: string; // URL pública en Supabase Storage o CDN
+  imagenUrl?: string;
 
   // Específicos Medicamentos
   requiereReceta?: boolean;
   laboratorio?: string;
   principioActivo?: string;
   concentracion?: string;
-  esControlado?: boolean; // Psicotrópico o Estupefaciente
+  esControlado?: boolean;
 
-  // Específicos Perfumes
+  // Específicos Perfumes / Otros
   marca?: string;
+  generoObjetivo?: 'HOMBRE' | 'MUJER' | 'UNISEX' | 'INFANTIL';
   familiaOlfativa?: string;
   volumenMl?: number;
-  generoObjetivo?: 'HOMBRE' | 'MUJER' | 'UNISEX';
 }
 
 @Injectable({
@@ -44,294 +45,174 @@ export interface ProductoCatalogoItem {
 export class ProductService {
   private supabase = inject(SupabaseService);
 
-  private readonly STORAGE_KEY = 'medicare_catalogo_maestro_v2';
+  private readonly STORAGE_KEY = 'medicare_catalogo_maestro_v3';
   private productosCatalogo: ProductoCatalogoItem[] = this.cargarCatalogoStorage();
 
-  private getProductosSemilla(): ProductoCatalogoItem[] {
-    return [
-      {
-        id: 'cat-001',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Analgésicos',
-        nombreComercial: 'Paracetamol 500mg',
-        sku: 'MED-PAR-500',
-        precioVenta: 4.50,
-        precioCaja: 4.50,
-        precioBlister: 2.00,
-        precioUnidad: 0.50,
-        unidadesPorCaja: 20,
-        unidadesPorBlister: 10,
-        stockDisponible: 458,
-        ubicacionAlmacen: 'P1-E1-N1',
-        descripcion: 'Paracetamol 500mg para dolor de cabeza, fiebre y dolores musculares.',
-        estaActivo: true,
-        requiereReceta: false,
-        esControlado: false,
-        laboratorio: 'Genérico',
-        principioActivo: 'Paracetamol',
-        concentracion: '500mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-002',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Antibióticos',
-        nombreComercial: 'Amoxicilina + Ac. Clavulánico 500/125mg',
-        sku: 'MED-AMX-500',
-        precioVenta: 7.00,
-        precioCaja: 7.00,
-        precioBlister: 3.50,
-        precioUnidad: 1.00,
-        unidadesPorCaja: 14,
-        unidadesPorBlister: 7,
-        stockDisponible: 68,
-        ubicacionAlmacen: 'P1-E2-N2',
-        descripcion: 'Antibiótico de amplio espectro para infecciones respiratorias bacterianas.',
-        estaActivo: true,
-        requiereReceta: true,
-        esControlado: false,
-        laboratorio: 'Portugal',
-        principioActivo: 'Amoxicilina + Clavulánico',
-        concentracion: '500/125mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-003',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Cardiología',
-        nombreComercial: 'Clonazepam 2mg (Controlado)',
-        sku: 'MED-CLZ-002',
-        precioVenta: 18.00,
-        precioCaja: 18.00,
-        precioBlister: 9.00,
-        precioUnidad: 2.00,
-        unidadesPorCaja: 30,
-        unidadesPorBlister: 10,
-        stockDisponible: 96,
-        ubicacionAlmacen: 'P3-E1-N1',
-        descripcion: 'Psicotrópico ansiolítico sujeto a retención de receta médica especial.',
-        estaActivo: true,
-        requiereReceta: true,
-        esControlado: true,
-        laboratorio: 'Sandoz',
-        principioActivo: 'Clonazepam',
-        concentracion: '2mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-004',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Venta Libre (OTC)',
-        nombreComercial: 'Panadol Antigripal NF',
-        sku: 'MED-PAN-004',
-        precioVenta: 10.90,
-        precioCaja: 10.90,
-        precioBlister: 5.50,
-        precioUnidad: 1.20,
-        unidadesPorCaja: 24,
-        unidadesPorBlister: 6,
-        stockDisponible: 218,
-        ubicacionAlmacen: 'P1-E1-N2',
-        descripcion: 'Alivio rápido de la congestión nasal, malestar general, dolor y fiebre.',
-        estaActivo: true,
-        requiereReceta: false,
-        esControlado: false,
-        laboratorio: 'GSK GlaxoSmithKline',
-        principioActivo: 'Paracetamol + Clorfenamina + Fenilefrina',
-        concentracion: '500mg/2mg/5mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1550572017-ed24c138f28c?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-005',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Analgésicos',
-        nombreComercial: 'Ibuprofeno 400mg',
-        sku: 'MED-IBU-400',
-        precioVenta: 6.50,
-        precioCaja: 6.50,
-        precioBlister: 3.20,
-        precioUnidad: 0.80,
-        unidadesPorCaja: 20,
-        unidadesPorBlister: 10,
-        stockDisponible: 9,
-        ubicacionAlmacen: 'P1-E3-N1',
-        descripcion: 'Antiinflamatorio no esteroideo analgésico y antipirético.',
-        estaActivo: true,
-        requiereReceta: false,
-        esControlado: false,
-        laboratorio: 'Genérico',
-        principioActivo: 'Ibuprofeno',
-        concentracion: '400mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-006',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Vitaminas',
-        nombreComercial: 'Vitamina C 1g Efervescente',
-        sku: 'MED-VIT-001',
-        precioVenta: 15.80,
-        precioCaja: 15.80,
-        precioBlister: 8.00,
-        precioUnidad: 2.00,
-        unidadesPorCaja: 10,
-        unidadesPorBlister: 5,
-        stockDisponible: 34,
-        ubicacionAlmacen: 'P2-E1-N3',
-        descripcion: 'Tabletas efervescentes sabor naranja para fortalecimiento inmunológico.',
-        estaActivo: true,
-        requiereReceta: false,
-        esControlado: false,
-        laboratorio: 'Bayer Redoxon',
-        principioActivo: 'Ácido Ascórbico',
-        concentracion: '1g',
-        imagenUrl: 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-007',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Antibióticos',
-        nombreComercial: 'Amoxicilina Genfar 500mg',
-        sku: 'MED-GEN-500',
-        precioVenta: 12.50,
-        precioCaja: 12.50,
-        precioBlister: 6.00,
-        precioUnidad: 1.50,
-        unidadesPorCaja: 20,
-        unidadesPorBlister: 10,
-        stockDisponible: 125,
-        ubicacionAlmacen: 'P1-E2-N1',
-        descripcion: 'Cápsulas de amoxicilina antibiótica bactericida.',
-        estaActivo: true,
-        requiereReceta: false,
-        esControlado: false,
-        laboratorio: 'Genfar',
-        principioActivo: 'Amoxicilina',
-        concentracion: '500mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1576073719676-aa955fcabf2a?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-008',
-        tipoProducto: 'MEDICAMENTO',
-        categoriaNombre: 'Analgésicos',
-        nombreComercial: 'Doloral 400mg',
-        sku: 'MED-DOL-400',
-        precioVenta: 8.90,
-        precioCaja: 8.90,
-        precioBlister: 4.50,
-        precioUnidad: 1.00,
-        unidadesPorCaja: 20,
-        unidadesPorBlister: 10,
-        stockDisponible: 52,
-        ubicacionAlmacen: 'P1-E3-N2',
-        descripcion: 'Ibuprofeno en cápsulas blandas de rápida acción analgésica.',
-        estaActivo: true,
-        requiereReceta: true,
-        esControlado: false,
-        laboratorio: 'Laboratorios Bagó',
-        principioActivo: 'Ibuprofeno',
-        concentracion: '400mg',
-        imagenUrl: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-009',
-        tipoProducto: 'PERFUME',
-        categoriaNombre: 'Perfumería Fina',
-        nombreComercial: 'Sauvage Dior Eau de Parfum',
-        sku: 'PERF-DIO-100',
-        precioVenta: 489.00,
-        precioCaja: 489.00,
-        precioUnidad: 489.00,
-        stockDisponible: 24,
-        ubicacionAlmacen: 'Vitrina Central',
-        descripcion: 'Fragancia oriental y fougère para hombre, notas de bergamota de Calabria y absoluto de vainilla.',
-        estaActivo: true,
-        marca: 'Christian Dior',
-        familiaOlfativa: 'Amaderada',
-        volumenMl: 100,
-        generoObjetivo: 'HOMBRE',
-        imagenUrl: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'cat-010',
-        tipoProducto: 'PERFUME',
-        categoriaNombre: 'Perfumería Fina',
-        nombreComercial: 'Good Girl Carolina Herrera EDP',
-        sku: 'PERF-CH-080',
-        precioVenta: 429.00,
-        precioCaja: 429.00,
-        precioUnidad: 429.00,
-        stockDisponible: 18,
-        ubicacionAlmacen: 'Vitrina Central',
-        descripcion: 'Icónico frasco stiletto con notas de haba tonka tostada, nardo y jazmín sambac blanco.',
-        estaActivo: true,
-        marca: 'Carolina Herrera',
-        familiaOlfativa: 'Oriental / Ámbar',
-        volumenMl: 80,
-        generoObjetivo: 'MUJER',
-        imagenUrl: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&auto=format&fit=crop&q=80'
-      }
-    ];
+  constructor() {
+    this.sincronizarConSupabase();
+  }
+
+  private mapSupabaseToProducto(p: any): ProductoCatalogoItem {
+    const esPerfume = p.codigo_interno?.startsWith('PERF') || p.categorias_producto?.nombre?.toLowerCase().includes('perfum');
+    const esOtros = p.codigo_interno?.startsWith('OTR') || p.categorias_producto?.nombre?.toLowerCase().includes('higiene');
+    const tipo: TipoProducto = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
+
+    const precioVenta = Number(p.precio_venta) || 0;
+    const unidadesCaja = Number(p.unidades_por_caja) || (esPerfume || esOtros ? 1 : 100);
+    const precioCaja = Number(precioVenta * (esPerfume || esOtros ? 1 : (unidadesCaja > 10 ? 1 : unidadesCaja))) || precioVenta;
+    const precioBlister = esPerfume || esOtros ? 0 : Number((precioCaja / 5).toFixed(2));
+    const precioUnidad = Number(p.precio_venta_fraccion) || (unidadesCaja > 0 ? Number((precioCaja / unidadesCaja).toFixed(2)) : precioVenta);
+
+    return {
+      id: p.id,
+      tipoProducto: tipo,
+      categoriaNombre: p.categorias_producto?.nombre || 'General',
+      nombreComercial: p.nombre_comercial,
+      sku: p.codigo_interno || ('MED-' + p.id.slice(0, 6)),
+      codigoBarra: p.codigo_barras || undefined,
+      precioVenta: precioVenta,
+      precioCaja: precioCaja,
+      precioBlister: precioBlister,
+      precioUnidad: precioUnidad,
+      unidadesPorCaja: unidadesCaja,
+      unidadesPorBlister: esPerfume || esOtros ? 1 : Math.max(1, Math.round(unidadesCaja / 10)),
+      stockDisponible: 50,
+      ubicacionAlmacen: 'P1-E1-N1',
+      descripcion: `${p.nombre_comercial} ${p.concentracion || ''} - ${p.nombre_generico || ''}`,
+      estaActivo: p.esta_activo !== false,
+      creadoEn: p.creado_en ? p.creado_en.split('T')[0] : new Date().toISOString().split('T')[0],
+      requiereReceta: p.tipo_receta === 'RECETA_MEDICA' || p.tipo_receta === 'RECETA_RETENIDA',
+      esControlado: p.tipo_receta === 'RECETA_RETENIDA',
+      laboratorio: p.laboratorios?.nombre || 'Genfar',
+      principioActivo: p.principios_activos?.nombre || p.nombre_generico || 'Genérico',
+      concentracion: p.concentracion || ''
+    };
   }
 
   private cargarCatalogoStorage(): ProductoCatalogoItem[] {
     try {
-      const guardado = localStorage.getItem(this.STORAGE_KEY);
-      if (guardado) {
-        const parsed: ProductoCatalogoItem[] = JSON.parse(guardado);
-        if (parsed && parsed.length > 0) {
-          // Asignar imagen si algún ítem no tiene
-          const semillas = this.getProductosSemilla();
-          let modificado = false;
-          parsed.forEach(p => {
-            if (!p.imagenUrl) {
-              const sem = semillas.find(s => s.nombreComercial.toLowerCase().includes(p.nombreComercial.toLowerCase()) || p.nombreComercial.toLowerCase().includes(s.nombreComercial.toLowerCase()));
-              p.imagenUrl = sem ? sem.imagenUrl : 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400&auto=format&fit=crop&q=80';
-              modificado = true;
-            }
-          });
-          if (modificado) {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(parsed));
-          }
-          return parsed;
+      // Limpiar cache viejo con data mockup
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('medicare_catalogo_maestro_v2');
+        const guardado = localStorage.getItem(this.STORAGE_KEY);
+        if (guardado) {
+          const parsed: ProductoCatalogoItem[] = JSON.parse(guardado);
+          // Filtrar items mockup que tengan id 'cat-001' etc.
+          const reales = (parsed || []).filter(p => !p.id.startsWith('cat-0'));
+          if (reales.length > 0) return reales;
         }
       }
-      const iniciales = this.getProductosSemilla();
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(iniciales));
-      return iniciales;
+      return [];
     } catch {
-      return this.getProductosSemilla();
+      return [];
     }
   }
 
   private persistirCatalogo(): void {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.productosCatalogo));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.productosCatalogo));
+      }
     } catch (e) {
       console.error('Error persistiendo catálogo en storage:', e);
     }
   }
 
+  private sincronizarConSupabase(): void {
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      client
+        .from('productos')
+        .select(`
+          id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
+          concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
+          es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
+          precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
+          principios_activos (nombre),
+          laboratorios (nombre),
+          categorias_producto (nombre)
+        `)
+        .order('nombre_comercial', { ascending: true })
+        .then(res => {
+          if (res.data && res.data.length > 0) {
+            this.productosCatalogo = res.data.map(p => this.mapSupabaseToProducto(p));
+            this.persistirCatalogo();
+          }
+        });
+    }
+  }
+
   // ==========================================
-  // GESTIÓN DEL CATÁLOGO MAESTRO DE PRODUCTOS
+  // GESTIÓN DEL CATÁLOGO REAL DE PRODUCTOS
   // ==========================================
 
   /**
-   * Listar todos los productos del catálogo maestro
+   * Listar todos los productos del catálogo desde Supabase
    */
   listarCatalogo(): Observable<ProductoCatalogoItem[]> {
-    if (!this.productosCatalogo || this.productosCatalogo.length === 0) {
-      this.productosCatalogo = this.cargarCatalogoStorage();
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      return from(
+        client
+          .from('productos')
+          .select(`
+            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
+            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
+            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
+            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
+            principios_activos (nombre),
+            laboratorios (nombre),
+            categorias_producto (nombre)
+          `)
+          .order('nombre_comercial', { ascending: true })
+      ).pipe(
+        map(res => {
+          if (res.data && res.data.length > 0) {
+            const mapped = res.data.map(p => this.mapSupabaseToProducto(p));
+            this.productosCatalogo = mapped;
+            this.persistirCatalogo();
+            return mapped;
+          }
+          return this.productosCatalogo;
+        }),
+        catchError(() => of(this.productosCatalogo))
+      );
     }
-    return of([...this.productosCatalogo]);
+    return of(this.productosCatalogo);
   }
 
   /**
    * Listar solo los productos activos del catálogo (para POS e Inventario)
    */
   listarCatalogoActivos(): Observable<ProductoCatalogoItem[]> {
-    if (!this.productosCatalogo || this.productosCatalogo.length === 0) {
-      this.productosCatalogo = this.cargarCatalogoStorage();
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      return from(
+        client
+          .from('productos')
+          .select(`
+            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
+            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
+            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
+            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
+            principios_activos (nombre),
+            laboratorios (nombre),
+            categorias_producto (nombre)
+          `)
+          .eq('esta_activo', true)
+          .order('nombre_comercial', { ascending: true })
+      ).pipe(
+        map(res => {
+          if (res.data && res.data.length > 0) {
+            const mapped = res.data.map(p => this.mapSupabaseToProducto(p));
+            this.productosCatalogo = mapped;
+            this.persistirCatalogo();
+            return mapped;
+          }
+          return this.productosCatalogo.filter(p => p.estaActivo);
+        }),
+        catchError(() => of(this.productosCatalogo.filter(p => p.estaActivo)))
+      );
     }
     return of(this.productosCatalogo.filter(p => p.estaActivo));
   }
@@ -340,19 +221,45 @@ export class ProductService {
    * Obtener un producto específico por ID
    */
   obtenerProductoCatalogo(id: string): Observable<ProductoCatalogoItem | null> {
-    if (!this.productosCatalogo || this.productosCatalogo.length === 0) {
-      this.productosCatalogo = this.cargarCatalogoStorage();
+    const item = this.productosCatalogo.find(p => p.id === id);
+    if (item) return of({ ...item });
+
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      return from(
+        client
+          .from('productos')
+          .select(`
+            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
+            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
+            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
+            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
+            principios_activos (nombre),
+            laboratorios (nombre),
+            categorias_producto (nombre)
+          `)
+          .eq('id', id)
+          .single()
+      ).pipe(
+        map(res => {
+          if (res.data) {
+            return this.mapSupabaseToProducto(res.data);
+          }
+          return null;
+        }),
+        catchError(() => of(null))
+      );
     }
-    const item = this.productosCatalogo.find(p => p.id === id) || null;
-    return of(item ? { ...item } : null);
+
+    return of(null);
   }
 
   /**
-   * Guardar o actualizar un producto en el catálogo maestro
+   * Guardar o actualizar un producto en el catálogo maestro y persistir en Supabase
    */
   guardarEnCatalogo(item: ProductoCatalogoItem): Observable<ProductoCatalogoItem> {
-    if (!item.id) {
-      item.id = 'cat-' + Date.now().toString().slice(-6);
+    if (!item.id || item.id.startsWith('cat-')) {
+      item.id = crypto.randomUUID();
       item.creadoEn = new Date().toISOString().split('T')[0];
       this.productosCatalogo.unshift({ ...item });
     } else {
@@ -364,20 +271,46 @@ export class ProductService {
       }
     }
     this.persistirCatalogo();
+
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      const payload: any = {
+        id: item.id,
+        nombre_comercial: item.nombreComercial,
+        nombre_generico: item.principioActivo || item.nombreComercial,
+        codigo_interno: item.sku || ('MED-' + item.id.slice(0, 6)),
+        codigo_barras: item.codigoBarra || null,
+        precio_venta: Number(item.precioVenta || item.precioCaja) || 1.0,
+        precio_costo: Number(item.precioUnidad) || 0.5,
+        precio_venta_fraccion: Number(item.precioUnidad || item.precioVenta) || 1.0,
+        unidades_por_caja: Number(item.unidadesPorCaja) || 100,
+        concentracion: item.concentracion || null,
+        tipo_receta: item.requiereReceta ? 'RECETA_MEDICA' : 'VENTA_LIBRE',
+        esta_activo: item.estaActivo !== false
+      };
+      client.from('productos').upsert(payload).then();
+    }
+
     return of({ ...item });
   }
 
   /**
-   * Eliminar un producto del catálogo maestro
+   * Eliminar un producto del catálogo maestro (soft delete en Supabase)
    */
   eliminarDelCatalogo(id: string): Observable<boolean> {
     this.productosCatalogo = this.productosCatalogo.filter(p => p.id !== id);
     this.persistirCatalogo();
+
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      client.from('productos').update({ esta_activo: false }).eq('id', id).then();
+    }
+
     return of(true);
   }
 
   /**
-   * Búsqueda predictiva sobre el catálogo maestro (para POS, autocompletados, etc.)
+   * Búsqueda predictiva sobre el catálogo
    */
   buscarEnCatalogo(query?: string): Observable<ProductoCatalogoItem[]> {
     const items = this.productosCatalogo.filter(p => p.estaActivo);
@@ -386,6 +319,7 @@ export class ProductService {
     return of(items.filter(p =>
       p.nombreComercial.toLowerCase().includes(q) ||
       p.sku.toLowerCase().includes(q) ||
+      (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
       (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
       (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
       (p.marca && p.marca.toLowerCase().includes(q)) ||

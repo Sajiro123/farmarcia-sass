@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
+import { ProductService } from '../../core/services/product.service';
 
 export interface CompraItem {
   id: number;
@@ -76,111 +77,11 @@ export class Compras implements OnInit {
   costoPorCaja = 35.00;
   precioVentaSugerido = 0.50;
 
-  itemsCompra: CompraItem[] = [
-    {
-      id: 1,
-      nombre: 'Paracetamol 500mg (Caja x 100)',
-      categoria: 'Analgésicos',
-      modalidadIngreso: 'cajas',
-      requiereLote: true,
-      lote: 'LT-982134',
-      vencimiento: '2027-12',
-      cantidadCajas: 10,
-      unidadesPorCaja: 100,
-      totalUnidades: 1000,
-      costoPorCaja: 35.00,
-      costoUnitario: 0.35,
-      precioVentaSugerido: 0.50,
-      margenPorcentaje: 42.8
-    },
-    {
-      id: 2,
-      nombre: 'Pañales Huggies Talla G (Fardo x 4)',
-      categoria: 'Cuidado Personal',
-      modalidadIngreso: 'cajas',
-      requiereLote: false,
-      lote: 'ING-AUTO-202608',
-      vencimiento: 'Sin Venc.',
-      cantidadCajas: 5,
-      unidadesPorCaja: 4,
-      totalUnidades: 20,
-      costoPorCaja: 120.00,
-      costoUnitario: 30.00,
-      precioVentaSugerido: 38.00,
-      margenPorcentaje: 26.6
-    }
-  ];
+  private productService = inject(ProductService);
 
-  // 2. Reorden Inteligente & Sugerencia de Compras
-  productosReorden: ProductoReorden[] = [
-    {
-      id: 1,
-      nombre: 'Ibuprofeno 400mg (Genfar)',
-      laboratorio: 'Genfar S.A.',
-      stockActual: 0,
-      ventaDiariaPromedio: 15,
-      diasEntregaProveedor: 3,
-      stockSeguridad: 30,
-      puntoReorden: 75, // (15 * 3) + 30 = 75
-      cantidadSugeridaPedir: 150,
-      costoEstimadoCaja: 7.00,
-      enQuiebre: true
-    },
-    {
-      id: 2,
-      nombre: 'Amoxicilina + Clavulánico 500/125mg',
-      laboratorio: 'Portugal',
-      stockActual: 12,
-      ventaDiariaPromedio: 8,
-      diasEntregaProveedor: 4,
-      stockSeguridad: 20,
-      puntoReorden: 52, // (8 * 4) + 20 = 52
-      cantidadSugeridaPedir: 60,
-      costoEstimadoCaja: 32.00,
-      enQuiebre: true
-    },
-    {
-      id: 3,
-      nombre: 'Panadol Antigripal NF (Sobre x 2)',
-      laboratorio: 'GSK',
-      stockActual: 210,
-      ventaDiariaPromedio: 25,
-      diasEntregaProveedor: 2,
-      stockSeguridad: 50,
-      puntoReorden: 100,
-      cantidadSugeridaPedir: 0,
-      costoEstimadoCaja: 110.00,
-      enQuiebre: false
-    }
-  ];
-
-  // 3. Cuentas por Pagar (Facturas a Crédito)
-  cuentasPorPagar: CuentaPorPagar[] = [
-    {
-      id: 'CXP-001',
-      proveedor: 'Laboratorios Genfar S.A.',
-      nroFactura: 'F002-009182',
-      fechaEmision: new Date(Date.now() - 86400000 * 20),
-      fechaVencimiento: new Date(Date.now() + 86400000 * 10),
-      diasRestantes: 10,
-      montoTotal: 1450.00,
-      montoPagado: 0,
-      saldoPendiente: 1450.00,
-      estado: 'PENDIENTE'
-    },
-    {
-      id: 'CXP-002',
-      proveedor: 'Droguería del Centro S.A.C.',
-      nroFactura: 'F001-003912',
-      fechaEmision: new Date(Date.now() - 86400000 * 35),
-      fechaVencimiento: new Date(Date.now() - 86400000 * 5),
-      diasRestantes: -5,
-      montoTotal: 820.00,
-      montoPagado: 0,
-      saldoPendiente: 820.00,
-      estado: 'VENCIDO'
-    }
-  ];
+  itemsCompra: CompraItem[] = [];
+  productosReorden: ProductoReorden[] = [];
+  cuentasPorPagar: CuentaPorPagar[] = [];
 
   // Modal Orden de Compra Generada
   showOrdenCompraModal = false;
@@ -188,6 +89,25 @@ export class Compras implements OnInit {
 
   ngOnInit() {
     this.recalcularTotalesItem();
+    this.cargarProductosReorden();
+  }
+
+  cargarProductosReorden() {
+    this.productService.listarCatalogoActivos().subscribe(prods => {
+      this.productosReorden = (prods || []).map((p, idx) => ({
+        id: idx + 1,
+        nombre: `${p.nombreComercial} ${p.concentracion || ''}`.trim(),
+        laboratorio: p.laboratorio || 'Genfar S.A.',
+        stockActual: p.stockDisponible || 0,
+        ventaDiariaPromedio: 10,
+        diasEntregaProveedor: 3,
+        stockSeguridad: 20,
+        puntoReorden: 50,
+        cantidadSugeridaPedir: (p.stockDisponible || 0) < 30 ? 100 : 0,
+        costoEstimadoCaja: p.precioCaja || 15.00,
+        enQuiebre: (p.stockDisponible || 0) < 20
+      }));
+    });
   }
 
   get totalUnidadesCalculadas(): number {

@@ -44,7 +44,13 @@ export class MainLayout {
     if (url.includes('/productos')) {
       return { section: 'Inventario', title: 'Catálogo DIGEMID' };
     }
-    if (url.includes('/inventario')) {
+    if (url.includes('/inventario/editar') || url.includes('/inventory/editar')) {
+      return { section: 'Inventario', title: 'Edición de Ficha de Lote' };
+    }
+    if (url.includes('/inventario/nuevo') || url.includes('/inventory/nuevo')) {
+      return { section: 'Inventario', title: 'Ingreso por Lote (Multiproducto)' };
+    }
+    if (url.includes('/inventario') || url.includes('/inventory')) {
       return { section: 'Inventario', title: 'Control de Lotes & FEFO' };
     }
     if (url.includes('/reportes')) {
@@ -71,11 +77,12 @@ export class MainLayout {
   }
 
   cambiarSede(sede: Sede) {
-    if (this.authService.activeRole() !== 'ADMIN') {
+    if (this.authService.activeRole() !== 'ADMIN' && !this.authService.currentUser()?.esSuperadmin) {
       return;
     }
     this.authService.setSedeActiva(sede);
     this.showSedesModal = false;
+    window.location.reload();
   }
 
   logout() {

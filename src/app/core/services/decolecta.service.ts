@@ -1,15 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, map, timeout } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-export interface DecolectaDniResponse {
-  first_name: string;
-  first_last_name: string;
-  second_last_name?: string;
-  full_name?: string;
-  document_number: string;
-}
 
 export interface DecolectaRucResponse {
   razon_social: string;
@@ -53,27 +45,6 @@ export class DecolectaService {
       'Authorization': `Bearer ${this.token}`,
       'Content-Type': 'application/json'
     });
-  }
-
-  consultarDni(dni: string): Observable<DecolectaDniResponse> {
-    const doc = dni ? dni.trim() : '';
-    const url = `${this.baseUrl}/reniec/dni?numero=${doc}&token=${this.token}`;
-
-    return this.http.get<any>(url, { headers: this.getHeaders() }).pipe(
-      timeout(5000), // Timeout de 5 segundos para que no se quede colgado
-      map(res => {
-        if (!res || res.error) {
-          throw new Error(res?.error || 'No se encontraron datos para el DNI ingresado.');
-        }
-        return {
-          first_name: res.first_name || '',
-          first_last_name: res.first_last_name || '',
-          second_last_name: res.second_last_name || '',
-          full_name: res.full_name || `${res.first_name || ''} ${res.first_last_name || ''} ${res.second_last_name || ''}`.trim(),
-          document_number: res.document_number || doc
-        } as DecolectaDniResponse;
-      })
-    );
   }
 
   consultarRuc(ruc: string): Observable<DecolectaRucResponse> {

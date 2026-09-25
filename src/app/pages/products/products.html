@@ -2,21 +2,40 @@
 
   <!-- TOAST NOTIFICACIÓN FLOTANTE (FONTAWESOME) -->
   @if (mensajeToast) {
-    <div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-medium transition-all duration-300 transform translate-y-0"
+    <div class="fixed top-20 right-6 z-[100] flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border max-w-md transition-all duration-300 animate-slide-up backdrop-blur-md"
       [ngClass]="{
-        'bg-emerald-50 border-emerald-200 text-emerald-900': mensajeToast.tipo === 'success',
-        'bg-rose-50 border-rose-200 text-rose-900': mensajeToast.tipo === 'error',
-        'bg-sky-50 border-sky-200 text-sky-900': mensajeToast.tipo === 'info'
+        'bg-emerald-50/95 dark:bg-emerald-950/95 border-emerald-300 dark:border-emerald-700 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-400/20': mensajeToast.tipo === 'success',
+        'bg-rose-50/95 dark:bg-rose-950/95 border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100 ring-2 ring-rose-400/20': mensajeToast.tipo === 'error',
+        'bg-sky-50/95 dark:bg-sky-950/95 border-sky-300 dark:border-sky-700 text-sky-950 dark:text-sky-100 ring-2 ring-sky-400/20': mensajeToast.tipo === 'info'
       }">
-      <i class="fa-solid text-lg"
+      
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
         [ngClass]="{
-          'fa-circle-check text-emerald-600': mensajeToast.tipo === 'success',
-          'fa-circle-exclamation text-rose-600': mensajeToast.tipo === 'error',
-          'fa-circle-info text-sky-600': mensajeToast.tipo === 'info'
+          'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-300': mensajeToast.tipo === 'success',
+          'bg-rose-100 text-rose-600 dark:bg-rose-900/60 dark:text-rose-300': mensajeToast.tipo === 'error',
+          'bg-sky-100 text-sky-600 dark:bg-sky-900/60 dark:text-sky-300': mensajeToast.tipo === 'info'
         }">
-      </i>
-      <span>{{ mensajeToast.texto }}</span>
-      <button (click)="mensajeToast = null" class="ml-3 text-slate-400 hover:text-slate-700">
+        <i class="text-base"
+          [ngClass]="{
+            'fa-solid fa-circle-check text-emerald-600 dark:text-emerald-300': mensajeToast.tipo === 'success',
+            'fa-solid fa-circle-exclamation text-rose-600 dark:text-rose-300': mensajeToast.tipo === 'error',
+            'fa-solid fa-circle-info text-sky-600 dark:text-sky-300': mensajeToast.tipo === 'info'
+          }"></i>
+      </div>
+
+      <div class="flex-1 min-w-0 pt-0.5">
+        <h4 class="text-xs font-black uppercase tracking-wider mb-0.5"
+          [ngClass]="{
+            'text-emerald-800 dark:text-emerald-300': mensajeToast.tipo === 'success',
+            'text-rose-800 dark:text-rose-300': mensajeToast.tipo === 'error',
+            'text-sky-800 dark:text-sky-300': mensajeToast.tipo === 'info'
+          }">
+          {{ mensajeToast.tipo === 'success' ? '¡Éxito!' : (mensajeToast.tipo === 'error' ? '¡Error!' : 'Notificación') }}
+        </h4>
+        <p class="text-xs font-semibold leading-relaxed">{{ mensajeToast.texto }}</p>
+      </div>
+
+      <button (click)="mensajeToast = null" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-1 cursor-pointer">
         <i class="fa-solid fa-xmark text-sm"></i>
       </button>
     </div>
@@ -47,8 +66,18 @@
             <span>Actualizar</span>
           </button>
 
+          <button (click)="abrirModalGestionCategorias()"
+            title="Ver y Administrar Tabla de Categorías"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+            <i class="fa-solid fa-table-list text-emerald-600 text-xs"></i>
+            <span>Tabla de Categorías</span>
+            <span class="px-2 py-0.5 text-[10px] bg-emerald-50 text-emerald-700 rounded-full font-bold border border-emerald-200">
+              {{ categorias.length }}
+            </span>
+          </button>
+
           <button (click)="irANuevoProducto()"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/25 transition-all transform active:scale-95">
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition-all transform active:scale-95 cursor-pointer">
             <i class="fa-solid fa-circle-plus text-sm"></i>
             <span>+ Nuevo Producto</span>
           </button>
@@ -57,15 +86,15 @@
 
       <!-- FILTROS Y BUSCADORES INTEGRADOS -->
       <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-center">
           
           <!-- Buscador principal -->
-          <div class="md:col-span-5 relative">
+          <div class="sm:col-span-2 md:col-span-4 relative">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
             <input type="text"
               [(ngModel)]="busquedaGrilla"
               (ngModelChange)="paginaActual = 1"
-              placeholder="Buscar por nombre comercial, SKU, marca o categoría..."
+              placeholder="Buscar por nombre, SKU, código de barras, marca..."
               class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
             @if (busquedaGrilla) {
               <button (click)="busquedaGrilla = ''; paginaActual = 1" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -75,29 +104,42 @@
           </div>
 
           <!-- Filtro Tipo de Producto -->
-          <div class="md:col-span-3">
+          <div class="sm:col-span-1 md:col-span-2">
             <select [(ngModel)]="filtroTipo"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
               <option value="TODOS">📦 Todos los Tipos</option>
-              <option value="MEDICAMENTO">💊 Solo Medicamentos</option>
-              <option value="PERFUME">✨ Solo Perfumería</option>
+              <option value="MEDICAMENTO">💊 Medicamentos</option>
+              <option value="PERFUME">✨ Perfumería</option>
+              <option value="OTROS">🧴 Otros</option>
+            </select>
+          </div>
+
+          <!-- Filtro Categoría -->
+          <div class="sm:col-span-1 md:col-span-2">
+            <select [(ngModel)]="filtroCategoria"
+              (ngModelChange)="paginaActual = 1"
+              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              <option value="TODOS">🏷️ Todas Categorías</option>
+              @for (cat of categorias; track cat.id) {
+                <option [value]="cat.nombre">{{ cat.nombre }}</option>
+              }
             </select>
           </div>
 
           <!-- Filtro Condición de Venta -->
-          <div class="md:col-span-2">
+          <div class="sm:col-span-1 md:col-span-2">
             <select [(ngModel)]="filtroCondicion"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
               <option value="TODOS">📋 Toda Condición</option>
-              <option value="RECETA">🔴 Requiere Receta (Rx)</option>
+              <option value="RECETA">🔴 Requiere Rx</option>
               <option value="VENTA_LIBRE">🟢 Venta Libre</option>
             </select>
           </div>
 
           <!-- Ordenar Por -->
-          <div class="md:col-span-2">
+          <div class="sm:col-span-1 md:col-span-2">
             <select [(ngModel)]="ordenarPor"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -111,7 +153,7 @@
         </div>
 
         <!-- Barra de estado de filtros aplicados -->
-        @if (busquedaGrilla || filtroTipo !== 'TODOS' || filtroCondicion !== 'TODOS' || filtroEstado !== 'TODOS') {
+        @if (busquedaGrilla || filtroTipo !== 'TODOS' || filtroCategoria !== 'TODOS' || filtroCondicion !== 'TODOS' || filtroEstado !== 'TODOS') {
           <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
             <div class="flex items-center gap-2">
               <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
@@ -132,50 +174,51 @@
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <!-- HEADER ESTILO IMAGEN (Dark Slate suave con iconos temáticos y flechas sort) -->
+            <!-- HEADER ESTILO IMAGEN COMPACTO Y CON ACCIONES FIJAS -->
             <thead>
-              <tr class="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider border-b border-slate-700">
-                <th (click)="alternarOrden('NOMBRE')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                  <div class="flex items-center gap-2">
+              <tr class="bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider border-b border-slate-700">
+                <th (click)="alternarOrden('NOMBRE')" class="py-2.5 px-3 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center gap-1.5">
                     <i class="fa-solid fa-barcode text-sky-400 text-xs"></i>
                     <span>TIPO & SKU</span>
-                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                    <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
-                <th (click)="alternarOrden('NOMBRE')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors">
-                  <div class="flex items-center gap-2">
+                <th (click)="alternarOrden('NOMBRE')" class="py-2.5 px-3 cursor-pointer hover:bg-slate-700/80 transition-colors">
+                  <div class="flex items-center gap-1.5">
                     <i class="fa-solid fa-pills text-emerald-400 text-xs"></i>
                     <span>PRODUCTO / FICHA</span>
-                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                    <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
-                <th (click)="alternarOrden('CATEGORIA')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                  <div class="flex items-center gap-2">
+                <th (click)="alternarOrden('CATEGORIA')" class="py-2.5 px-3 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center gap-1.5">
                     <i class="fa-solid fa-tags text-teal-300 text-xs"></i>
                     <span>CATEGORÍA</span>
-                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                    <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
-                <th (click)="alternarOrden('PRECIO')" class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-2">
+                <th (click)="alternarOrden('PRECIO')" class="py-2.5 px-3 text-right cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-1.5">
                     <i class="fa-solid fa-hand-holding-dollar text-emerald-300 text-xs"></i>
-                    <span>PRECIOS DE VENTA (S/)</span>
-                    <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+                    <span>PRECIOS (S/)</span>
+                    <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
-                <th class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2">
+                <th class="py-2.5 px-2.5 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-file-prescription text-rose-300 text-xs"></i>
-                    <span>CONDICIÓN / DETALLE</span>
+                    <span>CONDICIÓN</span>
                   </div>
                 </th>
-                <th class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2">
+                <th class="py-2.5 px-2.5 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-circle-check text-emerald-300 text-xs"></i>
                     <span>ESTADO</span>
                   </div>
                 </th>
-                <th class="py-3.5 px-4 text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-2">
+                <th class="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-slate-800 z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.3)]">
+                  <div class="flex items-center justify-end gap-1.5">
                     <i class="fa-solid fa-gear text-slate-400 text-xs"></i>
                     <span>ACCIONES</span>
                   </div>
@@ -187,52 +230,75 @@
             <tbody class="divide-y divide-slate-100 text-xs">
               @for (p of productosPaginados; track p.id) {
                 <tr class="hover:bg-slate-50/90 transition-colors group">
-                  <!-- Tipo & SKU -->
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
+                  <!-- Tipo & SKU Compactos -->
+                  <td class="py-2 px-3 whitespace-nowrap">
+                    <div class="flex items-center gap-1.5">
                       @if (p.tipoProducto === 'MEDICAMENTO') {
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-semibold text-[10px]">
-                          <i class="fa-solid fa-pills text-[10px]"></i>
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold text-[9px]">
+                          <i class="fa-solid fa-pills text-[9px]"></i>
                           MED
                         </span>
-                      } @else {
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/80 font-semibold text-[10px]">
-                          <i class="fa-solid fa-spray-can-sparkles text-[10px]"></i>
+                      } @else if (p.tipoProducto === 'PERFUME') {
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200/80 font-bold text-[9px]">
+                          <i class="fa-solid fa-spray-can-sparkles text-[9px]"></i>
                           PERF
                         </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200/80 font-bold text-[9px]">
+                          <i class="fa-solid fa-box text-[9px]"></i>
+                          OTRO
+                        </span>
                       }
-                      <span class="font-mono text-slate-700 font-semibold text-[11px]">{{ p.sku }}</span>
+                      <span class="font-mono text-slate-700 font-semibold text-[10px]">{{ p.sku }}</span>
                     </div>
+                    @if (p.codigoBarra) {
+                      <div class="flex items-center gap-1 text-[9px] font-mono text-slate-500 mt-0.5" [title]="'Código de barras: ' + p.codigoBarra">
+                        <i class="fa-solid fa-barcode text-[9px] text-slate-400"></i>
+                        <span>{{ p.codigoBarra }}</span>
+                      </div>
+                    }
                   </td>
 
-                  <!-- Producto / Ficha con Foto -->
-                  <td class="py-3.5 px-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs">
+                  <!-- Producto / Ficha con Foto Compacta -->
+                  <td class="py-2 px-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/90 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs">
                         @if (p.imagenUrl) {
                           <img [src]="p.imagenUrl" [alt]="p.nombreComercial" class="max-h-full max-w-full object-contain mix-blend-multiply" />
+                        } @else if (p.tipoProducto === 'PERFUME') {
+                          <i class="fa-solid fa-spray-can-sparkles text-purple-600 text-xs"></i>
+                        } @else if (p.tipoProducto === 'OTROS') {
+                          <i class="fa-solid fa-box-open text-sky-600 text-xs"></i>
                         } @else {
-                          <i class="fa-solid fa-pills text-emerald-600 text-sm"></i>
+                          <i class="fa-solid fa-pills text-emerald-600 text-xs"></i>
                         }
                       </div>
-                      <div class="min-w-0">
-                        <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                      <div class="min-w-0 max-w-[240px]">
+                        <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate text-xs">
                           {{ p.nombreComercial }}
                         </div>
-                        @if (p.tipoProducto === 'PERFUME' && p.marca) {
-                          <div class="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <span class="font-semibold text-slate-700">{{ p.marca }}</span>
-                            @if (p.familiaOlfativa) {
+                        @if (p.tipoProducto === 'PERFUME') {
+                          <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1">
+                            @if (p.marca) {
+                              <span class="font-semibold text-slate-700">{{ p.marca }}</span>
                               <span>•</span>
-                              <span class="text-purple-600 font-medium">{{ p.familiaOlfativa }}</span>
                             }
+                            <span class="text-purple-600 font-medium">{{ p.generoObjetivo || 'UNISEX' }}</span>
+                          </div>
+                        } @else if (p.tipoProducto === 'OTROS') {
+                          <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1">
+                            @if (p.marca) {
+                              <span class="font-semibold text-slate-700">{{ p.marca }}</span>
+                              <span>•</span>
+                            }
+                            <span class="text-slate-500">{{ p.categoriaNombre || 'Higiene y Cuidado' }}</span>
                           </div>
                         } @else if (p.principioActivo || p.laboratorio) {
-                          <div class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
+                          <div class="text-[10px] text-slate-400 truncate mt-0.5">
                             {{ p.principioActivo || '' }} {{ p.laboratorio ? '• ' + p.laboratorio : '' }}
                           </div>
                         } @else if (p.descripcion) {
-                          <div class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
+                          <div class="text-[10px] text-slate-500 mt-0.5 leading-snug truncate">
                             {{ p.descripcion }}
                           </div>
                         }
@@ -240,41 +306,54 @@
                     </div>
                   </td>
 
-                  <!-- Categoría -->
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px]">
-                      <i class="fa-solid fa-tag text-[9px] text-slate-400"></i>
-                      {{ p.categoriaNombre || 'General' }}
+                  <!-- Categoría Compacta -->
+                  <td class="py-2 px-3 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[10px] max-w-[125px] truncate" [title]="p.categoriaNombre || 'General'">
+                      <i class="fa-solid fa-tag text-[8px] text-slate-400 shrink-0"></i>
+                      <span class="truncate">{{ p.categoriaNombre || 'General' }}</span>
                     </span>
                   </td>
 
-                  <!-- Precios Desglosados: Caja, Blíster y Unidad para Medicamento / Frasco para Perfumes -->
-                  <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                  <!-- Precios Desglosados Compactos -->
+                  <td class="py-2 px-3 text-right whitespace-nowrap">
                     @if (p.tipoProducto === 'PERFUME') {
                       <div class="flex flex-col items-end">
                         <span class="font-mono font-bold text-purple-900 text-xs">
                           S/ {{ (p.precioVenta || p.precioUnidad || p.precioCaja || 0) | number:'1.2-2' }}
                         </span>
-                        <span class="text-[10px] text-purple-600 font-medium">Frasco / Und</span>
+                        <span class="text-[9px] text-purple-600 font-medium">Frasco / Und</span>
+                      </div>
+                    } @else if (p.tipoProducto === 'OTROS') {
+                      <div class="flex flex-col items-end gap-0.5">
+                        @if (p.precioCaja && p.precioCaja > 0) {
+                          <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-semibold">Caja:</span>
+                            <span class="font-mono font-bold text-slate-900 text-[11px]">S/ {{ p.precioCaja | number:'1.2-2' }}</span>
+                          </div>
+                        }
+                        <div class="flex items-center gap-1">
+                          <span class="text-[9px] text-sky-700 uppercase font-semibold">Und:</span>
+                          <span class="font-mono font-bold text-sky-800 text-[11px]">S/ {{ (p.precioUnidad || p.precioVenta || 0) | number:'1.2-2' }}</span>
+                        </div>
                       </div>
                     } @else {
-                      <div class="flex flex-col items-end gap-1">
+                      <div class="flex flex-col items-end gap-0.5">
                         @if (p.precioCaja && p.precioCaja > 0) {
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] text-slate-500 uppercase font-semibold">Caja:</span>
-                            <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ p.precioCaja | number:'1.2-2' }}</span>
+                          <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-semibold">Caj:</span>
+                            <span class="font-mono font-bold text-slate-900 text-[11px]">S/ {{ p.precioCaja | number:'1.2-2' }}</span>
                           </div>
                         }
                         @if (p.precioBlister && p.precioBlister > 0) {
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] text-emerald-700 uppercase font-semibold">Blíster:</span>
-                            <span class="font-mono font-bold text-emerald-700 text-xs">S/ {{ p.precioBlister | number:'1.2-2' }}</span>
+                          <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-emerald-700 uppercase font-semibold">Blíst:</span>
+                            <span class="font-mono font-bold text-emerald-700 text-[11px]">S/ {{ p.precioBlister | number:'1.2-2' }}</span>
                           </div>
                         }
                         @if (p.precioUnidad && p.precioUnidad > 0) {
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] text-slate-500 uppercase font-semibold">Unidad:</span>
-                            <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ p.precioUnidad | number:'1.2-2' }}</span>
+                          <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-semibold">Und:</span>
+                            <span class="font-mono font-bold text-slate-900 text-[11px]">S/ {{ p.precioUnidad | number:'1.2-2' }}</span>
                           </div>
                         } @else if (!p.precioCaja && !p.precioBlister) {
                           <span class="font-mono font-bold text-slate-900 text-xs">S/ {{ (p.precioVenta || 0) | number:'1.2-2' }}</span>
@@ -283,55 +362,56 @@
                     }
                   </td>
 
-                  <!-- Condición / Detalle -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <!-- Condición / Detalle Compacta -->
+                  <td class="py-2 px-2.5 text-center whitespace-nowrap">
                     @if (p.tipoProducto === 'MEDICAMENTO') {
                       @if (p.requiereReceta) {
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 text-[10px] font-bold">
-                          <i class="fa-solid fa-file-prescription text-xs"></i>
-                          Bajo Receta (Rx)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 text-[9px] font-bold">
+                          <i class="fa-solid fa-file-prescription text-[10px]"></i>
+                          Receta (Rx)
                         </span>
                       } @else {
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-semibold">
-                          <i class="fa-solid fa-circle-check text-xs"></i>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[9px] font-semibold">
+                          <i class="fa-solid fa-circle-check text-[10px]"></i>
                           Venta Libre
                         </span>
                       }
+                    } @else if (p.tipoProducto === 'PERFUME') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 text-[9px] font-medium">
+                        <i class="fa-solid fa-user-tag text-[10px]"></i>
+                        {{ p.generoObjetivo || 'UNISEX' }}
+                      </span>
                     } @else {
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] font-medium">
-                        <i class="fa-solid fa-droplet text-xs"></i>
-                        {{ p.volumenMl }} ml • {{ p.generoObjetivo || 'UNISEX' }}
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/80 text-[9px] font-medium">
+                        <i class="fa-solid fa-box text-[10px]"></i>
+                        {{ p.marca || 'Cuidado' }}
                       </span>
                     }
                   </td>
 
-                  <!-- Estado -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    @if (p.estaActivo) {
-                      <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
-                        <i class="fa-solid fa-circle text-[7px] text-emerald-500"></i>
-                        Activo
-                      </span>
-                    } @else {
-                      <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                        <i class="fa-solid fa-circle text-[7px] text-slate-300"></i>
-                        Inactivo
-                      </span>
-                    }
+                  <!-- Estado con toggle rápido Compacto -->
+                  <td class="py-2 px-2.5 text-center whitespace-nowrap">
+                    <button type="button" (click)="alternarEstadoProducto(p, $event)"
+                      [title]="p.estaActivo ? 'Haga clic para desactivar producto' : 'Haga clic para activar producto'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer"
+                      [ngClass]="p.estaActivo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'">
+                      <i class="fa-solid text-[6px]" [ngClass]="p.estaActivo ? 'fa-circle text-emerald-500' : 'fa-circle text-slate-400'"></i>
+                      <span>{{ p.estaActivo ? 'Activo' : 'Inactivo' }}</span>
+                    </button>
                   </td>
 
-                  <!-- Acciones -->
-                  <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                  <!-- Acciones Fijas y Siempre Visibles -->
+                  <td class="py-2 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)]">
                     <div class="flex items-center justify-end gap-1.5">
                       <button (click)="editarProducto(p)"
                         title="Editar ficha"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors">
-                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        class="p-1.5 rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-colors shadow-2xs cursor-pointer">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
                       </button>
                       <button (click)="eliminarProducto(p)"
                         title="Eliminar del catálogo"
-                        class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
-                        <i class="fa-solid fa-trash-can text-sm"></i>
+                        class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors shadow-2xs cursor-pointer">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
                       </button>
                     </div>
                   </td>
@@ -450,7 +530,7 @@
               [class.text-slate-600]="tipoSeleccionado !== 'MEDICAMENTO'"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all">
               <i class="fa-solid fa-pills text-xs text-emerald-600"></i>
-              Modo Medicamento
+              Medicamento
             </button>
             <button (click)="seleccionarTipo('PERFUME')"
               [class.bg-white]="tipoSeleccionado === 'PERFUME'"
@@ -459,15 +539,34 @@
               [class.text-slate-600]="tipoSeleccionado !== 'PERFUME'"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all">
               <i class="fa-solid fa-spray-can-sparkles text-xs text-purple-600"></i>
-              Modo Perfume
+              Perfume
+            </button>
+            <button (click)="seleccionarTipo('OTROS')"
+              [class.bg-white]="tipoSeleccionado === 'OTROS'"
+              [class.text-sky-800]="tipoSeleccionado === 'OTROS'"
+              [class.shadow-sm]="tipoSeleccionado === 'OTROS'"
+              [class.text-slate-600]="tipoSeleccionado !== 'OTROS'"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all">
+              <i class="fa-solid fa-box-open text-xs text-sky-600"></i>
+              Otros (Aseo/Varios)
             </button>
           </div>
         } @else {
           <!-- Badge Bloqueado de Tipo en Modo Edición -->
           <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold"
-            [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-purple-50 text-purple-800 border-purple-200'">
-            <i class="fa-solid" [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'"></i>
-            <span>{{ tipoSeleccionado === 'MEDICAMENTO' ? 'Ficha de Medicamento' : 'Ficha de Perfumería' }}</span>
+            [ngClass]="{
+              'bg-emerald-50 text-emerald-800 border-emerald-200': tipoSeleccionado === 'MEDICAMENTO',
+              'bg-purple-50 text-purple-800 border-purple-200': tipoSeleccionado === 'PERFUME',
+              'bg-sky-50 text-sky-800 border-sky-200': tipoSeleccionado === 'OTROS'
+            }">
+            <i class="fa-solid" [ngClass]="{
+              'fa-pills text-emerald-600': tipoSeleccionado === 'MEDICAMENTO',
+              'fa-spray-can-sparkles text-purple-600': tipoSeleccionado === 'PERFUME',
+              'fa-box-open text-sky-600': tipoSeleccionado === 'OTROS'
+            }"></i>
+            <span>
+              {{ tipoSeleccionado === 'MEDICAMENTO' ? 'Ficha de Medicamento' : (tipoSeleccionado === 'PERFUME' ? 'Ficha de Perfumería' : 'Ficha de Otros Productos (Aseo/Pañales)') }}
+            </span>
             <span class="text-[10px] opacity-75 font-medium ml-1">(Tipo no modificable)</span>
           </div>
         }
@@ -479,49 +578,99 @@
         <!-- COLUMNA IZQUIERDA: FORMULARIO (8 COLS) -->
         <div class="lg:col-span-8 space-y-6">
 
+          <!-- CONTROL DE ACTIVACIÓN / DESACTIVACIÓN DEL PRODUCTO (CATÁLOGO) -->
+          <div class="p-4.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all"
+            [ngClass]="productoForm.estaActivo ? 'bg-emerald-50/40 border-emerald-200' : 'bg-rose-50/40 border-rose-200'">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-sm transition-colors shrink-0"
+                [ngClass]="productoForm.estaActivo ? 'bg-emerald-600' : 'bg-rose-500'">
+                <i class="fa-solid text-lg" [ngClass]="productoForm.estaActivo ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold text-slate-900">Estado del Producto:</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border"
+                    [ngClass]="productoForm.estaActivo ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'">
+                    {{ productoForm.estaActivo ? 'PRODUCTO ACTIVO' : 'PRODUCTO DESACTIVADO' }}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {{ productoForm.estaActivo
+                     ? 'Habilitado y visible en catálogo, punto de venta (POS) y recepción de mercadería.'
+                     : 'Inhabilitado. El producto se mantendrá en el sistema pero no aparecerá disponible para ventas en el POS.' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Switch Toggle -->
+            <label class="relative inline-flex items-center cursor-pointer select-none shrink-0 ml-4">
+              <input type="checkbox" [(ngModel)]="productoForm.estaActivo" class="sr-only peer">
+              <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[3px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all after:shadow-sm peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
           <!-- SELECTOR TIPO DE PRODUCTO (SOLO CUANDO NO ES EDICIÓN) -->
           @if (!esEdicion) {
             <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Selecciona el Tipo de Producto a Registrar
               </label>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 
                 <!-- Card Medicamento -->
                 <div (click)="seleccionarTipo('MEDICAMENTO')"
-                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex items-start gap-3.5"
+                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex flex-col items-start gap-2.5"
                   [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'border-emerald-500 bg-emerald-50/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'">
                   <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30' : 'bg-slate-100 text-slate-600'">
                     <i class="fa-solid fa-pills text-lg"></i>
                   </div>
                   <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-sm text-slate-900">Medicamento</span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-sm text-slate-900">Medicamentos</span>
                       @if (tipoSeleccionado === 'MEDICAMENTO') {
                         <i class="fa-solid fa-circle text-[8px] text-emerald-500"></i>
                       }
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Fármacos, jarabes y pastillas para salud humana con control de receta médica.</p>
+                    <p class="text-xs text-slate-500 mt-1">Fármacos, jarabes y pastillas con receta o venta libre.</p>
                   </div>
                 </div>
 
                 <!-- Card Perfume / Fragancia -->
                 <div (click)="seleccionarTipo('PERFUME')"
-                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex items-start gap-3.5"
+                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex flex-col items-start gap-2.5"
                   [ngClass]="tipoSeleccionado === 'PERFUME' ? 'border-purple-500 bg-purple-50/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'">
                   <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     [ngClass]="tipoSeleccionado === 'PERFUME' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30' : 'bg-slate-100 text-slate-600'">
                     <i class="fa-solid fa-spray-can-sparkles text-lg"></i>
                   </div>
                   <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-sm text-slate-900">Perfume / Fragancia</span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-sm text-slate-900">Perfumes</span>
                       @if (tipoSeleccionado === 'PERFUME') {
                         <i class="fa-solid fa-circle text-[8px] text-purple-500"></i>
                       }
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Perfumes, colonias y lociones con especificación de marca, familia y volumen en ml.</p>
+                    <p class="text-xs text-slate-500 mt-1">Fragancias y colonias con marca y género objetivo.</p>
+                  </div>
+                </div>
+
+                <!-- Card Otros (Aseo, Pañales, etc.) -->
+                <div (click)="seleccionarTipo('OTROS')"
+                  class="cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 relative overflow-hidden flex flex-col items-start gap-2.5"
+                  [ngClass]="tipoSeleccionado === 'OTROS' ? 'border-sky-500 bg-sky-50/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    [ngClass]="tipoSeleccionado === 'OTROS' ? 'bg-sky-600 text-white shadow-md shadow-sky-500/30' : 'bg-slate-100 text-slate-600'">
+                    <i class="fa-solid fa-box-open text-lg"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-sm text-slate-900">Otros</span>
+                      @if (tipoSeleccionado === 'OTROS') {
+                        <i class="fa-solid fa-circle text-[8px] text-sky-500"></i>
+                      }
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Pañales, toallitas, higiene, aseo personal y varios.</p>
                   </div>
                 </div>
               </div>
@@ -563,22 +712,83 @@
                 </div>
               </div>
 
-              <!-- Categoría -->
+              <!-- Código de Barras (Opcional - Compatible con Pistola Lectora) -->
               <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Categoría</label>
-                <input type="text"
-                  [(ngModel)]="productoForm.categoriaNombre"
-                  placeholder="Ej. Analgésicos, Cuidado Personal, Fragancias, etc."
-                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-semibold text-slate-700">
+                    Código de Barras <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                  </label>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold border border-emerald-200 flex items-center gap-1">
+                    <i class="fa-solid fa-barcode text-[10px]"></i>
+                    <span>Lector compatible</span>
+                  </span>
+                </div>
+                <div class="relative">
+                  <input type="text"
+                    [(ngModel)]="productoForm.codigoBarra"
+                    (keydown.enter)="$event.preventDefault()"
+                    placeholder="Escanear con lector o ingresar EAN-13 / UPC..."
+                    class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  <i class="fa-solid fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                </div>
+              </div>
+
+              <!-- Categoría (Select con opción dinámica para agregar) -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-semibold text-slate-700">
+                    Categoría <span class="text-rose-500">*</span>
+                  </label>
+                  <button type="button"
+                    (click)="abrirModalNuevaCategoriaRapida()"
+                    class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-circle-plus text-[10px]"></i>
+                    <span>+ Nueva Categoría</span>
+                  </button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="relative flex-1">
+                    <select
+                      [(ngModel)]="productoForm.categoriaNombre"
+                      (change)="onCategoriaSelectChange($event)"
+                      class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none pr-8 font-medium">
+                      <option value="">-- Seleccionar categoría --</option>
+                      @if (productoForm.categoriaNombre && !estaEnCategoriasFiltradas(productoForm.categoriaNombre)) {
+                        <option [value]="productoForm.categoriaNombre">
+                          {{ productoForm.categoriaNombre }} (Seleccionada)
+                        </option>
+                      }
+                      @for (cat of categoriasFiltradasParaForm; track cat.id) {
+                        <option [value]="cat.nombre">
+                          {{ cat.nombre }} ({{ cat.tipoAsociado }})
+                        </option>
+                      }
+                      <option value="__NUEVA_CATEGORIA__" class="font-bold text-emerald-600 bg-emerald-50">
+                        ➕ + Agregar nueva categoría si desea...
+                      </option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                  </div>
+                  <button type="button"
+                    (click)="abrirModalGestionCategorias()"
+                    title="Ver Tabla de Categorías"
+                    class="px-2.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-medium transition-colors shrink-0 flex items-center gap-1 shadow-2xs">
+                    <i class="fa-solid fa-table-list text-xs"></i>
+                    <span class="hidden sm:inline text-[11px]">Tabla</span>
+                  </button>
+                </div>
               </div>
 
               <!-- Ubicación Almacén -->
-              <div class="sm:col-span-2">
+              <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1">Ubicación / Estante de Tienda</label>
-                <input type="text"
-                  [(ngModel)]="productoForm.ubicacionAlmacen"
-                  placeholder="Ej. Vitrina A-1, Pasillo 3, Gaveta 12"
-                  class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                <div class="relative">
+                  <input type="text"
+                    [(ngModel)]="productoForm.ubicacionAlmacen"
+                    placeholder="Ej. Vitrina A-1, Pasillo 3, Gaveta 12"
+                    class="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                  <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                </div>
               </div>
 
               <!-- Descripción -->
@@ -717,7 +927,7 @@
                 </div>
               </div>
             </div>
-          } @else {
+          } @else if (tipoSeleccionado === 'PERFUME') {
             <!-- PERFUMERÍA: PRECIO DE VENTA ÚNICO POR FRASCO / UNIDAD -->
             <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
               <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -751,9 +961,59 @@
                 </div>
               </div>
             </div>
+          } @else {
+            <!-- OTROS: PRECIO POR UNIDAD / PAQUETE Y POR CAJA / FARDO -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-sky-600"></i>
+                    <span>2. Estructura de Precios de Venta (S/)</span>
+                  </h2>
+                  <p class="text-xs text-slate-500">Configura el precio por unidad/paquete y opcionalmente precio por fardo o empaque mayorista.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-sky-50 text-sky-700 border border-sky-200">
+                  Aseo / Pañales / Varios
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Precio por Unidad / Paquete -->
+                <div class="bg-sky-50/40 p-4 rounded-xl border border-sky-200/80">
+                  <label class="block text-xs font-bold text-sky-950 mb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-tag text-sky-600 text-xs"></i>
+                    <span>Precio por Unidad / Paquete Individual (S/) *</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-sky-400">S/</span>
+                    <input type="number" step="0.50"
+                      [(ngModel)]="productoForm.precioUnidad"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-sky-200 rounded-xl text-sm font-mono font-bold text-sky-950 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-sky-700/80 mt-1 block">Precio por unidad suelta o paquete en mostrador</span>
+                </div>
+
+                <!-- Precio por Caja / Fardo -->
+                <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+                  <label class="block text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-boxes-packing text-slate-500 text-xs"></i>
+                    <span>Precio por Caja / Fardo Mayorista (S/)</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">S/</span>
+                    <input type="number" step="1.00"
+                      [(ngModel)]="productoForm.precioCaja"
+                      placeholder="0.00"
+                      class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all">
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">Presentación en fardo o caja cerrada de distribución</span>
+                </div>
+              </div>
+            </div>
           }
 
-          <!-- SECCIÓN: CONDICIÓN RECETA MÉDICA (MEDICAMENTOS) -->
+          <!-- SECCIÓN: CONDICIÓN RECETA MÉDICA (SOLO MEDICAMENTOS) -->
           @if (tipoSeleccionado === 'MEDICAMENTO') {
             <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
               <label class="flex items-center gap-3.5 p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 cursor-pointer transition-colors">
@@ -771,13 +1031,16 @@
             </div>
           }
 
-          <!-- SECCIÓN 3: ESPECIFICACIONES DE FRAGANCIA (SOLO PERFUMERÍA) -->
+          <!-- SECCIÓN 3: ESPECIFICACIONES DE FRAGANCIA (PERFUMERÍA: SOLO MARCA Y PÚBLICO/GÉNERO) -->
           @if (tipoSeleccionado === 'PERFUME') {
             <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
               <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
                 <div>
-                  <h2 class="text-base font-bold text-slate-900">3. Especificación de Fragancia (Perfumería)</h2>
-                  <p class="text-xs text-slate-500">Campos especializados para perfumes, colonias y cosmética.</p>
+                  <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-spray-can-sparkles text-purple-600"></i>
+                    <span>3. Especificación de Fragancia (Perfumería)</span>
+                  </h2>
+                  <p class="text-xs text-slate-500">Marca diseñadora y público objetivo de la fragancia.</p>
                 </div>
                 <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-purple-50 text-purple-700 border border-purple-200">
                   PERFUME
@@ -791,73 +1054,95 @@
                   <input type="text"
                     [(ngModel)]="productoForm.marca"
                     placeholder="Ej. Dior, Chanel, Paco Rabanne, Carolina Herrera"
-                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all font-medium">
                 </div>
 
-                <!-- Familia Olfativa -->
-                <div>
-                  <label class="block text-xs font-semibold text-slate-700 mb-1">Familia Olfativa</label>
-                  <select [(ngModel)]="productoForm.familiaOlfativa"
-                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
-                    <option value="Amaderado Aromático">Amaderado Aromático</option>
-                    <option value="Floral Frutal">Floral Frutal</option>
-                    <option value="Cítrico Fresco">Cítrico Fresco</option>
-                    <option value="Oriental Especiado">Oriental Especiado</option>
-                    <option value="Chipre Gourmand">Chipre Gourmand</option>
-                    <option value="Acuático Marino">Acuático Marino</option>
-                  </select>
-                </div>
-
-                <!-- Volumen ml -->
-                <div>
-                  <label class="block text-xs font-semibold text-slate-700 mb-1">Volumen / Presentación (ml)</label>
-                  <div class="relative">
-                    <input type="number"
-                      [(ngModel)]="productoForm.volumenMl"
-                      placeholder="100"
-                      class="w-full pr-10 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
-                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">ml</span>
-                  </div>
-                </div>
-
-                <!-- Género -->
+                <!-- Género / Público Objetivo (PUESTO SOLO EN EL CATÁLOGO COMO SE SOLICITÓ) -->
                 <div>
                   <label class="block text-xs font-semibold text-slate-700 mb-1">Público / Género Objetivo</label>
                   <select [(ngModel)]="productoForm.generoObjetivo"
-                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all font-medium">
                     <option value="UNISEX">Unisex (Para todos)</option>
                     <option value="HOMBRE">Masculino / Hombre</option>
                     <option value="MUJER">Femenino / Mujer</option>
+                    <option value="INFANTIL">Infantil / Bebés / Niños</option>
                   </select>
                 </div>
               </div>
             </div>
           }
 
+          <!-- SECCIÓN 3: ESPECIFICACIONES PARA OTROS PRODUCTOS (ASEO, PAÑALES, ETC.) -->
+          @if (tipoSeleccionado === 'OTROS') {
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-box-open text-sky-600"></i>
+                    <span>3. Marca o Fabricante Comercial</span>
+                  </h2>
+                  <p class="text-xs text-slate-500">Fabricante, marca o línea comercial del producto.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-sky-50 text-sky-700 border border-sky-200">
+                  OTROS
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Marca / Fabricante</label>
+                  <input type="text"
+                    [(ngModel)]="productoForm.marca"
+                    placeholder="Ej. Huggies, Babysec, Protex, Colgate, Gillette, etc."
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-medium">
+                </div>
+              </div>
+            </div>
+          }
+
           <!-- BOTONES DE ACCIÓN -->
-          <div class="flex items-center justify-end gap-3 pt-2">
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
             @if (!esEdicion) {
               <button type="button"
                 (click)="limpiarCampos()"
-                class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-all">
-                Limpiar Formulario
+                class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-2">
+                <i class="fa-solid fa-eraser text-slate-400 text-xs"></i>
+                <span>Limpiar Formulario</span>
               </button>
             } @else {
               <button type="button"
                 (click)="volverAGrilla()"
-                class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-all">
-                Cancelar Edición
+                class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-2">
+                <i class="fa-solid fa-xmark text-slate-400 text-xs"></i>
+                <span>Cancelar Edición</span>
               </button>
             }
 
-            <button type="button"
-              (click)="guardarProducto()"
-              [disabled]="guardando"
-              class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-semibold shadow-md transition-all transform active:scale-95 disabled:opacity-50"
-              [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/25' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-600/25'">
-              <i class="fa-solid" [class.fa-spinner]="guardando" [class.fa-spin]="guardando" [class.fa-floppy-disk]="!guardando"></i>
-              <span>{{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Producto' : 'Guardar en Catálogo') }}</span>
-            </button>
+            @if (tipoSeleccionado === 'PERFUME') {
+              <button type="button"
+                (click)="guardarProducto()"
+                [disabled]="guardando"
+                class="btn-guardar-producto inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer">
+                <i class="fa-solid" [class.fa-spinner]="guardando" [class.fa-spin]="guardando" [class.fa-floppy-disk]="!guardando"></i>
+                <span>{{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Producto' : 'Guardar en Catálogo') }}</span>
+              </button>
+            } @else if (tipoSeleccionado === 'OTROS') {
+              <button type="button"
+                (click)="guardarProducto()"
+                [disabled]="guardando"
+                class="btn-guardar-producto inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs font-bold shadow-md shadow-sky-600/30 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer">
+                <i class="fa-solid" [class.fa-spinner]="guardando" [class.fa-spin]="guardando" [class.fa-floppy-disk]="!guardando"></i>
+                <span>{{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Producto' : 'Guardar en Catálogo') }}</span>
+              </button>
+            } @else {
+              <button type="button"
+                (click)="guardarProducto()"
+                [disabled]="guardando"
+                class="btn-guardar-producto inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer">
+                <i class="fa-solid" [class.fa-spinner]="guardando" [class.fa-spin]="guardando" [class.fa-floppy-disk]="!guardando"></i>
+                <span>{{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Producto' : 'Guardar en Catálogo') }}</span>
+              </button>
+            }
           </div>
         </div>
 
@@ -867,15 +1152,27 @@
           <div class="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
             <!-- Header de la tarjeta con badge dinámico -->
             <div class="p-4 border-b border-slate-100 flex items-center justify-between"
-              [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-gradient-to-r from-emerald-50/80 to-teal-50/50' : 'bg-gradient-to-r from-purple-50/80 to-pink-50/50'">
+              [ngClass]="{
+                'bg-gradient-to-r from-emerald-50/80 to-teal-50/50': tipoSeleccionado === 'MEDICAMENTO',
+                'bg-gradient-to-r from-purple-50/80 to-pink-50/50': tipoSeleccionado === 'PERFUME',
+                'bg-gradient-to-r from-sky-50/80 to-blue-50/50': tipoSeleccionado === 'OTROS'
+              }">
               <span class="text-[11px] font-bold tracking-wider uppercase text-slate-600 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full animate-ping"
-                  [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-500' : 'bg-purple-500'"></span>
+                  [ngClass]="{
+                    'bg-emerald-500': tipoSeleccionado === 'MEDICAMENTO',
+                    'bg-purple-500': tipoSeleccionado === 'PERFUME',
+                    'bg-sky-500': tipoSeleccionado === 'OTROS'
+                  }"></span>
                 Ficha Técnica en Vivo
               </span>
               
               <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'">
+                [ngClass]="{
+                  'bg-emerald-100 text-emerald-800': tipoSeleccionado === 'MEDICAMENTO',
+                  'bg-purple-100 text-purple-800': tipoSeleccionado === 'PERFUME',
+                  'bg-sky-100 text-sky-800': tipoSeleccionado === 'OTROS'
+                }">
                 {{ tipoSeleccionado }}
               </span>
             </div>
@@ -895,8 +1192,16 @@
                 } @else {
                   <div class="flex flex-col items-center justify-center text-center p-3">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-2"
-                      [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 text-emerald-500' : 'bg-purple-50 text-purple-500'">
-                      <i class="fa-solid text-xl" [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'"></i>
+                      [ngClass]="{
+                        'bg-emerald-50 text-emerald-500': tipoSeleccionado === 'MEDICAMENTO',
+                        'bg-purple-50 text-purple-500': tipoSeleccionado === 'PERFUME',
+                        'bg-sky-50 text-sky-500': tipoSeleccionado === 'OTROS'
+                      }">
+                      <i class="fa-solid text-xl" [ngClass]="{
+                        'fa-pills': tipoSeleccionado === 'MEDICAMENTO',
+                        'fa-spray-can-sparkles': tipoSeleccionado === 'PERFUME',
+                        'fa-box-open': tipoSeleccionado === 'OTROS'
+                      }"></i>
                     </div>
                     <p class="text-xs font-bold text-slate-700">Sin fotografía asignada</p>
                     <p class="text-[10px] text-slate-400 mt-0.5">Sube una foto o ingresa una URL</p>
@@ -907,19 +1212,34 @@
               <!-- Header del producto con miniatura -->
               <div class="flex items-center gap-3.5">
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden"
-                  [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-purple-50 border-purple-200 text-purple-600'">
+                  [ngClass]="{
+                    'bg-emerald-50 border-emerald-200 text-emerald-600': tipoSeleccionado === 'MEDICAMENTO',
+                    'bg-purple-50 border-purple-200 text-purple-600': tipoSeleccionado === 'PERFUME',
+                    'bg-sky-50 border-sky-200 text-sky-600': tipoSeleccionado === 'OTROS'
+                  }">
                   @if (productoForm.imagenUrl) {
                     <img [src]="productoForm.imagenUrl" [alt]="productoForm.nombreComercial" class="max-h-full max-w-full object-contain p-0.5 mix-blend-multiply" />
                   } @else {
                     <i class="fa-solid text-lg"
-                      [ngClass]="tipoSeleccionado === 'MEDICAMENTO' ? 'fa-pills' : 'fa-spray-can-sparkles'">
+                      [ngClass]="{
+                        'fa-pills': tipoSeleccionado === 'MEDICAMENTO',
+                        'fa-spray-can-sparkles': tipoSeleccionado === 'PERFUME',
+                        'fa-box-open': tipoSeleccionado === 'OTROS'
+                      }">
                     </i>
                   }
                 </div>
                 <div class="min-w-0">
-                  <span class="font-mono text-[10px] font-semibold text-slate-400 block">
-                    SKU: {{ productoForm.sku || '---' }}
-                  </span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-mono text-[10px] font-semibold text-slate-400">
+                      SKU: {{ productoForm.sku || '---' }}
+                    </span>
+                    @if (productoForm.codigoBarra) {
+                      <span class="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
+                        <i class="fa-solid fa-barcode text-[9px]"></i> {{ productoForm.codigoBarra }}
+                      </span>
+                    }
+                  </div>
                   <h3 class="text-sm font-bold text-slate-900 leading-tight truncate" [title]="productoForm.nombreComercial">
                     {{ productoForm.nombreComercial || 'Nombre del Producto' }}
                   </h3>
@@ -957,11 +1277,11 @@
                     </div>
                   </div>
                 </div>
-              } @else {
+              } @else if (tipoSeleccionado === 'PERFUME') {
                 <!-- Perfume: Precio de Venta Sugerido Único -->
                 <div class="bg-purple-50/50 rounded-xl p-3.5 border border-purple-100 space-y-1.5">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Precio de Venta Sugerido</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Precio de Venta</span>
                     <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-100 text-purple-800">
                       Frasco / Unidad
                     </span>
@@ -969,7 +1289,7 @@
                   <div class="bg-white p-3 rounded-lg border border-purple-100 shadow-2xs flex items-center justify-between">
                     <div>
                       <span class="text-[11px] font-semibold text-slate-500 block">Precio al Público:</span>
-                      <span class="text-[10px] text-slate-400">{{ productoForm.volumenMl || 100 }} ml • {{ productoForm.generoObjetivo || 'UNISEX' }}</span>
+                      <span class="text-[10px] text-purple-700 font-medium">{{ productoForm.generoObjetivo || 'UNISEX' }}</span>
                     </div>
                     <div class="text-right">
                       <span class="font-mono font-black text-purple-900 text-lg">
@@ -978,10 +1298,50 @@
                     </div>
                   </div>
                 </div>
+              } @else {
+                <!-- Otros: Precio de Venta (Unidad y Caja) -->
+                <div class="bg-sky-50/50 rounded-xl p-3.5 border border-sky-100 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-sky-700 block">Precios de Venta</span>
+                    <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-sky-100 text-sky-800">
+                      Artículos Varios
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white p-2.5 rounded-lg border border-sky-100 shadow-2xs">
+                      <span class="text-[10px] font-semibold text-slate-500 block">Unidad / Paq</span>
+                      <span class="font-mono font-bold text-sky-900 text-sm">
+                        S/ {{ (productoForm.precioUnidad || productoForm.precioVenta || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                    <div class="bg-white p-2.5 rounded-lg border border-sky-100 shadow-2xs">
+                      <span class="text-[10px] font-semibold text-slate-500 block">Fardo / Caja</span>
+                      <span class="font-mono font-bold text-slate-900 text-sm">
+                        S/ {{ (productoForm.precioCaja || 0) | number:'1.2-2' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               }
 
               <!-- Atributos específicos según tipo -->
-              <div class="space-y-2.5 text-xs">
+              <div class="space-y-2 text-xs">
+                <!-- Estado del producto (Activo / Inactivo) -->
+                <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span class="text-slate-500">Estado en Catálogo:</span>
+                  @if (productoForm.estaActivo) {
+                    <span class="inline-flex items-center gap-1.5 font-bold text-emerald-600">
+                      <i class="fa-solid fa-circle text-[7px] text-emerald-500"></i>
+                      Activo (Para Venta)
+                    </span>
+                  } @else {
+                    <span class="inline-flex items-center gap-1.5 font-bold text-rose-600">
+                      <i class="fa-solid fa-circle text-[7px] text-rose-500"></i>
+                      Inactivo (Desactivado)
+                    </span>
+                  }
+                </div>
+
                 @if (tipoSeleccionado === 'MEDICAMENTO') {
                   <div class="flex items-center justify-between py-1 border-b border-slate-100">
                     <span class="text-slate-500">Condición de Venta:</span>
@@ -997,18 +1357,19 @@
                       </span>
                     }
                   </div>
-                } @else {
+                } @else if (tipoSeleccionado === 'PERFUME') {
                   <div class="flex items-center justify-between py-1 border-b border-slate-100">
                     <span class="text-slate-500">Marca / Diseñador:</span>
                     <strong class="text-slate-800">{{ productoForm.marca || 'No especificado' }}</strong>
                   </div>
                   <div class="flex items-center justify-between py-1 border-b border-slate-100">
-                    <span class="text-slate-500">Familia Olfativa:</span>
-                    <strong class="text-purple-700">{{ productoForm.familiaOlfativa || 'Amaderado' }}</strong>
+                    <span class="text-slate-500">Público / Género:</span>
+                    <strong class="text-purple-700">{{ productoForm.generoObjetivo || 'UNISEX' }}</strong>
                   </div>
+                } @else {
                   <div class="flex items-center justify-between py-1 border-b border-slate-100">
-                    <span class="text-slate-500">Presentación:</span>
-                    <strong class="text-slate-800">{{ productoForm.volumenMl || 100 }} ml ({{ productoForm.generoObjetivo }})</strong>
+                    <span class="text-slate-500">Marca / Fabricante:</span>
+                    <strong class="text-slate-800">{{ productoForm.marca || 'No especificado' }}</strong>
                   </div>
                 }
 
@@ -1016,6 +1377,15 @@
                   <div class="flex items-center justify-between py-1 border-b border-slate-100">
                     <span class="text-slate-500">Ubicación Tienda:</span>
                     <span class="font-medium text-slate-700">{{ productoForm.ubicacionAlmacen }}</span>
+                  </div>
+                }
+
+                @if (productoForm.codigoBarra) {
+                  <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                    <span class="text-slate-500">Cód. Barras:</span>
+                    <span class="font-mono text-xs font-semibold text-slate-800 flex items-center gap-1">
+                      <i class="fa-solid fa-barcode text-emerald-600"></i> {{ productoForm.codigoBarra }}
+                    </span>
                   </div>
                 }
               </div>
@@ -1057,7 +1427,7 @@
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                  <th class="pb-2">SKU</th>
+                  <th class="pb-2">SKU & Código</th>
                   <th class="pb-2">Producto</th>
                   <th class="pb-2">Tipo</th>
                   <th class="pb-2 text-right">Precios (Caja / Blíster / Unidad)</th>
@@ -1067,7 +1437,14 @@
               <tbody class="divide-y divide-slate-50">
                 @for (p of productosRecientesFiltrados; track p.id) {
                   <tr class="hover:bg-slate-50/50">
-                    <td class="py-2.5 font-mono text-slate-600">{{ p.sku }}</td>
+                    <td class="py-2.5 font-mono text-slate-600">
+                      <div>{{ p.sku }}</div>
+                      @if (p.codigoBarra) {
+                        <div class="text-[9px] text-slate-400 flex items-center gap-1">
+                          <i class="fa-solid fa-barcode text-[8px]"></i>{{ p.codigoBarra }}
+                        </div>
+                      }
+                    </td>
                     <td class="py-2.5 font-medium text-slate-800">{{ p.nombreComercial }}</td>
                     <td class="py-2.5">
                       <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
@@ -1094,6 +1471,416 @@
         </div>
       }
 
+    </div>
+  }
+
+  <!-- ======================================================== -->
+  <!-- MODAL 1: TABLA Y GESTIÓN DE CATEGORÍAS                   -->
+  <!-- ======================================================== -->
+  @if (mostrarModalCategorias) {
+    <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-6xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+        
+        <!-- Header del Modal con Diseño Premium -->
+        <div class="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between shrink-0 border-b border-slate-700/60">
+          <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-inner">
+              <i class="fa-solid fa-table-list text-xl"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2.5">
+                <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
+                  Tabla de Categorías de Productos
+                </h2>
+                <span class="px-2.5 py-0.5 text-[11px] font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 rounded-full">
+                  {{ categorias.length }} registradas
+                </span>
+              </div>
+              <p class="text-xs text-slate-300">
+                Selecciona, edita, agrega o elimina las clasificaciones para Medicamentos, Perfumería y Otros productos.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <button type="button"
+              (click)="mostrarFormularioNuevaCategoriaEnTabla = !mostrarFormularioNuevaCategoriaEnTabla; categoriaEnEdicionId = null; categoriaForm = { nombre: '', tipoAsociado: tipoSeleccionado || 'MEDICAMENTO', descripcion: '' }"
+              class="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm transform active:scale-95"
+              [ngClass]="mostrarFormularioNuevaCategoriaEnTabla ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/30'">
+              <i class="fa-solid" [ngClass]="mostrarFormularioNuevaCategoriaEnTabla ? 'fa-xmark' : 'fa-plus'"></i>
+              <span>{{ mostrarFormularioNuevaCategoriaEnTabla ? 'Cerrar Formulario' : '+ Nueva Categoría' }}</span>
+            </button>
+            <button type="button"
+              (click)="cerrarModalCategorias()"
+              title="Cerrar modal"
+              class="w-9 h-9 rounded-xl bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors">
+              <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido Scrolleable -->
+        <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-slate-50/40">
+          
+          <!-- Formulario de Crear / Editar Categoría Integrado -->
+          @if (mostrarFormularioNuevaCategoriaEnTabla) {
+            <div class="bg-white border-2 border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-md">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <i class="fa-solid" [ngClass]="categoriaEnEdicionId ? 'fa-pen' : 'fa-tag'"></i>
+                  </div>
+                  <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    {{ categoriaEnEdicionId ? 'Modificar Categoría Seleccionada' : 'Registrar Nueva Categoría en la Tabla' }}
+                  </span>
+                </div>
+                <span class="text-[11px] text-slate-500 hidden sm:inline">
+                  Los cambios se sincronizan en tiempo real en los selectores y filtros.
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+                <!-- Nombre -->
+                <div class="sm:col-span-6">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Nombre de la Categoría <span class="text-rose-500">*</span>
+                  </label>
+                  <input type="text"
+                    [(ngModel)]="categoriaForm.nombre"
+                    placeholder="Ej. Dermocosmética, Analgésicos..."
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold transition-all">
+                </div>
+
+                <!-- Tipo Asociado -->
+                <div class="sm:col-span-6">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Tipo de Producto (idtipoproducto)</label>
+                  <select
+                    [(ngModel)]="categoriaForm.idtipoproducto"
+                    (ngModelChange)="onTipoProductoModalChange($event)"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold transition-all">
+                    <option [ngValue]="1">💊 1 - Medicamentos</option>
+                    <option [ngValue]="2">✨ 2 - Perfumes</option>
+                    <option [ngValue]="3">🧴 3 - Otros (Aseo / Golosinas / Cafés)</option>
+                  </select>
+                </div>
+
+                <!-- Descripción Breve (Textarea) -->
+                <div class="sm:col-span-9">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Descripción Breve</label>
+                  <textarea
+                    [(ngModel)]="categoriaForm.descripcion"
+                    rows="2"
+                    placeholder="Opcional. Escribe una descripción breve o notas sobre los productos de esta categoría..."
+                    class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none leading-relaxed"></textarea>
+                </div>
+
+                <!-- Botones Guardar / Cancelar -->
+                <div class="sm:col-span-3 flex items-center gap-2 self-end pb-1">
+                  <button type="button"
+                    (click)="guardarCategoriaDesdeModal(false)"
+                    [disabled]="guardandoCategoria || !categoriaForm.nombre?.trim()"
+                    class="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i>
+                    <span>{{ categoriaEnEdicionId ? 'Actualizar' : 'Guardar' }}</span>
+                  </button>
+                  @if (categoriaEnEdicionId) {
+                    <button type="button"
+                      (click)="categoriaEnEdicionId = null; categoriaForm = { nombre: '', tipoAsociado: 'MEDICAMENTO', descripcion: '' }; mostrarFormularioNuevaCategoriaEnTabla = false"
+                      class="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      title="Cancelar edición">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Barra de Filtros y Búsqueda -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+            <!-- Tabs por tipo -->
+            <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+              <button type="button"
+                (click)="filtroTipoCategoriaTabla = 'TODOS'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer"
+                [ngClass]="filtroTipoCategoriaTabla === 'TODOS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+                Todos ({{ categorias.length }})
+              </button>
+              <button type="button"
+                (click)="filtroTipoCategoriaTabla = 'MEDICAMENTO'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer"
+                [ngClass]="filtroTipoCategoriaTabla === 'MEDICAMENTO' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+                💊 Medicamentos
+              </button>
+              <button type="button"
+                (click)="filtroTipoCategoriaTabla = 'PERFUME'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer"
+                [ngClass]="filtroTipoCategoriaTabla === 'PERFUME' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+                ✨ Perfumes
+              </button>
+              <button type="button"
+                (click)="filtroTipoCategoriaTabla = 'OTROS'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer"
+                [ngClass]="filtroTipoCategoriaTabla === 'OTROS' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+                🧴 Otros
+              </button>
+            </div>
+
+            <!-- Buscador en tiempo real -->
+            <div class="relative w-full sm:w-72">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text"
+                [(ngModel)]="busquedaCategoriaTabla"
+                placeholder="Buscar por nombre, código..."
+                class="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium transition-all">
+              @if (busquedaCategoriaTabla) {
+                <button (click)="busquedaCategoriaTabla = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <i class="fa-solid fa-circle-xmark text-xs"></i>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- TABLA DE CATEGORÍAS ESTILIZADA Y COMPACTA -->
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-900 text-white text-[10px] font-bold tracking-wider uppercase">
+                  <tr>
+                    <th class="py-2.5 px-2 text-center w-8">#</th>
+                    <th class="py-2.5 px-2.5 text-center w-20">Código</th>
+                    <th class="py-2.5 px-3 w-40">Categoría</th>
+                    <th class="py-2.5 px-2 text-center w-24">Tipo</th>
+                    <th class="py-2.5 px-2 text-center w-16">Prods</th>
+                    <th class="py-2.5 px-3">Descripción</th>
+                    <th class="py-2.5 px-3 text-center w-52 sticky right-0 bg-slate-900 z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.3)]">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (cat of categoriasTablaFiltradas; track cat.id; let idx = $index) {
+                    <tr class="hover:bg-slate-50/90 transition-colors group"
+                      [ngClass]="{
+                        'bg-emerald-50/40 border-l-4 border-l-emerald-500': productoForm.categoriaNombre === cat.nombre || filtroCategoria === cat.nombre
+                      }">
+                      <!-- Índice -->
+                      <td class="py-2 px-2 text-center font-mono text-slate-400 text-[11px] font-semibold">
+                        {{ idx + 1 }}
+                      </td>
+                      
+                      <!-- Código Compacto -->
+                      <td class="py-2 px-2.5 text-center whitespace-nowrap">
+                        <span class="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 inline-block">
+                          {{ cat.codigo }}
+                        </span>
+                      </td>
+
+                      <!-- Categoría Compacta -->
+                      <td class="py-2 px-3">
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-bold text-slate-900 text-xs leading-tight">{{ cat.nombre }}</span>
+                          @if (productoForm.categoriaNombre === cat.nombre && vistaActual !== 'GRILLA') {
+                            <span class="px-1.5 py-0.2 text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full shrink-0">
+                              ✓ En uso
+                            </span>
+                          }
+                          @if (filtroCategoria === cat.nombre && vistaActual === 'GRILLA') {
+                            <span class="px-1.5 py-0.2 text-[8px] font-bold bg-sky-100 text-sky-800 border border-sky-300 rounded-full shrink-0">
+                              ✓ Filtro
+                            </span>
+                          }
+                        </div>
+                      </td>
+
+                      <!-- Tipo Compacto -->
+                      <td class="py-2 px-2 text-center whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border"
+                          [ngClass]="{
+                            'bg-emerald-50 text-emerald-700 border-emerald-200': cat.tipoAsociado === 'MEDICAMENTO',
+                            'bg-purple-50 text-purple-700 border-purple-200': cat.tipoAsociado === 'PERFUME',
+                            'bg-amber-50 text-amber-700 border-amber-200': cat.tipoAsociado === 'OTROS',
+                            'bg-sky-50 text-sky-700 border-sky-200': cat.tipoAsociado === 'TODOS'
+                          }">
+                          <i class="fa-solid text-[8px]"
+                            [ngClass]="{
+                              'fa-pills text-emerald-600': cat.tipoAsociado === 'MEDICAMENTO',
+                              'fa-spray-can-sparkles text-purple-600': cat.tipoAsociado === 'PERFUME',
+                              'fa-pump-soap text-amber-600': cat.tipoAsociado === 'OTROS',
+                              'fa-globe text-sky-600': cat.tipoAsociado === 'TODOS'
+                            }"></i>
+                          <span>{{ cat.tipoAsociado === 'TODOS' ? 'General' : cat.tipoAsociado }}</span>
+                        </span>
+                      </td>
+
+                      <!-- Productos Compacto -->
+                      <td class="py-2 px-2 text-center whitespace-nowrap">
+                        @if (contarProductosPorCategoria(cat.nombre) > 0) {
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <i class="fa-solid fa-boxes-stacked text-[8px] text-emerald-600"></i>
+                            <span>{{ contarProductosPorCategoria(cat.nombre) }}</span>
+                          </span>
+                        } @else {
+                          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-400 border border-slate-200">
+                            0
+                          </span>
+                        }
+                      </td>
+
+                      <!-- Descripción Compacta con Salto de Línea -->
+                      <td class="py-2 px-3 text-[10px] leading-snug text-slate-500 whitespace-normal break-words max-w-[220px]">
+                        {{ cat.descripcion || 'Sin descripción registrada' }}
+                      </td>
+
+                      <!-- Acciones Fijas y Siempre Visibles -->
+                      <td class="py-2 px-3 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)]">
+                        <div class="flex items-center justify-center gap-1">
+                          
+                          <!-- Botón ELEGIR: SIEMPRE VISIBLE Y DESTACADO -->
+                          <button type="button"
+                            (click)="seleccionarCategoriaDesdeTabla(cat)"
+                            [title]="vistaActual === 'GRILLA' ? 'Filtrar catálogo por esta categoría' : 'Elegir esta categoría para el producto'"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all transform active:scale-95 cursor-pointer">
+                            <i class="fa-solid fa-check text-[9px]"></i>
+                            <span>Elegir</span>
+                          </button>
+
+                          <!-- Botón EDITAR -->
+                          <button type="button"
+                            (click)="editarCategoriaEnTabla(cat)"
+                            title="Modificar categoría"
+                            class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-pen-to-square text-[9px] text-slate-500"></i>
+                            <span>Editar</span>
+                          </button>
+
+                          <!-- Botón ELIMINAR -->
+                          <button type="button"
+                            (click)="eliminarCategoriaEnTabla(cat)"
+                            title="Eliminar categoría"
+                            class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-trash text-[9px] text-rose-600"></i>
+                            <span>Eliminar</span>
+                          </button>
+
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="py-12 text-center text-slate-400">
+                        <div class="flex flex-col items-center justify-center gap-2.5">
+                          <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                            <i class="fa-solid fa-tags text-xl"></i>
+                          </div>
+                          <span class="text-sm font-semibold text-slate-600">No se encontraron categorías.</span>
+                          <p class="text-xs text-slate-400 max-w-sm">No hay categorías que coincidan con el término de búsqueda o filtro seleccionado.</p>
+                          <button type="button"
+                            (click)="busquedaCategoriaTabla = ''; filtroTipoCategoriaTabla = 'TODOS'"
+                            class="mt-1 px-4 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold transition-colors">
+                            Restablecer filtros de tabla
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+            <i class="fa-solid fa-circle-info text-emerald-600 text-xs"></i>
+            <span>Usa <strong>"Elegir"</strong> para aplicar la categoría inmediatamente, o <strong>"Eliminar"</strong> para removerla.</span>
+          </div>
+          <button type="button"
+            (click)="cerrarModalCategorias()"
+            class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ======================================================== -->
+  <!-- MODAL 2: CREAR CATEGORÍA RÁPIDA DESDE EL FORMULARIO      -->
+  <!-- ======================================================== -->
+  @if (mostrarModalNuevaCategoria) {
+    <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
+        <div class="px-6 py-5 bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white">
+              <i class="fa-solid fa-tag text-base"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white leading-tight">Nueva Categoría de Producto</h3>
+              <p class="text-[11px] text-emerald-100">Crea la categoría e intégrala al producto actual.</p>
+            </div>
+          </div>
+          <button type="button"
+            (click)="cerrarModalNuevaCategoriaRapida()"
+            class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Nombre de la Categoría <span class="text-rose-500">*</span>
+            </label>
+            <input type="text"
+              [(ngModel)]="categoriaForm.nombre"
+              placeholder="Ej. Antigripales, Dermocosmética, Higiene..."
+              autofocus
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium transition-all">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Tipo de Producto Asociado (idtipoproducto) <span class="text-rose-500">*</span>
+            </label>
+            <select
+              [(ngModel)]="categoriaForm.idtipoproducto"
+              (ngModelChange)="onTipoProductoModalChange($event)"
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium transition-all">
+              <option [ngValue]="1">💊 1 - Medicamentos</option>
+              <option [ngValue]="2">✨ 2 - Perfumes</option>
+              <option [ngValue]="3">🧴 3 - Otros (Aseo / Golosinas / Cafés)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Descripción Breve</label>
+            <textarea
+              [(ngModel)]="categoriaForm.descripcion"
+              rows="3"
+              placeholder="Detalle o propósito de esta categoría..."
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+          <button type="button"
+            (click)="cerrarModalNuevaCategoriaRapida()"
+            class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors">
+            Cancelar
+          </button>
+          <button type="button"
+            (click)="guardarCategoriaDesdeModal(true)"
+            [disabled]="guardandoCategoria || !categoriaForm.nombre?.trim()"
+            class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-check text-xs"></i>
+            <span>Crear y Seleccionar</span>
+          </button>
+        </div>
+
+      </div>
     </div>
   }
 

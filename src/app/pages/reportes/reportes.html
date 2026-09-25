@@ -1,12 +1,12 @@
-<div class="min-h-screen bg-slate-50/60 pb-16">
+<div class="min-h-screen bg-slate-50/60 dark:bg-slate-950 pb-16">
 
   <!-- TOAST DE NOTIFICACIÓN DE AUDITORÍA -->
   @if (mensajeToast) {
     <div class="fixed top-20 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-xs font-bold transition-all duration-300 animate-slide-up"
       [ngClass]="{
-        'bg-emerald-50 border-emerald-300 text-emerald-900': mensajeToast.tipo === 'success',
-        'bg-amber-50 border-amber-300 text-amber-900': mensajeToast.tipo === 'warning',
-        'bg-rose-50 border-rose-300 text-rose-900': mensajeToast.tipo === 'error'
+        'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-700 dark:text-emerald-100': mensajeToast.tipo === 'success',
+        'bg-amber-50 border-amber-300 text-amber-900 dark:bg-amber-950 dark:border-amber-700 dark:text-amber-100': mensajeToast.tipo === 'warning',
+        'bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-950 dark:border-rose-700 dark:text-rose-100': mensajeToast.tipo === 'error'
       }">
       <i class="fa-solid text-base"
         [ngClass]="{
@@ -16,7 +16,7 @@
         }">
       </i>
       <span>{{ mensajeToast.texto }}</span>
-      <button (click)="mensajeToast = null" class="ml-3 text-slate-400 hover:text-slate-700 cursor-pointer">
+      <button (click)="mensajeToast = null" class="ml-3 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -24,7 +24,7 @@
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
 
-    <!-- ENCABEZADO PRINCIPAL (SOLO ADMINISTRADOR) -->
+    <!-- ENCABEZADO PRINCIPAL -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div>
         <div class="flex items-center gap-3">
@@ -32,669 +32,1123 @@
             <i class="fa-solid fa-chart-line text-xl"></i>
           </div>
           <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Reportes de Ventas & Auditoría de Caja</h1>
-            <p class="text-xs text-slate-500">Supervisión administrativa de turnos, aperturas de caja, cajeros asignados y arqueo diario de ventas.</p>
+            <div class="flex items-center gap-2.5">
+              <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Reportes de Ventas & Caja</h1>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-bold border border-emerald-300 dark:border-emerald-800">
+                <i class="fa-solid fa-store text-emerald-600 text-xs"></i>
+                {{ filtroSedeGeneral !== 'TODAS' ? filtroSedeGeneral : (sedeActivaNombre || 'Sede Cajamarca Central') }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Supervisión integral de ventas diarias, detalle de compras y auditoría de aperturas independientes por sede.</p>
           </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2.5">
+        <!-- Badge de conexión en vivo con Supabase Cloud -->
+        <div class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 shadow-2xs text-[11px] font-bold">
+          <span class="relative flex h-2.5 w-2.5">
+            <span [ngClass]="cargandoSupabase ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-ping'" class="absolute inline-flex h-full w-full rounded-full opacity-75"></span>
+            <span [ngClass]="cargandoSupabase ? 'bg-amber-500' : 'bg-emerald-500'" class="relative inline-flex rounded-full h-2.5 w-2.5"></span>
+          </span>
+          <span class="text-slate-700 dark:text-slate-300">
+            {{ cargandoSupabase ? 'Consultando Nube...' : 'Supabase Cloud (En Vivo)' }}
+          </span>
+          @if (conteoVentasNube > 0) {
+            <span class="px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono">
+              {{ conteoVentasNube }} ventas
+            </span>
+          }
+        </div>
+
         <button (click)="imprimirReporte()"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer">
+          class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-xs cursor-pointer">
           <i class="fa-solid fa-print text-xs text-slate-500"></i>
-          <span>Imprimir Reporte</span>
+          <span class="hidden sm:inline">Imprimir Reporte</span>
         </button>
 
-        <button (click)="cargarDatos()"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
-          <i class="fa-solid fa-rotate-right text-xs"></i>
-          <span>Actualizar</span>
+        <button (click)="recargarDatosNube()" [disabled]="cargandoSupabase"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-60">
+          <i class="fa-solid" [ngClass]="cargandoSupabase ? 'fa-spinner animate-spin' : 'fa-cloud-arrow-down text-xs'"></i>
+          <span>{{ cargandoSupabase ? 'Consultando...' : 'Consultar Nube' }}</span>
         </button>
       </div>
     </div>
 
-    <!-- TARJETA DESTACADA: AUDITORÍA DEL TURNO (SOLO SE MUESTRA SI CORRESPONDE AL DÍA DE HOY) -->
-    @if (turnoActual && esTurnoDeHoy) {
-      <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-800 rounded-3xl p-5 text-white mb-6 shadow-xl border border-slate-700/80 animate-slide-up">
-        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700/80">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg"
-              [ngClass]="turnoActual.cajaAbierta ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40' : 'bg-rose-500/20 text-rose-400 ring-2 ring-rose-500/40'">
-              <i class="fa-solid" [ngClass]="turnoActual.cajaAbierta ? 'fa-cash-register animate-pulse' : 'fa-lock'"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md"
-                  [ngClass]="turnoActual.cajaAbierta ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'">
-                  {{ turnoActual.cajaAbierta ? 'Turno Activo • Caja Abierta' : 'Turno Finalizado • Caja Cerrada' }}
-                </span>
-                <span class="text-xs text-slate-400">• {{ turnoActual.sede }}</span>
-              </div>
-              <p class="text-sm font-bold text-white mt-1 flex items-center gap-1.5">
-                <i class="fa-solid fa-user-tie text-emerald-400 text-xs"></i>
-                <span>Cajero Asignado: <strong>{{ turnoActual.cajeroActual }}</strong></span>
-              </p>
-            </div>
-          </div>
-
-          <div class="text-right">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Fondo Sencillo Apertura</span>
-            <p class="text-xl font-black font-mono text-emerald-400 mt-0.5">S/ {{ turnoActual.fondoInicial | number:'1.2-2' }}</p>
-          </div>
+    <!-- NAVEGACIÓN POR PESTAÑAS (3 PESTAÑAS SOLICITADAS) -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-1.5 mb-6 shadow-xs flex flex-wrap gap-1.5">
+      <!-- Pestaña 1: Reporte General -->
+      <button (click)="cambiarTab('GENERAL')"
+        [ngClass]="tabActiva === 'GENERAL'
+          ? 'bg-emerald-600 text-white shadow-xs font-bold'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 font-medium'"
+        class="flex-1 min-w-[200px] py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+        <i class="fa-solid fa-calendar-days text-sm"></i>
+        <div class="text-left">
+          <span class="block leading-tight">Reporte General</span>
+          <span class="text-[10px] opacity-80 font-normal">Por fechas: ventas, apertura y cajero</span>
         </div>
+      </button>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
-          <div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Hora de Apertura:</span>
-            <p class="font-mono font-bold text-slate-200 mt-0.5">
-              <i class="fa-regular fa-clock text-slate-400 mr-1"></i>
-              {{ turnoActual.fechaApertura | date:'short' }}
-            </p>
-          </div>
-
-          <div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Estado del Turno:</span>
-            <p class="font-bold mt-0.5" [ngClass]="turnoActual.cajaAbierta ? 'text-emerald-400' : 'text-slate-300'">
-              <i class="fa-solid fa-circle text-[8px] mr-1" [ngClass]="turnoActual.cajaAbierta ? 'text-emerald-400' : 'text-rose-400'"></i>
-              {{ turnoActual.cajaAbierta ? 'Abierto y Cobrando' : 'Cerrado' }}
-            </p>
-          </div>
-
-          <div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tickets Emitidos en Turno:</span>
-            <p class="font-mono font-black text-slate-100 mt-0.5">
-              {{ totalTicketsEmitidos }} ventas
-            </p>
-          </div>
-
-          <div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Vendido en Turno:</span>
-            <p class="font-mono font-black text-emerald-400 mt-0.5 text-sm">
-              S/ {{ totalVentasHoy | number:'1.2-2' }}
-            </p>
-          </div>
+      <!-- Pestaña 2: Reporte Detallado -->
+      <button (click)="cambiarTab('DETALLADO')"
+        [ngClass]="tabActiva === 'DETALLADO'
+          ? 'bg-emerald-600 text-white shadow-xs font-bold'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 font-medium'"
+        class="flex-1 min-w-[200px] py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+        <i class="fa-solid fa-list-check text-sm"></i>
+        <div class="text-left">
+          <span class="block leading-tight">Reporte Detallado</span>
+          <span class="text-[10px] opacity-80 font-normal">Detalle de cada compra por fecha</span>
         </div>
+      </button>
+
+      <!-- Pestaña 3: Aperturas de Caja -->
+      <button (click)="cambiarTab('APERTURAS')"
+        [ngClass]="tabActiva === 'APERTURAS'
+          ? 'bg-emerald-600 text-white shadow-xs font-bold'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 font-medium'"
+        class="flex-1 min-w-[200px] py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+        <i class="fa-solid fa-cash-register text-sm"></i>
+        <div class="text-left">
+          <span class="block leading-tight">Apertura de Caja</span>
+          <span class="text-[10px] opacity-80 font-normal">Monto inicial, quién abrió y fechas</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- BANNER DE SINCRONIZACIÓN CON SUPABASE CLOUD -->
+    @if (cargandoSupabase) {
+      <div class="mb-4 p-3 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 animate-pulse">
+        <div class="flex items-center gap-2 font-bold">
+          <i class="fa-solid fa-cloud-arrow-down text-emerald-600 animate-bounce"></i>
+          <span>Consultando base de datos en la nube (Supabase Cloud PostgreSQL)...</span>
+        </div>
+        <span class="text-[11px] font-mono opacity-80">SELECT en tiempo real</span>
       </div>
     }
 
-    <!-- TARJETAS KPI DE VENTAS Y MÉTODOS DE PAGO -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
-      <!-- Total Ventas -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-money-bill-wave"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Total Ventas (S/)</span>
-          <p class="text-xl font-black text-slate-900 font-mono mt-0.5">S/ {{ totalVentasHoy | number:'1.2-2' }}</p>
-        </div>
-      </div>
+    <!-- ========================================================================= -->
+    <!-- PESTAÑA 1: REPORTE GENERAL (CONSOLIDADO DÍA POR DÍA CON FECHAS Y CAJEROS) -->
+    <!-- ========================================================================= -->
+    @if (tabActiva === 'GENERAL') {
+      <div class="space-y-6 animate-slide-up">
 
-      <!-- Efectivo Físico -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-coins"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Efectivo en Caja</span>
-          <p class="text-xl font-black text-teal-700 font-mono mt-0.5">S/ {{ totalEfectivo | number:'1.2-2' }}</p>
-        </div>
-      </div>
+        <!-- Barra de Filtros de Fecha para Reporte General -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-5 shadow-xs space-y-4">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <!-- Selectores de Rango de Fechas -->
+            <div class="flex flex-wrap items-center gap-3 text-xs">
+              <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar text-emerald-600"></i> Rango de Fechas:
+              </span>
 
-      <!-- Yape -->
-      <div class="bg-white rounded-2xl border border-purple-200/80 p-4 shadow-sm flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-mobile-screen"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase text-purple-600 block tracking-wider">Total Yape</span>
-          <p class="text-xl font-black text-purple-700 font-mono mt-0.5">S/ {{ totalYape | number:'1.2-2' }}</p>
-        </div>
-      </div>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Desde</span>
+                  <input [(ngModel)]="fechaInicioGeneral" (change)="consultarSupabaseGeneral()" type="date"
+                    class="bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer" />
+                </div>
 
-      <!-- Plin -->
-      <div class="bg-white rounded-2xl border border-cyan-200/80 p-4 shadow-sm flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-mobile-screen-button"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase text-cyan-600 block tracking-wider">Total Plin</span>
-          <p class="text-xl font-black text-cyan-700 font-mono mt-0.5">S/ {{ totalPlin | number:'1.2-2' }}</p>
-        </div>
-      </div>
+                <span class="text-slate-400 font-bold">-</span>
 
-      <!-- Tarjetas POS -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-credit-card"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase text-sky-600 block tracking-wider">Tarjetas (POS)</span>
-          <p class="text-xl font-black text-sky-700 font-mono mt-0.5">S/ {{ totalTarjeta | number:'1.2-2' }}</p>
-        </div>
-      </div>
-    </div>
+                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Hasta</span>
+                  <input [(ngModel)]="fechaFinGeneral" (change)="consultarSupabaseGeneral()" type="date"
+                    class="bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer" />
+                </div>
+              </div>
 
-    <!-- FILTROS Y BUSCADORES DE REPORTES CON INPUT DE CALENDARIO -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
-        
-        <!-- Buscador -->
-        <div class="md:col-span-3 relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input type="text"
-            [(ngModel)]="busqueda"
-            (ngModelChange)="aplicarFiltros()"
-            placeholder="Buscar por # ticket, DNI o cliente..."
-            class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-          @if (busqueda) {
-            <button (click)="busqueda = ''; aplicarFiltros()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <i class="fa-solid fa-circle-xmark text-xs"></i>
-            </button>
-          }
+              <!-- Atajos Rápidos -->
+              <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl">
+                <button (click)="setRangoGeneral('HOY')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">Hoy</button>
+                <button (click)="setRangoGeneral('7DIAS')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">7 Días</button>
+                <button (click)="setRangoGeneral('MES')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">Este Mes</button>
+                <button (click)="setRangoGeneral('TODO')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">Todo</button>
+              </div>
+            </div>
+
+            <!-- Filtro por Sede -->
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-bold text-slate-500">Sede:</span>
+              <select [(ngModel)]="filtroSedeGeneral" (change)="consultarSupabaseGeneral()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white">
+                <option value="TODAS">Todas las Sedes</option>
+                @for (sede of listaSedes; track sede) {
+                  <option [value]="sede">{{ sede }}</option>
+                }
+              </select>
+            </div>
+          </div>
         </div>
 
-        <!-- FILTRO DE FECHA: INPUT CALENDARIO -->
-        <div class="md:col-span-3 flex items-center gap-1.5">
-          <div class="relative flex-1">
-            <i class="fa-regular fa-calendar absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-600 text-xs pointer-events-none"></i>
-            <input type="date"
-              [(ngModel)]="fechaSeleccionada"
-              (ngModelChange)="modoFecha = 'CALENDARIO'; aplicarFiltros()"
-              class="w-full pl-7 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer" />
+        <!-- KPIs Resumen del Período Seleccionado -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Total Ventas Período</span>
+            <p class="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">S/ {{ kpiTotalVentasGeneral | number:'1.2-2' }}</p>
           </div>
 
-          <!-- Botones rápidos de fecha -->
-          <button (click)="seleccionarHoy()"
-            [ngClass]="modoFecha === 'CALENDARIO' && fechaSeleccionada === '2026-09-15' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-            class="px-2.5 py-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer whitespace-nowrap">
-            Hoy
-          </button>
-          <button (click)="seleccionarTodoHistorico()"
-            [ngClass]="modoFecha === 'TODOS' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-            class="px-2.5 py-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer whitespace-nowrap">
-            Todo
-          </button>
-        </div>
-
-        <!-- Filtro Sede / Sucursal -->
-        <div class="md:col-span-2">
-          <select [(ngModel)]="filtroSede"
-            (ngModelChange)="aplicarFiltros()"
-            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="TODAS">📍 Todas las Sedes</option>
-            @for (s of listaSedes; track s) {
-              <option [value]="s">🏢 {{ s }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Filtro Método de Pago -->
-        <div class="md:col-span-2">
-          <select [(ngModel)]="filtroMetodo"
-            (ngModelChange)="aplicarFiltros()"
-            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="TODOS">💳 Todo Método</option>
-            <option value="Efectivo">💵 Efectivo</option>
-            <option value="Yape">📱 Yape</option>
-            <option value="Plin">📲 Plin</option>
-            <option value="Tarjeta">💳 Tarjeta (POS)</option>
-            <option value="Mixto">⭐ Pago Mixto</option>
-          </select>
-        </div>
-
-        <!-- Filtro Estado -->
-        <div class="md:col-span-2">
-          <select [(ngModel)]="filtroEstado"
-            (ngModelChange)="aplicarFiltros()"
-            class="w-full px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="TODOS">🛡️ Todos Estados</option>
-            <option value="EMITIDO">✅ Emitidos</option>
-            <option value="ANULADO">❌ Anulados</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Barra de estado de filtros aplicados -->
-      @if (busqueda || modoFecha !== 'CALENDARIO' || filtroMetodo !== 'TODOS' || filtroEstado !== 'TODOS' || filtroSede !== 'TODAS') {
-        <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
-            <span class="font-medium text-slate-700">Filtros aplicados:</span>
-            <span>Mostrando {{ ventasFiltradas.length }} de {{ ventas.length }} ventas registradas</span>
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-teal-600 dark:text-teal-400 block tracking-wider">Efectivo Cobrado</span>
+            <p class="text-xl font-black text-teal-700 dark:text-teal-300 font-mono mt-1">S/ {{ kpiTotalEfectivoGeneral | number:'1.2-2' }}</p>
           </div>
-          <button (click)="limpiarFiltros()"
-            class="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-arrow-rotate-left text-[11px]"></i>
-            <span>Restablecer filtros</span>
-          </button>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-purple-200/80 dark:border-purple-800/80 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400 block tracking-wider">Yape / Plin</span>
+            <p class="text-xl font-black text-purple-700 dark:text-purple-300 font-mono mt-1">S/ {{ kpiTotalDigitalGeneral | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-sky-200/80 dark:border-sky-800/80 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400 block tracking-wider">Tarjetas</span>
+            <p class="text-xl font-black text-sky-700 dark:text-sky-300 font-mono mt-1">S/ {{ kpiTotalTarjetaGeneral | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Tickets Emitidos</span>
+            <p class="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{{ kpiTotalTicketsGeneral }} ventas</p>
+          </div>
         </div>
-      }
-    </div>
 
-    <!-- TABLA DE GRILLA ESTILIZADA (DARK SLATE HEADER + FONTAWESOME) -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <!-- HEADER DARK SLATE -->
-          <thead>
-            <tr class="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider border-b border-slate-700">
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-receipt text-sky-400 text-xs"></i>
-                  <span>N° TICKET</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-clock text-amber-300 text-xs"></i>
-                  <span>HORA & FECHA</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-user text-emerald-400 text-xs"></i>
-                  <span>CLIENTE & DNI</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-wallet text-purple-400 text-xs"></i>
-                  <span>MÉTODO DE PAGO</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-building text-slate-300 text-xs"></i>
-                  <span>SEDE</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 text-right whitespace-nowrap">
-                <div class="flex items-center justify-end gap-2">
-                  <i class="fa-solid fa-sack-dollar text-emerald-300 text-xs"></i>
-                  <span>TOTAL (S/)</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 text-center whitespace-nowrap">
-                <div class="flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-shield-halved text-sky-300 text-xs"></i>
-                  <span>ESTADO</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 text-right whitespace-nowrap">
-                <div class="flex items-center justify-end gap-2">
-                  <i class="fa-solid fa-gear text-slate-400 text-xs"></i>
-                  <span>ACCIONES</span>
-                </div>
-              </th>
-            </tr>
-          </thead>
+        <!-- TABLA PRINCIPAL: CONSOLIDADO DÍA POR DÍA -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-xs overflow-hidden">
+          <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-table-list text-emerald-600"></i>
+                Consolidado Diario de Operaciones
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Muestra día por día con cuánto abrió la caja, quién trabajó y el total recaudado.</p>
+            </div>
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-xl">
+              {{ reportePorDias.length }} {{ reportePorDias.length === 1 ? 'día registrado' : 'días registrados' }}
+            </span>
+          </div>
 
-          <!-- CUERPO DE LA TABLA -->
-          <tbody class="divide-y divide-slate-100 text-xs">
-            @for (ticket of ventasPaginadas; track ticket.id; let i = $index) {
-              <tr class="hover:bg-slate-50/90 transition-colors group">
-                <!-- N° Ticket -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
-                  <span class="font-mono font-black text-slate-900 text-xs bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                    {{ ticket.id }}
-                  </span>
-                </td>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px] border-b-2 border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Fecha / Día</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Quién Trabajó (Cajero)</th>
+                  <th class="py-3.5 px-4 text-right border-r border-slate-200/80 dark:border-slate-700/80">Fondo Apertura</th>
+                  <th class="py-3.5 px-4 text-right border-r border-slate-200/80 dark:border-slate-700/80">Total Vendido</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Desglose de Cobros</th>
+                  <th class="py-3.5 px-4 text-center border-r border-slate-200/80 dark:border-slate-700/80">Tickets</th>
+                  <th class="py-3.5 px-4 text-right border-r border-slate-200/80 dark:border-slate-700/80">Ticket Prom.</th>
+                  <th class="py-3.5 px-4 text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="font-sans">
+                @for (dia of reportePorDias; track dia.fecha) {
+                  <tr [ngClass]="$even ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/80 dark:bg-slate-800/40'"
+                    class="hover:bg-emerald-50/50 dark:hover:bg-slate-700/40 transition-colors border-b border-slate-200 dark:border-slate-700/80">
+                    <!-- Fecha / Día -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      <div class="font-bold text-slate-900 dark:text-white">{{ dia.fechaFormateada }}</div>
+                      <span class="text-[10px] font-mono text-slate-400">{{ dia.fecha }} • {{ dia.diaSemana }}</span>
+                    </td>
 
-                <!-- Fecha y Hora -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
-                  <div>
-                    <span class="font-mono font-bold text-slate-800 text-xs">
-                      {{ ticket.fecha | date:'shortTime' }}
-                    </span>
-                    <p class="text-[10px] text-slate-400 mt-0.5">
-                      {{ ticket.fecha | date:'mediumDate' }}
-                    </p>
-                  </div>
-                </td>
+                    <!-- Quién Trabajó -->
+                    <td class="py-3.5 px-4 border-r border-slate-100 dark:border-slate-700/60">
+                      <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 text-xs">
+                          <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <span class="font-bold text-slate-800 dark:text-slate-200">{{ dia.cajeroPrincipal }}</span>
+                      </div>
+                    </td>
 
-                <!-- Cliente & DNI -->
-                <td class="py-3.5 px-4">
-                  <div>
-                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                      {{ ticket.cliente }}
-                    </div>
-                    <div class="text-[11px] font-mono text-slate-500 mt-0.5">
-                      DNI/RUC: {{ ticket.dni || 'Sin Documento' }}
-                    </div>
-                  </div>
-                </td>
+                    <!-- Fondo Apertura -->
+                    <td class="py-3.5 px-4 text-right whitespace-nowrap font-mono font-bold text-emerald-700 dark:text-emerald-400 border-r border-slate-100 dark:border-slate-700/60">
+                      S/ {{ dia.fondoApertura | number:'1.2-2' }}
+                    </td>
 
-                <!-- Método de Pago -->
-                <td class="py-3.5 px-4">
-                  @if (ticket.metodo.includes('Mixto') || (ticket.desglose && ticket.desglose.length > 1)) {
-                    <div class="space-y-1.5">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold border bg-amber-50 text-amber-800 border-amber-300">
-                        <i class="fa-solid fa-sliders text-amber-600"></i>
-                        <span>Pago Mixto</span>
+                    <!-- Total Vendido -->
+                    <td class="py-3.5 px-4 text-right whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      <span class="font-mono font-black text-slate-900 dark:text-white text-sm">
+                        S/ {{ dia.totalVentas | number:'1.2-2' }}
                       </span>
-                      <!-- Desglose de cada medio de pago participante -->
+                    </td>
+
+                    <!-- Desglose de Métodos -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                        <span class="px-1.5 py-0.5 bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 rounded border border-teal-200 dark:border-teal-800">
+                          Ef: S/ {{ dia.totalEfectivo | number:'1.0-0' }}
+                        </span>
+                        <span class="px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">
+                          Yp: S/ {{ dia.totalYape | number:'1.0-0' }}
+                        </span>
+                        @if (dia.totalPlin > 0) {
+                          <span class="px-1.5 py-0.5 bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 rounded border border-cyan-200 dark:border-cyan-800">
+                            Pl: S/ {{ dia.totalPlin | number:'1.0-0' }}
+                          </span>
+                        }
+                        @if (dia.totalTarjeta > 0) {
+                          <span class="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 rounded border border-sky-200 dark:border-sky-800">
+                            Tj: S/ {{ dia.totalTarjeta | number:'1.0-0' }}
+                          </span>
+                        }
+                      </div>
+                    </td>
+
+                    <!-- Tickets -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap font-mono border-r border-slate-100 dark:border-slate-700/60">
+                      <span class="font-bold text-slate-700 dark:text-slate-300">{{ dia.ticketsEmitidos }}</span>
+                      @if (dia.ticketsAnulados > 0) {
+                        <span class="text-[10px] text-rose-500 ml-1">({{ dia.ticketsAnulados }} anl)</span>
+                      }
+                    </td>
+
+                    <!-- Ticket Promedio -->
+                    <td class="py-3.5 px-4 text-right whitespace-nowrap font-mono text-slate-500 border-r border-slate-100 dark:border-slate-700/60">
+                      S/ {{ dia.ticketPromedio | number:'1.2-2' }}
+                    </td>
+
+                    <!-- Acción: Ir a detalle -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                      <button (click)="irADetalleDia(dia.fecha)"
+                        title="Ver detalle de todas las compras de este día"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                        <span>Ver Detalle</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="py-12 text-center text-slate-400">
+                      <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
+                      No se encontraron movimientos de ventas en el rango de fechas seleccionado.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+
+              <!-- TOTALES AL FINAL DE LA TABLA (FOOTER) -->
+              @if (reportePorDias.length > 0) {
+                <tfoot class="bg-slate-100 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-700 font-bold text-xs">
+                  <tr>
+                    <td class="py-4 px-4 font-black text-slate-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-slate-200 dark:border-slate-700">
+                      TOTAL GENERAL
+                    </td>
+                    <td class="py-4 px-4 text-slate-600 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700 text-[11px]">
+                      {{ reportePorDias.length }} {{ reportePorDias.length === 1 ? 'día' : 'días' }}
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono font-black text-emerald-700 dark:text-emerald-400 whitespace-nowrap border-r border-slate-200 dark:border-slate-700">
+                      S/ {{ totalFondoAperturaGeneral | number:'1.2-2' }}
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono font-black text-slate-900 dark:text-white text-sm whitespace-nowrap border-r border-slate-200 dark:border-slate-700">
+                      S/ {{ kpiTotalVentasGeneral | number:'1.2-2' }}
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap border-r border-slate-200 dark:border-slate-700">
+                      <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                        <span class="px-1.5 py-0.5 bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-200 rounded border border-teal-300 dark:border-teal-700 font-bold">
+                          Ef: S/ {{ kpiTotalEfectivoGeneral | number:'1.0-0' }}
+                        </span>
+                        <span class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-200 rounded border border-purple-300 dark:border-purple-700 font-bold">
+                          Yp/Pl: S/ {{ kpiTotalDigitalGeneral | number:'1.0-0' }}
+                        </span>
+                        @if (kpiTotalTarjetaGeneral > 0) {
+                          <span class="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-200 rounded border border-sky-300 dark:border-sky-700 font-bold">
+                            Tj: S/ {{ kpiTotalTarjetaGeneral | number:'1.0-0' }}
+                          </span>
+                        }
+                      </div>
+                    </td>
+                    <td class="py-4 px-4 text-center font-mono font-black text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700">
+                      {{ kpiTotalTicketsGeneral }}
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700">
+                      S/ {{ ticketPromedioGeneralGlobal | number:'1.2-2' }}
+                    </td>
+                    <td class="py-4 px-4 text-center text-[10px] text-slate-400 font-bold">
+                      Consolidado
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </div>
+
+      </div>
+    }
+
+    <!-- ========================================================================= -->
+    <!-- PESTAÑA 2: REPORTE DETALLADO (SELECCIONA UNA FECHA Y DETALLE DE CADA COMPRA) -->
+    <!-- ========================================================================= -->
+    @if (tabActiva === 'DETALLADO') {
+      <div class="space-y-6 animate-slide-up">
+
+        <!-- Selector de Fecha Única y Filtros -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-5 shadow-xs space-y-4">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            
+            <!-- Selector de Fecha Única -->
+            <div class="flex flex-wrap items-center gap-3 text-xs">
+              <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-calendar-day text-emerald-600"></i> Selecciona la Fecha:
+              </span>
+
+              <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
+                <button (click)="moverFechaDetalle(-1)" title="Día Anterior" class="text-slate-400 hover:text-slate-700 dark:hover:text-white px-1 cursor-pointer">
+                  <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <input [(ngModel)]="fechaDetallada" (change)="consultarSupabaseDetalle()" type="date"
+                  class="bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer" />
+                <button (click)="moverFechaDetalle(1)" title="Día Siguiente" class="text-slate-400 hover:text-slate-700 dark:hover:text-white px-1 cursor-pointer">
+                  <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl">
+                <button (click)="setFechaDetalle('HOY')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">Hoy</button>
+                <button (click)="setFechaDetalle('AYER')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors cursor-pointer">Ayer</button>
+              </div>
+
+              <span class="text-xs font-bold text-slate-500 font-mono">
+                ({{ formatFechaLegible(fechaDetallada) }})
+              </span>
+            </div>
+
+            <!-- Buscador y Filtro por Método -->
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input [(ngModel)]="busquedaDetalle" (input)="aplicarFiltrosDetallados()" type="text"
+                  placeholder="Ticket, cliente o producto..."
+                  class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 w-52" />
+              </div>
+
+              <select [(ngModel)]="filtroMetodoDetalle" (change)="aplicarFiltrosDetallados()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white">
+                <option value="TODOS">Todos los Métodos</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Yape">Yape</option>
+                <option value="Plin">Plin</option>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="mixto">Pago Mixto</option>
+              </select>
+
+              <select [(ngModel)]="filtroEstadoDetalle" (change)="aplicarFiltrosDetallados()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white">
+                <option value="TODOS">Todos los Estados</option>
+                <option value="EMITIDO">Emitidos</option>
+                <option value="ANULADO">Anulados</option>
+              </select>
+
+              <select [(ngModel)]="filtroSedeDetalle" (change)="consultarSupabaseDetalle()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white">
+                <option value="TODAS">Todas las Sedes</option>
+                @for (s of listaSedes; track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- KPIs del Día Detallado -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Total del Día</span>
+            <p class="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">S/ {{ kpiTotalVentasDetalle | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-teal-600 block tracking-wider">Efectivo</span>
+            <p class="text-xl font-black text-teal-700 dark:text-teal-300 font-mono mt-1">S/ {{ kpiTotalEfectivoDetalle | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-purple-200/80 dark:border-purple-800/80 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-purple-600 block tracking-wider">Digital (Yape / Plin)</span>
+            <p class="text-xl font-black text-purple-700 dark:text-purple-300 font-mono mt-1">S/ {{ kpiTotalYapePlinDetalle | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Ventas Emitidas</span>
+            <p class="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{{ kpiTicketsEmitidosDetalle }} compras</p>
+          </div>
+        </div>
+
+        <!-- TABLA DETALLADA DE COMPRAS -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-xs overflow-hidden">
+          <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-basket-shopping text-emerald-600"></i>
+                Detalle de Compras del Día: {{ formatFechaLegible(fechaDetallada) }}
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Lista de comprobantes emitidos con desglose de productos comprados.</p>
+            </div>
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-xl">
+              {{ ventasDetalladas.length }} compras
+            </span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px] border-b-2 border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">N° Ticket</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Hora</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Cliente</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Productos / Detalle de Compra</th>
+                  <th class="py-3.5 px-4 border-r border-slate-200/80 dark:border-slate-700/80">Método de Pago</th>
+                  <th class="py-3.5 px-4 text-right border-r border-slate-200/80 dark:border-slate-700/80">Total</th>
+                  <th class="py-3.5 px-4 text-center border-r border-slate-200/80 dark:border-slate-700/80">Estado</th>
+                  <th class="py-3.5 px-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="font-sans">
+                @for (ticket of ventasDetalladasPaginadas; track ticket.id) {
+                  <tr [ngClass]="$even ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/80 dark:bg-slate-800/40'"
+                    class="hover:bg-emerald-50/50 dark:hover:bg-slate-700/40 transition-colors border-b border-slate-200 dark:border-slate-700/80">
+                    <!-- N° Ticket -->
+                    <td class="py-3.5 px-4 font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      {{ ticket.id }}
+                    </td>
+
+                    <!-- Hora -->
+                    <td class="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      {{ ticket.fecha | date:'hh:mm a' }}
+                    </td>
+
+                    <!-- Cliente -->
+                    <td class="py-3.5 px-4 border-r border-slate-100 dark:border-slate-700/60">
+                      <div class="font-bold text-slate-800 dark:text-slate-200">{{ ticket.cliente }}</div>
+                      <span class="text-[10px] font-mono text-slate-400">Doc: {{ ticket.dni }}</span>
+                    </td>
+
+                    <!-- Productos Comprados -->
+                    <td class="py-3.5 px-4 min-w-[240px] border-r border-slate-100 dark:border-slate-700/60">
                       <div class="space-y-1">
-                        @for (dp of ticket.desglose; track $index) {
-                          <div class="flex items-center gap-1.5 text-[10px] bg-slate-50 border border-slate-200/90 rounded px-2 py-0.5 whitespace-nowrap">
-                            <i class="fa-solid" [ngClass]="{
-                              'fa-money-bill text-teal-600': dp.metodo.toLowerCase() === 'efectivo',
-                              'fa-mobile-screen text-purple-600': dp.metodo.toLowerCase() === 'yape',
-                              'fa-mobile-screen-button text-cyan-600': dp.metodo.toLowerCase() === 'plin',
-                              'fa-credit-card text-sky-600': dp.metodo.toLowerCase().includes('tarjeta'),
-                              'fa-building-columns text-indigo-600': dp.metodo.toLowerCase().includes('transferencia')
-                            }"></i>
-                            <span class="font-bold text-slate-700">{{ dp.metodo }}:</span>
-                            <span class="font-mono font-bold text-slate-900">S/ {{ dp.monto | number:'1.2-2' }}</span>
-                            @if (dp.referencia) {
-                              <span class="text-[9px] font-mono text-slate-400">({{ dp.referencia }})</span>
-                            }
+                        @for (it of ticket.items; track it.productoId) {
+                          <div class="flex items-center justify-between text-[11px] gap-2">
+                            <span class="truncate text-slate-700 dark:text-slate-300">
+                              <strong class="font-mono text-emerald-600">{{ it.cantidad }}x</strong> {{ it.nombre }}
+                              <span class="text-[10px] text-slate-400">({{ it.tipoPresentacion }})</span>
+                            </span>
+                            <span class="font-mono text-slate-500 whitespace-nowrap">S/ {{ it.subtotal | number:'1.2-2' }}</span>
                           </div>
                         }
                       </div>
-                    </div>
-                  } @else {
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap"
-                      [ngClass]="{
-                        'bg-teal-50 text-teal-800 border-teal-200': ticket.metodo.toLowerCase().includes('efectivo'),
-                        'bg-purple-50 text-purple-800 border-purple-200': ticket.metodo.toLowerCase().includes('yape'),
-                        'bg-cyan-50 text-cyan-800 border-cyan-200': ticket.metodo.toLowerCase().includes('plin'),
-                        'bg-sky-50 text-sky-800 border-sky-200': ticket.metodo.toLowerCase().includes('tarjeta'),
-                        'bg-indigo-50 text-indigo-800 border-indigo-200': ticket.metodo.toLowerCase().includes('transferencia')
-                      }">
-                      <i class="fa-solid" [ngClass]="{
-                        'fa-money-bill text-teal-600': ticket.metodo.toLowerCase().includes('efectivo'),
-                        'fa-mobile-screen text-purple-600': ticket.metodo.toLowerCase().includes('yape'),
-                        'fa-mobile-screen-button text-cyan-600': ticket.metodo.toLowerCase().includes('plin'),
-                        'fa-credit-card text-sky-600': ticket.metodo.toLowerCase().includes('tarjeta'),
-                        'fa-building-columns text-indigo-600': ticket.metodo.toLowerCase().includes('transferencia')
-                      }"></i>
-                      {{ ticket.metodo }}
-                    </span>
-                    @if (ticket.desglose && ticket.desglose.length > 0 && ticket.desglose[0].referencia) {
-                      <p class="text-[9px] font-mono text-slate-400 mt-0.5">Ref: {{ ticket.desglose[0].referencia }}</p>
-                    }
-                  }
-                </td>
+                    </td>
 
-                <!-- Sede -->
-                <td class="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
-                  <i class="fa-solid fa-location-dot text-[10px] text-slate-400 mr-1"></i>
-                  {{ ticket.sede || 'Sede Cajamarca Central' }}
-                </td>
+                    <!-- Método de Pago -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border"
+                        [ngClass]="{
+                          'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800': ticket.metodo.includes('Efectivo'),
+                          'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800': ticket.metodo.includes('Yape'),
+                          'bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800': ticket.metodo.includes('Plin'),
+                          'bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800': ticket.metodo.includes('Tarjeta')
+                        }">
+                        <i class="fa-solid text-[9px]"
+                          [ngClass]="{
+                            'fa-coins': ticket.metodo.includes('Efectivo'),
+                            'fa-mobile-screen': ticket.metodo.includes('Yape') || ticket.metodo.includes('Plin'),
+                            'fa-credit-card': ticket.metodo.includes('Tarjeta')
+                          }"></i>
+                        {{ ticket.metodo }}
+                      </span>
+                    </td>
 
-                <!-- Total S/ -->
-                <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                  <span class="font-mono font-black text-sm"
-                    [ngClass]="ticket.estado === 'ANULADO' ? 'text-slate-400 line-through' : 'text-slate-900'">
-                    S/ {{ ticket.total | number:'1.2-2' }}
-                  </span>
-                </td>
+                    <!-- Total -->
+                    <td class="py-3.5 px-4 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      S/ {{ ticket.total | number:'1.2-2' }}
+                    </td>
 
-                <!-- Estado -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
-                    [ngClass]="ticket.estado === 'EMITIDO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'">
-                    <i class="fa-solid" [ngClass]="ticket.estado === 'EMITIDO' ? 'fa-circle-check text-emerald-600' : 'fa-ban text-rose-600'"></i>
-                    {{ ticket.estado }}
-                  </span>
-                </td>
+                    <!-- Estado -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        [ngClass]="ticket.estado === 'EMITIDO'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'">
+                        {{ ticket.estado }}
+                      </span>
+                    </td>
 
-                <!-- Acciones (Ver Detalle y Corregir Medio de Pago) -->
-                <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-1.5">
-                    <!-- BOTÓN CORREGIR MÉTODO DE PAGO -->
-                    @if (ticket.estado === 'EMITIDO') {
-                      <button (click)="abrirModalCorregirPago(ticket)"
-                        title="Corregir error en medio de pago (ej: Plin / Efectivo)"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-bold transition-all cursor-pointer">
-                        <i class="fa-solid fa-pen-to-square"></i> Corregir Pago
-                      </button>
-                    }
+                    <!-- Acciones -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button (click)="verDetalle(ticket)" title="Ver Comprobante / Imprimir"
+                          class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">
+                          <i class="fa-solid fa-receipt"></i>
+                        </button>
+                        <button (click)="abrirModalCorregirPago(ticket)" title="Corregir Método de Pago"
+                          class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer">
+                          <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="py-12 text-center text-slate-400">
+                      <i class="fa-regular fa-calendar-xmark text-3xl mb-2 block"></i>
+                      No hay compras registradas para la fecha seleccionada: <strong>{{ formatFechaLegible(fechaDetallada) }}</strong>.
+                    </td>
+                  </tr>
+                }
+              </tbody>
 
-                    <!-- BOTÓN VER DETALLE -->
-                    <button (click)="verDetalle(ticket)"
-                      title="Ver Detalle del Ticket"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 rounded-lg text-[10px] font-bold transition-all cursor-pointer">
-                      <i class="fa-solid fa-eye"></i> Detalle
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="8" class="py-14 text-center text-slate-400">
-                  <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-receipt text-2xl"></i>
-                  </div>
-                  <p class="font-medium text-slate-700 mb-1">No se encontraron ventas para los filtros seleccionados</p>
-                  <p class="text-xs text-slate-400">Selecciona otra fecha en el calendario o haz clic en "Todo" para ver el histórico.</p>
-                </td>
-              </tr>
-            }
-          </tbody>
+              <!-- TOTALES AL FINAL DE LA TABLA (FOOTER) -->
+              @if (ventasDetalladas.length > 0) {
+                <tfoot class="bg-slate-100 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-700 font-bold text-xs">
+                  <tr>
+                    <td colspan="3" class="py-4 px-4 font-black text-slate-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-slate-200 dark:border-slate-700">
+                      TOTAL DEL DÍA ({{ ventasDetalladas.length }} COMPRAS)
+                    </td>
+                    <td class="py-4 px-4 font-mono text-[11px] text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700">
+                      <strong>{{ totalProductosVendidosDetalle }}</strong> unidades vendidas
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap border-r border-slate-200 dark:border-slate-700 text-[10px] font-mono">
+                      Ef: S/ {{ kpiTotalEfectivoDetalle | number:'1.0-0' }} | Dig: S/ {{ kpiTotalYapePlinDetalle | number:'1.0-0' }}
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm whitespace-nowrap border-r border-slate-200 dark:border-slate-700">
+                      S/ {{ kpiTotalVentasDetalle | number:'1.2-2' }}
+                    </td>
+                    <td class="py-4 px-4 text-center font-bold text-slate-700 dark:text-slate-300 text-[10px] border-r border-slate-200 dark:border-slate-700">
+                      {{ kpiTicketsEmitidosDetalle }} emitidos
+                    </td>
+                    <td class="py-4 px-4 text-center text-[10px] text-slate-400 font-bold">
+                      Detallado
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
 
-          <!-- FILA DE TOTALES EN FOOTER -->
-          @if (ventasFiltradas.length > 0) {
-            <tfoot>
-              <tr class="border-t-2 border-slate-200 bg-slate-50/80 text-slate-900 font-bold text-xs">
-                <td colspan="5" class="py-3.5 px-4 uppercase tracking-wider font-extrabold text-slate-800">
-                  TOTAL RECAUDADO ({{ totalTicketsEmitidos }} TICKETS EMITIDOS)
-                </td>
-                <td class="py-3.5 px-4 text-right font-mono font-black text-emerald-700 text-base whitespace-nowrap">
-                  S/ {{ totalVentasHoy | number:'1.2-2' }}
-                </td>
-                <td colspan="2" class="py-3.5 px-4 text-right text-[11px] text-slate-500 font-medium">
-                  Auditoría Administrativa • Sincronización Supabase
-                </td>
-              </tr>
-            </tfoot>
+          <!-- Paginación Detalle -->
+          @if (totalPaginasDetalle > 1) {
+            <div class="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Página {{ paginaDetalle }} de {{ totalPaginasDetalle }}</span>
+              <div class="flex gap-1">
+                <button (click)="cambiarPaginaDetalle(paginaDetalle - 1)" [disabled]="paginaDetalle === 1"
+                  class="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-40 cursor-pointer">Anterior</button>
+                <button (click)="cambiarPaginaDetalle(paginaDetalle + 1)" [disabled]="paginaDetalle === totalPaginasDetalle"
+                  class="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg disabled:opacity-40 cursor-pointer">Siguiente</button>
+              </div>
+            </div>
           }
-        </table>
-      </div>
-
-      <!-- BARRA DE PAGINACIÓN INFERIOR -->
-      <div class="py-3.5 px-6 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-        <div>
-          Mostrando
-          <strong class="text-slate-800">{{ ventasFiltradas.length === 0 ? 0 : (paginaActual - 1) * itemsPorPagina + 1 }}</strong> a
-          <strong class="text-slate-800">{{ paginaActual * itemsPorPagina > ventasFiltradas.length ? ventasFiltradas.length : paginaActual * itemsPorPagina }}</strong>
-          de <strong class="text-slate-800">{{ ventasFiltradas.length }}</strong> registros
         </div>
 
-        <div class="flex items-center gap-1.5">
-          <button (click)="cambiarPagina(1)"
-            [disabled]="paginaActual === 1"
-            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
-            <i class="fa-solid fa-angles-left text-[10px]"></i>
-          </button>
-
-          <button (click)="cambiarPagina(paginaActual - 1)"
-            [disabled]="paginaActual === 1"
-            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
-            <i class="fa-solid fa-angle-left text-[10px]"></i>
-          </button>
-
-          <span class="min-w-7 h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center justify-center text-xs shadow-xs">
-            {{ paginaActual }}
-          </span>
-
-          <button (click)="cambiarPagina(paginaActual + 1)"
-            [disabled]="paginaActual >= totalPaginas"
-            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
-            <i class="fa-solid fa-angle-right text-[10px]"></i>
-          </button>
-
-          <button (click)="cambiarPagina(totalPaginas)"
-            [disabled]="paginaActual >= totalPaginas"
-            class="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:hover:bg-white flex items-center justify-center transition-all cursor-pointer">
-            <i class="fa-solid fa-angles-right text-[10px]"></i>
-          </button>
-        </div>
       </div>
-    </div>
+    }
 
-  </div>
-</div>
+    <!-- ========================================================================= -->
+    <!-- PESTAÑA 3: APERTURAS DE CAJA (CUÁNTO DINERO ABRIÓ, QUIÉN TRABAJÓ, DÍA Y FECHA) -->
+    <!-- ========================================================================= -->
+    @if (tabActiva === 'APERTURAS') {
+      <div class="space-y-6 animate-slide-up">
 
-<!-- MODAL: DETALLE DE TICKET DE VENTA -->
-@if (showDetalleModal && ticketSeleccionado) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-slide-up">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <div>
-          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-receipt text-emerald-600"></i> Detalle de Venta
-          </h3>
-          <p class="text-xs font-mono text-slate-500 font-bold mt-0.5">{{ ticketSeleccionado.id }} • {{ ticketSeleccionado.fecha | date:'medium' }}</p>
-        </div>
-        <button (click)="showDetalleModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
+        <!-- Banner de Apertura Activa Hoy (Diseño sobrio de un solo color) -->
+        @if (turnoActual) {
+          <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-700">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center text-lg">
+                  <i class="fa-solid" [ngClass]="turnoActual.cajaAbierta ? 'fa-cash-register' : 'fa-lock'"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200">
+                      {{ turnoActual.cajaAbierta ? 'Turno en Curso • Caja Abierta' : 'Caja Cerrada del Día de Hoy' }}
+                    </span>
+                    @if (turnoActual.reabierta) {
+                      <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        🔄 Reabierta
+                      </span>
+                    }
+                  </div>
+                  <p class="text-sm font-bold text-slate-800 dark:text-white mt-1">Cajero: <strong>{{ turnoActual.cajeroActual }}</strong></p>
+                </div>
+              </div>
 
-      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-        <p>Cliente: <strong>{{ ticketSeleccionado.cliente }}</strong></p>
-        <p>DNI/RUC: <strong class="font-mono">{{ ticketSeleccionado.dni }}</strong></p>
-        <p>Sede: {{ ticketSeleccionado.sede }}</p>
-        <p>Método de Pago: <strong>{{ ticketSeleccionado.metodo }}</strong></p>
-        @if (ticketSeleccionado.desglose && ticketSeleccionado.desglose.length > 0) {
-          <div class="mt-2 pt-2 border-t border-slate-200 space-y-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Desglose de Pago Recibido:</span>
-            @for (dp of ticketSeleccionado.desglose; track $index) {
-              <div class="flex justify-between items-center text-[11px] font-medium text-slate-700 bg-white px-2.5 py-1 rounded border border-slate-200">
-                <span class="font-bold flex items-center gap-1.5">
-                  <i class="fa-solid" [ngClass]="{
-                    'fa-money-bill text-teal-600': dp.metodo.toLowerCase() === 'efectivo',
-                    'fa-mobile-screen text-purple-600': dp.metodo.toLowerCase() === 'yape',
-                    'fa-mobile-screen-button text-cyan-600': dp.metodo.toLowerCase() === 'plin',
-                    'fa-credit-card text-sky-600': dp.metodo.toLowerCase().includes('tarjeta'),
-                    'fa-building-columns text-indigo-600': dp.metodo.toLowerCase().includes('transferencia')
-                  }"></i>
-                  <span>{{ dp.metodo }}</span>
-                  @if (dp.referencia) {
-                    <span class="text-[9px] font-normal text-slate-400 font-mono">(Ref: {{ dp.referencia }})</span>
-                  }
-                </span>
-                <span class="font-mono font-bold text-slate-900">S/ {{ dp.monto | number:'1.2-2' }}</span>
+              <div class="flex items-center gap-4">
+                <div class="text-right">
+                  <span class="text-[10px] font-bold uppercase text-slate-400 block">Fondo con que abrió hoy</span>
+                  <p class="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">S/ {{ turnoActual.fondoInicial | number:'1.2-2' }}</p>
+                </div>
+
+                @if (!turnoActual.cajaAbierta) {
+                  <button (click)="abrirModalReapertura(turnoActual)"
+                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-colors">
+                    <i class="fa-solid fa-lock-open text-xs"></i>
+                    <span>Reabrir Caja de Hoy</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Fecha y Hora de Apertura:</span>
+                <p class="font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoActual.fechaApertura | date:'short' }}</p>
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Día:</span>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ getDiaSemana(toIsoDate(turnoActual.fechaApertura)) }}</p>
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Sede:</span>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoActual.sede }}</p>
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Estado:</span>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                  {{ turnoActual.cajaAbierta ? 'Operativo para cobros' : 'Cerrado' }}
+                </p>
+              </div>
+            </div>
+
+            @if (turnoActual.reabierta && turnoActual.motivoReapertura) {
+              <div class="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-circle-info text-slate-400"></i>
+                <span><strong>Auditoría de Reapertura:</strong> Reabierta el {{ turnoActual.fechaReapertura | date:'dd/MM/yyyy • hh:mm a' }} — Motivo: <em>{{ turnoActual.motivoReapertura }}</em> (Autorizado por: {{ turnoActual.autorizadoReapertura || 'Supervisor' }}).</span>
               </div>
             }
           </div>
         }
-        @if (ticketSeleccionado.anulacionInfo) {
-          <div class="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px]">
-            <p class="font-bold">❌ Ticket Anulado por: {{ ticketSeleccionado.anulacionInfo.autorizadoPor }}</p>
-            <p>Motivo: {{ ticketSeleccionado.anulacionInfo.motivo }}</p>
-          </div>
-        }
-      </div>
 
-      <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Ítems Vendidos & Descuento de Unidades</label>
-        @for (item of ticketSeleccionado.items; track $index) {
-          <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
-            <div>
-              <p class="font-bold text-slate-800">{{ item.nombre }}</p>
-              <p class="text-[10px] text-slate-500">
-                Cant: {{ item.cantidad }} • <span class="text-emerald-700 font-bold">Descontó {{ item.unidadesTotales }} unid.</span>
-              </p>
+        <!-- Filtros de la Lista de Aperturas -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-5 shadow-xs space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <!-- Rango de Fechas (Desde / Hasta) -->
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-calendar-days text-emerald-600"></i> Rango de Fechas:
+              </span>
+
+              <div class="flex items-center gap-2">
+                <label class="text-[11px] font-bold text-slate-500">Desde:</label>
+                <input [(ngModel)]="fechaInicioApertura" (change)="consultarSupabaseAperturas()" type="date"
+                  class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" />
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-[11px] font-bold text-slate-500">Hasta:</label>
+                <input [(ngModel)]="fechaFinApertura" (change)="consultarSupabaseAperturas()" type="date"
+                  class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" />
+              </div>
+
+              <!-- Botones rápidos de rango -->
+              <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-xl">
+                <button (click)="setRangoAperturas('HOY')"
+                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer">
+                  Hoy
+                </button>
+                <button (click)="setRangoAperturas('7DIAS')"
+                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer">
+                  7 Días
+                </button>
+                <button (click)="setRangoAperturas('MES')"
+                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer">
+                  Este Mes
+                </button>
+                <button (click)="setRangoAperturas('TODO')"
+                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer">
+                  Todo
+                </button>
+              </div>
             </div>
-            <span class="font-mono font-bold text-slate-900">S/ {{ item.subtotal | number:'1.2-2' }}</span>
-          </div>
-        }
-      </div>
 
-      <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-1 font-mono">
-        <div class="flex justify-between"><span>Subtotal:</span><span>S/ {{ ticketSeleccionado.subtotal | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between"><span>IGV (18%):</span><span>S/ {{ ticketSeleccionado.igv | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between text-sm font-black text-emerald-800 border-t border-emerald-200 pt-1">
-          <span>TOTAL:</span><span>S/ {{ ticketSeleccionado.total | number:'1.2-2' }}</span>
+            <!-- Resumen Total Aperturas y Promedio -->
+            <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700">
+              Aperturas: <strong class="text-slate-800 dark:text-white">{{ aperturasFiltradas.length }}</strong> |
+              Fondo Promedio: <strong class="text-emerald-600">S/ {{ kpiPromedioFondoInicial | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <!-- Filtros secundarios: Quién trabajó, Estado, Sede y Búsqueda -->
+          <div class="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+            <!-- Quién trabajó en el local (Cajero) -->
+            <div class="flex items-center gap-1.5">
+              <label class="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                <i class="fa-solid fa-user-tie text-emerald-600"></i> Quién Trabajó:
+              </label>
+              <select [(ngModel)]="filtroCajeroApertura" (change)="aplicarFiltrosAperturas()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="TODOS">Todos los colaboradores</option>
+                @for (caj of cajerosUnicosAperturas; track caj) {
+                  <option [value]="caj">{{ caj }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Local / Sede -->
+            <div class="flex items-center gap-1.5">
+              <label class="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                <i class="fa-solid fa-store text-emerald-600"></i> Local / Sede:
+              </label>
+              <select [(ngModel)]="filtroSedeApertura" (change)="consultarSupabaseAperturas()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="TODAS">Todas las sedes</option>
+                @for (s of listaSedes; track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Estado de Caja -->
+            <div class="flex items-center gap-1.5">
+              <label class="text-[11px] font-bold text-slate-500">Estado:</label>
+              <select [(ngModel)]="filtroEstadoApertura" (change)="aplicarFiltrosAperturas()"
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="TODOS">Todos los estados</option>
+                <option value="ABIERTO">Solo Cajas Abiertas</option>
+                <option value="CERRADO">Solo Cajas Cerradas</option>
+              </select>
+            </div>
+
+            <!-- Búsqueda rápida -->
+            <div class="relative ml-auto">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input [(ngModel)]="busquedaApertura" (input)="aplicarFiltrosAperturas()" type="text"
+                placeholder="Buscar por colaborador o sede..."
+                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 w-56" />
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="flex gap-2 pt-2">
-        <button (click)="showDetalleModal = false" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- MODAL: CORREGIR MÉTODO DE PAGO (SOLUCIÓN A ERROR DEL CAJERO) -->
-@if (showCorregirPagoModal && ticketACorregir) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-slide-up">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
-            <i class="fa-solid fa-pen-to-square"></i>
+        <!-- TABLA DE HISTORIAL DE APERTURAS -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 shadow-xs overflow-hidden">
+          <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-emerald-600"></i>
+                Historial de Aperturas de Caja Registradas
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Control de fondos iniciales entregados, personal asignado y opción de reapertura (1 apertura por día).</p>
+            </div>
           </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100/90 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px] border-b-2 border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800">Fecha y Hora de Apertura</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800">Día</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800">Quién Trabajó en el Local</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800 text-right">Dinero con que Abrió</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800">Sede / Local</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800 text-center">Estado Caja</th>
+                  <th class="py-3 px-4 border-r border-slate-200/80 dark:border-slate-800">Cierre / Recaudación</th>
+                  <th class="py-3 px-4 text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/80 dark:divide-slate-700/80 font-sans">
+                @for (t of aperturasFiltradas; track t.fechaApertura) {
+                  <tr [ngClass]="$even ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/80 dark:bg-slate-900/40'"
+                    class="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors border-b border-slate-200/80 dark:border-slate-700/80">
+                    <!-- Fecha y Hora de Apertura -->
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800">
+                      {{ t.fechaApertura | date:'dd/MM/yyyy • hh:mm a' }}
+                    </td>
+
+                    <!-- Día -->
+                    <td class="py-3.5 px-4 whitespace-nowrap font-bold text-slate-600 dark:text-slate-300 border-r border-slate-200/60 dark:border-slate-800">
+                      {{ getDiaSemana(toIsoDate(t.fechaApertura)) }}
+                    </td>
+
+                    <!-- Quién Trabajó en el Local -->
+                    <td class="py-3.5 px-4 border-r border-slate-200/60 dark:border-slate-800">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 text-xs font-black shadow-2xs">
+                          <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div>
+                          <span class="font-bold text-slate-900 dark:text-white block text-xs">{{ t.cajeroActual }}</span>
+                          <span class="text-[10px] text-slate-400 block">{{ t.sede || 'Sede Cajamarca Central' }}</span>
+                          @if (t.reabierta) {
+                            <span class="inline-flex items-center gap-1 text-[9px] text-cyan-700 dark:text-cyan-400 font-bold bg-cyan-50 dark:bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-200 dark:border-cyan-800 mt-0.5">
+                              🔄 Reabierta
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Dinero con que Abrió (Fondo Inicial) -->
+                    <td class="py-3.5 px-4 text-right whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800">
+                      <span class="inline-flex items-center px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded-xl font-mono font-black text-xs border border-emerald-200 dark:border-emerald-800">
+                        S/ {{ t.fondoInicial | number:'1.2-2' }}
+                      </span>
+                    </td>
+
+                    <!-- Sede -->
+                    <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800">
+                      <span class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        {{ t.sede || 'Sede Cajamarca Central' }}
+                      </span>
+                    </td>
+
+                    <!-- Estado Caja -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800">
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                        [ngClass]="t.cajaAbierta
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-300'">
+                        {{ t.cajaAbierta ? '🟢 Abierta' : '🔒 Cerrada' }}
+                      </span>
+                    </td>
+
+                    <!-- Cierre / Recaudación -->
+                    <td class="py-3.5 px-4 text-xs font-mono border-r border-slate-200/60 dark:border-slate-800">
+                      @if (t.cajaAbierta) {
+                        <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Turno activo cobrando
+                        </span>
+                      } @else {
+                        <div class="text-slate-500">
+                          <div><span class="text-slate-400 text-[10px]">Cierre:</span> {{ t.fechaCierre | date:'hh:mm a' }}</div>
+                          @if (t.totalVentas) {
+                            <div class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">Recaudó: S/ {{ t.totalVentas | number:'1.2-2' }}</div>
+                          }
+                        </div>
+                      }
+                    </td>
+
+                    <!-- Acción: Reabrir Caja -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                      @if (!t.cajaAbierta) {
+                        <button (click)="abrirModalReapertura(t)"
+                          title="Reabrir esta caja para permitir cobros en POS"
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer">
+                          <i class="fa-solid fa-lock-open text-xs text-amber-600"></i>
+                          <span>Reabrir Caja</span>
+                        </button>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                          <i class="fa-solid fa-circle-check text-xs"></i> En Operación
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="py-12 text-center text-slate-400">
+                      <i class="fa-solid fa-cash-register text-3xl mb-2 block"></i>
+                      No se encontraron registros de apertura de caja para el rango y filtros seleccionados.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+
+              <!-- TOTALES AL FINAL DE LA TABLA (TFOOT) -->
+              @if (aperturasFiltradas.length > 0) {
+                <tfoot class="bg-slate-100 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-700 text-xs font-black text-slate-900 dark:text-white">
+                  <tr>
+                    <td colspan="3" class="py-3.5 px-4 text-left border-r border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
+                      TOTALES GENERALES ({{ aperturasFiltradas.length }} aperturas registradas)
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-mono text-emerald-700 dark:text-emerald-400 border-r border-slate-200 dark:border-slate-800 text-sm whitespace-nowrap">
+                      S/ {{ totalFondosAperturaFiltrados | number:'1.2-2' }}
+                    </td>
+                    <td class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-slate-500 font-normal text-[11px]">
+                      {{ listaSedes.length }} sedes
+                    </td>
+                    <td class="py-3.5 px-4 text-center border-r border-slate-200 dark:border-slate-800 text-slate-500 font-normal text-[11px]">
+                      —
+                    </td>
+                    <td class="py-3.5 px-4 font-mono text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-800 text-xs whitespace-nowrap">
+                      Total Recaudado: <span class="text-emerald-600 dark:text-emerald-400 font-bold">S/ {{ totalRecaudadoAperturasFiltradas | number:'1.2-2' }}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-center text-slate-400 text-[11px] font-normal">
+                      —
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </div>
+
+      </div>
+    }
+
+  </div>
+
+  <!-- MODAL: DETALLE DEL TICKET DE VENTA (REIMPRESIÓN) -->
+  @if (showDetalleModal && ticketSeleccionado) {
+    <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
           <div>
-            <h3 class="text-base font-bold text-slate-900">Corregir Medio de Pago</h3>
-            <p class="text-xs text-slate-500">Ticket: <strong class="font-mono text-slate-800">{{ ticketACorregir.id }}</strong></p>
+            <h3 class="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+              <i class="fa-solid fa-receipt text-emerald-600"></i> Comprobante {{ ticketSeleccionado.id }}
+            </h3>
+            <p class="text-[11px] text-slate-400">{{ ticketSeleccionado.fecha | date:'medium' }}</p>
+          </div>
+          <button (click)="showDetalleModal = false" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-1">
+            <p><strong>Cliente:</strong> {{ ticketSeleccionado.cliente }}</p>
+            <p><strong>DNI/RUC:</strong> {{ ticketSeleccionado.dni }}</p>
+            <p><strong>Sede:</strong> {{ ticketSeleccionado.sede }}</p>
+            <p><strong>Método de Pago:</strong> {{ ticketSeleccionado.metodo }}</p>
+          </div>
+
+          <div class="border rounded-xl p-3 border-slate-200 dark:border-slate-700 space-y-1.5 max-h-48 overflow-y-auto">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Productos Comprados:</span>
+            @for (it of ticketSeleccionado.items; track it.productoId) {
+              <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800 text-[11px]">
+                <span>{{ it.cantidad }}x {{ it.nombre }} ({{ it.tipoPresentacion }})</span>
+                <span class="font-mono font-bold">S/ {{ it.subtotal | number:'1.2-2' }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="flex justify-between items-baseline pt-2 border-t border-slate-100 dark:border-slate-700 font-mono">
+            <span class="text-xs font-bold text-slate-500">TOTAL:</span>
+            <span class="text-lg font-black text-emerald-600">S/ {{ ticketSeleccionado.total | number:'1.2-2' }}</span>
           </div>
         </div>
-        <button (click)="showCorregirPagoModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
 
-      <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-1">
-        <div class="flex justify-between">
-          <span class="text-slate-500">Cliente:</span>
-          <span class="font-bold text-slate-800">{{ ticketACorregir.cliente }}</span>
+        <div class="flex gap-2 pt-2">
+          <button (click)="imprimirReporte()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-print"></i> Imprimir
+          </button>
+          <button (click)="showDetalleModal = false" class="py-2.5 px-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer">
+            Cerrar
+          </button>
         </div>
-        <div class="flex justify-between">
-          <span class="text-slate-500">Monto Total:</span>
-          <span class="font-mono font-black text-emerald-700 text-sm">S/ {{ ticketACorregir.total | number:'1.2-2' }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-500">Método Registrado Erróneo:</span>
-          <span class="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">{{ ticketACorregir.metodo }}</span>
-        </div>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="font-bold text-slate-700 block mb-1">
-            Nuevo Método de Pago Correcto <span class="text-rose-500">*</span>
-          </label>
-          <select [(ngModel)]="nuevoMetodoPago"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
-            <option value="Yape">📱 Yape (Billetera BCP)</option>
-            <option value="Plin">📲 Plin (Billetera Interbank / BBVA / Scotiabank)</option>
-            <option value="Efectivo">💵 Efectivo Físico</option>
-            <option value="Tarjeta">💳 Tarjeta Débito / Crédito (POS)</option>
-            <option value="Transferencia">🏦 Transferencia Bancaria</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="font-bold text-slate-700 block mb-1">
-            N° de Operación / Referencia (Opcional para Plin / Yape):
-          </label>
-          <input [(ngModel)]="referenciaPago"
-            placeholder="Ej: OP-849204 o últimos 4 dígitos"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
-        </div>
-      </div>
-
-      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500">
-        <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i>
-        Esta corrección recalcula automáticamente los totales de Efectivo y Billeteras Digitales del día sin alterar el kardex de stock.
-      </div>
-
-      <div class="flex gap-2 pt-2 border-t border-slate-100">
-        <button (click)="showCorregirPagoModal = false"
-          class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer">
-          Cancelar
-        </button>
-        <button (click)="confirmarCorreccionPago()"
-          class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs cursor-pointer shadow-sm">
-          Guardar Corrección
-        </button>
       </div>
     </div>
-  </div>
-}
+  }
+
+  <!-- MODAL: CORREGIR MÉTODO DE PAGO -->
+  @if (showCorregirPagoModal && ticketACorregir) {
+    <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+          <div>
+            <h3 class="text-sm font-black text-slate-800 dark:text-white">Corregir Método de Pago</h3>
+            <p class="text-[11px] text-slate-400">Ticket: {{ ticketACorregir.id }} • Total: S/ {{ ticketACorregir.total | number:'1.2-2' }}</p>
+          </div>
+          <button (click)="showCorregirPagoModal = false" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nuevo Método de Pago:</label>
+            <select [(ngModel)]="nuevoMetodoPago" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Yape">Yape</option>
+              <option value="Plin">Plin</option>
+              <option value="Tarjeta">Tarjeta (Visa/Mastercard)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">N° Operación / Referencia (Opcional):</label>
+            <input [(ngModel)]="referenciaPago" type="text" placeholder="Ej: OP-982173"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono" />
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <button (click)="showCorregirPagoModal = false" class="flex-1 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer">Cancelar</button>
+          <button (click)="confirmarCorreccionPago()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer">Guardar Corrección</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: REAPERTURA DE CAJA (OPCIÓN EN REPORTE: REGLA 1 APERTURA POR DÍA) -->
+  @if (showReabrirModal && turnoAReabrir) {
+    <div class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 animate-slide-up">
+        
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-lock-open"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-black text-slate-800 dark:text-white">Reapertura de Caja</h3>
+              <p class="text-[11px] text-slate-400">Reactivar operaciones de la jornada</p>
+            </div>
+          </div>
+          <button (click)="showReabrirModal = false" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Alerta de Regla de Negocio -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+          <i class="fa-solid fa-circle-info text-slate-500 mt-0.5 shrink-0"></i>
+          <div>
+            <strong class="block font-bold text-slate-900 dark:text-white">Normativa: Solo se permite una apertura por día</strong>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Para evitar duplicar turnos en una misma fecha, esta acción reabre la caja existente, manteniendo su fondo inicial de sencillo y ventas previas.</span>
+          </div>
+        </div>
+
+        <!-- Ficha de Datos de la Caja -->
+        <div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400 font-bold uppercase text-[10px]">Fecha de Turno:</span>
+            <span class="font-bold text-slate-800 dark:text-slate-200">{{ formatFechaLegible(toIsoDate(turnoAReabrir.fechaApertura)) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400 font-bold uppercase text-[10px]">Cajero Responsable:</span>
+            <span class="font-bold text-slate-800 dark:text-slate-200">{{ turnoAReabrir.cajeroActual }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400 font-bold uppercase text-[10px]">Fondo Inicial Registrado:</span>
+            <span class="font-mono font-black text-slate-900 dark:text-white">S/ {{ turnoAReabrir.fondoInicial | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400 font-bold uppercase text-[10px]">Sede:</span>
+            <span class="font-bold text-slate-700 dark:text-slate-300">{{ turnoAReabrir.sede }}</span>
+          </div>
+        </div>
+
+        <!-- Formulario de Motivo y Autorización -->
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Motivo de Reapertura:</label>
+            <select [(ngModel)]="motivoReapertura"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white">
+              <option value="Reanudación de ventas de la jornada">Reanudación de ventas de la jornada</option>
+              <option value="Cierre anticipado o involuntario">Cierre anticipado o involuntario</option>
+              <option value="Ventas de emergencia fuera de horario">Ventas de emergencia fuera de horario</option>
+              <option value="Corrección o regularización administrativa">Corrección o regularización administrativa</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Autorizado Por:</label>
+            <input [(ngModel)]="autorizadoPorReapertura" type="text"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white" />
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <button (click)="showReabrirModal = false" class="flex-1 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="confirmarReaperturaCaja()"
+            class="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors">
+            <i class="fa-solid fa-lock-open text-xs"></i>
+            <span>Confirmar Reapertura</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

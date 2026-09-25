@@ -1,10 +1,10 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnInit, inject, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
 import { InventoryService } from '../../core/services/inventory.service';
-import { VentaService } from '../../core/services/venta.service';
+import { VentaService, TurnoCajaDTO } from '../../core/services/venta.service';
 import { DecolectaService } from '../../core/services/decolecta.service';
 import { CustomerService } from '../../core/services/customer.service';
 import { StorageService } from '../../core/services/storage.service';
@@ -29,12 +29,13 @@ export interface TicketVenta {
   cambio?: number;
   cliente: string;
   dni: string;
-  tipoComprobante: 'Boleta' | 'Factura' | 'Ticket';
+  tipoComprobante: string;
   datosReceta?: {
     cmpMedico: string;
     nroReceta: string;
     paciente: string;
   };
+  sedeId?: string;
   sede: string;
   estado: 'EMITIDO' | 'ANULADO';
   anulacionInfo?: {
@@ -47,6 +48,9 @@ export interface TicketVenta {
 
 export interface ProductoFarmacia {
   id: string | number;
+  sku?: string;
+  codigoBarra?: string;
+  tipoProducto?: 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
   nombre: string;
   principioActivo: string;
   concentracion: string;
@@ -74,7 +78,9 @@ export interface ProductoFarmacia {
   imports: [CommonModule, FormsModule],
   templateUrl: './pos.html'
 })
-export class Pos implements OnInit {
+export class Pos implements OnInit, AfterViewInit {
+  @ViewChild('barcodeInput') barcodeInputRef?: ElementRef<HTMLInputElement>;
+  private audioCtx: AudioContext | null = null;
   public authService = inject(AuthService);
   private productService = inject(ProductService);
   private inventoryService = inject(InventoryService);
@@ -120,6 +126,9 @@ export class Pos implements OnInit {
   // Modo de Vista del Catálogo (Tarjetas con fotos vs Lista compacta)
   vistaModo: 'cards' | 'lista' = (typeof localStorage !== 'undefined' && localStorage.getItem('medicare_pos_view_mode') as 'cards' | 'lista') || 'cards';
 
+  // Posición del Carrito: 'izquierda' (solicitado) o 'derecha'
+  posicionCarrito: 'izquierda' | 'derecha' = (typeof localStorage !== 'undefined' && (localStorage.getItem('medicare_pos_cart_position') as 'izquierda' | 'derecha')) || 'izquierda';
+
   // Modal para receta de psicotrópicos
   showRecetaModal = false;
   productoControladoPendiente: any = null;
@@ -144,8 +153,8 @@ export class Pos implements OnInit {
   igv = 0;
   total = 0;
 
-  // Cliente & Comprobante
-  tipoComprobante: 'Boleta' | 'Factura' | 'Ticket' = 'Ticket';
+  // Cliente & Comprobante (Exclusivo Ticket de Venta)
+  tipoComprobante = 'Ticket';
   tipoDoc: 'DNI' | 'RUC' | 'SIN_DOC' = 'DNI';
   docNumero = '';
   customerName = 'Cliente de mostrador';
@@ -156,6 +165,18 @@ export class Pos implements OnInit {
   customerPuntos = 0;
   consultandoDocumento = false;
   isEditingCustomer = false;
+
+  // Estado y Modal de Cliente (Búsqueda, Edición y Creación)
+  clienteEncontrado = false;
+  showClienteModal = false;
+  modoClienteModal: 'CREAR' | 'EDITAR' = 'CREAR';
+  modalDocTipo: 'DNI' | 'RUC' = 'DNI';
+  modalDocNumero = '';
+  modalNombre = '';
+  modalCelular = '';
+  modalEmail = '';
+  modalDireccion = '';
+  modalFechaNacimiento = '';
 
   // Notificaciones y Alertas con diseño
   mensajeToast: { tipo: 'warning' | 'error' | 'success' | 'info'; titulo?: string; texto: string } | null = null;
@@ -215,6 +236,94 @@ export class Pos implements OnInit {
   observacionesAnulacion = '';
   errorAnulacion = '';
 
+  // ================= 5.1 REAPERTURA EXCLUSIVA ADMINISTRADOR =================
+  showReaperturaModal = false;
+  pinReapertura = '';
+  motivoReapertura = 'Reapertura de turno autorizada por Administrador';
+  motivosReaperturaDisponibles = [
+    'Reapertura de turno autorizada por Administrador',
+    'Cierre accidental o error de arqueo anticipado',
+    'Reanudación de ventas por extensión de jornada',
+    'Auditoría y ajuste extraordinario de caja'
+  ];
+  autorizadoresReaperturaDisponibles = [
+    'Lic. Carlos Mendoza (Administrador General)',
+    'Administrador de Turno / Propietario'
+  ];
+  autorizadorReapertura: string = 'Lic. Carlos Mendoza (Administrador General)';
+  errorReapertura = '';
+
+  get esAdmin(): boolean {
+    const user = this.authService.currentUser();
+    const role = this.authService.activeRole();
+    return role === 'ADMIN' || 
+           Boolean(user?.esSuperadmin) || 
+           Boolean(user?.esPropietario) || 
+           user?.rolCodigo === 'ADMIN_NEGOCIO' ||
+           user?.rolCodigo === 'SUPERADMIN' ||
+           user?.rolCodigo === 'ADMIN_MASTER';
+  }
+
+  // Buffer para lector de código de barras físico
+  private barcodeBuffer = '';
+  private lastKeyTime = 0;
+
+  ngAfterViewInit() {
+    this.enfocarLector();
+  }
+
+  enfocarLector() {
+    setTimeout(() => {
+      try {
+        if (this.barcodeInputRef?.nativeElement) {
+          this.barcodeInputRef.nativeElement.focus();
+        }
+      } catch (e) {
+        // Silencioso
+      }
+    }, 100);
+  }
+
+  playBeep(success: boolean = true) {
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return;
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioCtxClass();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+
+      const now = this.audioCtx.currentTime;
+      if (success) {
+        // Tono agudo y limpio de éxito (880 Hz a 1175 Hz, 100ms)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.08);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else {
+        // Tono grave de advertencia / no encontrado (220 Hz, 220ms)
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+    } catch (e) {
+      // AudioContext policy
+    }
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'F12') {
@@ -222,6 +331,53 @@ export class Pos implements OnInit {
       if (this.cart.length > 0 && this.cajaAbierta) {
         this.openPayment();
       }
+      return;
+    }
+
+    // Si hay un modal abierto, no interceptar teclas como código de barras
+    if (this.showPaymentModal || this.showClienteModal || this.showAperturaModal || 
+        this.showCierreModal || this.showTicketModal || this.showRecetaModal || 
+        this.showModalImagen || this.showReporteZModal || this.showAnulacionModal || this.showReaperturaModal) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    const isBarcodeInput = target && target === this.barcodeInputRef?.nativeElement;
+
+    // Si el usuario está directamente en el buscador de código de barras, el input maneja el Enter
+    if (isBarcodeInput) {
+      return;
+    }
+
+    // Si está en otro campo de texto (ej. DNI del cliente), no interceptar
+    if (isInput) {
+      return;
+    }
+
+    // Detección global para pistola de código de barras cuando el foco está libre en la pantalla
+    const now = Date.now();
+    // Las pistolas USB disparan teclas consecutivas a ráfagas (< 150ms)
+    if (now - this.lastKeyTime > 200) {
+      this.barcodeBuffer = '';
+    }
+    this.lastKeyTime = now;
+
+    if (event.key === 'Enter') {
+      const code = this.barcodeBuffer.trim();
+      if (code.length >= 3) {
+        event.preventDefault();
+        event.stopPropagation();
+        const procesado = this.procesarCodigoEscaneado(code);
+        if (!procesado) {
+          this.playBeep(false);
+          this.mostrarAlerta('warning', `Código de barras "${code}" no registrado en el inventario.`, 'No Encontrado');
+        }
+      }
+      this.barcodeBuffer = '';
+      this.enfocarLector();
+    } else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      this.barcodeBuffer += event.key;
     }
   }
 
@@ -237,8 +393,9 @@ export class Pos implements OnInit {
   }
 
   cargarProductosYVentas() {
+    const activeSedeId = this.authService.activeSede()?.id;
     this.productService.listarCatalogoActivos().subscribe(catalogo => {
-      this.inventoryService.listarLotesFefo().subscribe(lotes => {
+      this.inventoryService.listarLotesFefo(activeSedeId).subscribe(lotes => {
         this.productos = (catalogo || []).map(p => {
           const lotesProd = (lotes || []).filter(l => l.productoId === p.id && l.stock > 0);
           const stockReal = lotesProd.length > 0
@@ -246,18 +403,56 @@ export class Pos implements OnInit {
             : (p.stockDisponible || 0);
           const loteMasCercano = lotesProd[0]; // Ya ordenado FEFO
 
+          const esPerfume = p.tipoProducto === 'PERFUME' || p.sku?.startsWith('PERF') || p.categoriaNombre === 'Perfumería Fina';
+          const esOtros = p.tipoProducto === 'OTROS' || p.sku?.startsWith('OTR');
+          const esSoloUnidad = esPerfume || esOtros;
+          const tipoProd: 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
+
           const vtoStr = loteMasCercano && loteMasCercano.vencimiento
-            ? loteMasCercano.vencimiento.slice(2, 7).replace('-', '/')
-            : (p.creadoEn ? '12/25' : '11/25');
+            ? (loteMasCercano.vencimiento === 'No expira' ? 'No expira' : loteMasCercano.vencimiento.slice(2, 7).replace('-', '/'))
+            : (esPerfume ? 'No expira' : (p.creadoEn ? '12/25' : '11/25'));
+
+          const precioBase = p.precioVenta || p.precioUnidad || p.precioCaja || 0;
+
+          if (esSoloUnidad) {
+            return {
+              id: p.id,
+              sku: p.sku || '',
+              codigoBarra: p.codigoBarra || '',
+              tipoProducto: tipoProd,
+              nombre: p.nombreComercial,
+              principioActivo: p.principioActivo || (esPerfume ? (p.marca || 'Perfumería') : (p.marca || 'Cuidado General')),
+              concentracion: p.concentracion || '',
+              laboratorio: p.laboratorio || (esPerfume ? (p.marca || 'Cosmética') : (p.marca || 'Fabricante')),
+              tipo: esPerfume ? ('Perfume' + (p.volumenMl ? ` • ${p.volumenMl}ml` : '')) : 'Unidad',
+              categoria: p.categoriaNombre || (esPerfume ? 'Perfumería Fina' : 'Cuidado Personal'),
+              ubicacion: p.ubicacionAlmacen || 'Vitrina / Estante',
+              requiereReceta: false,
+              esControlado: false,
+              lote: loteMasCercano ? loteMasCercano.lote : 'SIN-LOTE',
+              vto: vtoStr,
+              diasParaVencer: esPerfume ? 99999 : (loteMasCercano ? loteMasCercano.dias : 999),
+              stockUnidades: stockReal,
+              unidadesPorCaja: 1,
+              unidadesPorBlister: 1,
+              precioCaja: precioBase,
+              precioBlister: 0,
+              precioUnidad: precioBase,
+              imagenUrl: p.imagenUrl || this.storageService.obtenerImagenPorDefecto(p.nombreComercial, p.categoriaNombre)
+            };
+          }
 
           return {
             id: p.id,
+            sku: p.sku || '',
+            codigoBarra: p.codigoBarra || '',
+            tipoProducto: 'MEDICAMENTO',
             nombre: p.nombreComercial,
-            principioActivo: p.principioActivo || (p.tipoProducto === 'PERFUME' ? (p.marca || 'Perfumería') : 'Genérico'),
+            principioActivo: p.principioActivo || 'Genérico',
             concentracion: p.concentracion || '',
-            laboratorio: p.laboratorio || (p.tipoProducto === 'PERFUME' ? (p.marca || 'Cosmética') : 'Laboratorio'),
-            tipo: p.tipoProducto === 'PERFUME' ? `Perfume • ${p.volumenMl || 100}ml` : (p.unidadesPorBlister ? `Blíster x ${p.unidadesPorBlister}` : 'Caja'),
-            categoria: p.categoriaNombre || (p.tipoProducto === 'PERFUME' ? 'Cuidado Personal' : 'Venta Libre (OTC)'),
+            laboratorio: p.laboratorio || 'Laboratorio',
+            tipo: p.unidadesPorBlister ? `Blíster x ${p.unidadesPorBlister}` : 'Caja',
+            categoria: p.categoriaNombre || 'Venta Libre (OTC)',
             ubicacion: p.ubicacionAlmacen || 'P1-E1-N1',
             requiereReceta: !!p.requiereReceta,
             esControlado: !!p.esControlado,
@@ -275,7 +470,7 @@ export class Pos implements OnInit {
         });
 
         // Actualizar categorías dinámicamente según productos en el catálogo
-        const catSet = new Set(['Todos', 'Analgésicos', 'Antibióticos', 'Cardiología', 'Venta Libre (OTC)', 'Cuidado Personal', 'Vitaminas']);
+        const catSet = new Set(['Todos', 'Medicamentos', 'Perfumes', 'Otros', 'Analgésicos', 'Antibióticos', 'Cardiología', 'Venta Libre (OTC)', 'Cuidado Personal', 'Vitaminas']);
         this.productos.forEach(pr => {
           if (pr.categoria) catSet.add(pr.categoria);
         });
@@ -291,7 +486,77 @@ export class Pos implements OnInit {
   }
 
   // --- MÉTODOS DE CAJA ---
+  get aperturaHoyExistente(): TurnoCajaDTO | null {
+    return this.ventaService.getAperturaDelDia();
+  }
+
+  solicitarReaperturaCaja() {
+    if (this.esAdmin) {
+      // El Administrador actual puede reabrir directamente registrando su nombre para auditoría
+      const nombreAdmin = this.authService.getUserDisplayName();
+      this.reabrirCajaPos('Reapertura directa por Administrador', nombreAdmin);
+    } else {
+      // Si el rol es Cajero o Químico, se solicita PIN de Administrador
+      this.pinReapertura = '';
+      this.errorReapertura = '';
+      this.motivoReapertura = this.motivosReaperturaDisponibles[0];
+      this.autorizadorReapertura = this.autorizadoresReaperturaDisponibles[0];
+      this.showReaperturaModal = true;
+    }
+  }
+
+  confirmarReaperturaConPin() {
+    const pin = (this.pinReapertura || '').trim();
+    if (!pin) {
+      this.errorReapertura = 'Ingresa el PIN de seguridad del Administrador.';
+      return;
+    }
+
+    const user = this.authService.currentUser();
+    const userPin = (user as any)?.pinSeguridad || (user as any)?.pin;
+
+    // Acepta PIN del usuario o PINs maestros administrativos de contingencia (1234, 2026)
+    const pinValido = pin === '1234' || pin === '2026' || (userPin && pin === String(userPin));
+
+    if (!pinValido) {
+      this.errorReapertura = 'PIN de Administrador incorrecto. Ingrese el PIN de seguridad autorizado (ej: 1234).';
+      return;
+    }
+
+    this.showReaperturaModal = false;
+    this.reabrirCajaPos(this.motivoReapertura, this.autorizadorReapertura);
+  }
+
+  reabrirCajaPos(motivo: string = 'Reanudación de operaciones en POS', autorizadoPor?: string) {
+    const responsable = autorizadoPor || (this.esAdmin ? this.authService.getUserDisplayName() : null);
+
+    // Si NO es Administrador y NO viene una autorización previa, forzar solicitud
+    if (!this.esAdmin && !autorizadoPor) {
+      this.solicitarReaperturaCaja();
+      return;
+    }
+
+    const turno = this.ventaService.reabrirCaja(motivo, responsable || this.cajeroActual);
+    this.cajaAbierta = true;
+    this.fondoInicial = turno.fondoInicial;
+    if (turno.fechaApertura) this.fechaApertura = new Date(turno.fechaApertura);
+    this.showAperturaModal = false;
+    this.showReaperturaModal = false;
+    this.mostrarAlerta('success', `Caja reabierta exitosamente. Turno reactivado por ${responsable || 'Administrador'} con S/ ${this.fondoInicial.toFixed(2)} de fondo.`, 'Caja Reabierta');
+  }
+
   abrirCaja() {
+    const aperturaHoy = this.ventaService.getAperturaDelDia();
+    if (aperturaHoy) {
+      // Normativa: solo el administrador puede reabrir la caja
+      if (!this.esAdmin) {
+        this.showAperturaModal = false;
+        this.solicitarReaperturaCaja();
+        return;
+      }
+      this.reabrirCajaPos('Reapertura del turno del día por Administrador', this.authService.getUserDisplayName());
+      return;
+    }
     if (!this.fondoInicial || this.fondoInicial < 0) {
       this.mostrarAlerta('warning', 'Ingresa un fondo de sencillo inicial válido.', 'Monto Inválido');
       return;
@@ -407,7 +672,91 @@ export class Pos implements OnInit {
     });
   }
 
-  // --- CONSULTA DNI / RUC SUNAT & RENIEC VIA DECOLECTA ---
+  // --- GESTIÓN DE CLIENTES: BÚSQUEDA RENIEC / SUNAT Y MODALES ---
+  onDocNumeroChange() {
+    this.alertaDocumento = '';
+    this.clienteEncontrado = false;
+    const num = this.docNumero ? this.docNumero.trim() : '';
+    if (!num) {
+      this.customerName = 'Cliente de mostrador';
+      this.customerCelular = '';
+      this.customerEmail = '';
+      this.customerDireccion = '';
+      this.customerFechaNacimiento = '';
+      this.customerPuntos = 0;
+    }
+  }
+
+  abrirModalCliente(modo: 'CREAR' | 'EDITAR') {
+    this.modoClienteModal = modo;
+    const num = this.docNumero ? this.docNumero.trim() : '';
+    this.modalDocTipo = num.length === 11 ? 'RUC' : 'DNI';
+    this.modalDocNumero = num;
+
+    if (modo === 'EDITAR') {
+      this.modalNombre = (this.customerName && this.customerName !== 'Cliente de mostrador' && this.customerName !== 'Cliente Público') ? this.customerName : '';
+      this.modalCelular = this.customerCelular || '';
+      this.modalEmail = this.customerEmail || '';
+      this.modalDireccion = this.customerDireccion || '';
+      this.modalFechaNacimiento = this.customerFechaNacimiento || '';
+    } else {
+      this.modalNombre = '';
+      this.modalCelular = '';
+      this.modalEmail = '';
+      this.modalDireccion = '';
+      this.modalFechaNacimiento = '';
+    }
+    this.showClienteModal = true;
+  }
+
+  cerrarModalCliente() {
+    this.showClienteModal = false;
+  }
+
+  guardarClienteModal() {
+    const doc = this.modalDocNumero ? this.modalDocNumero.trim() : '';
+    const nom = this.modalNombre ? this.modalNombre.trim() : '';
+    if (!doc) {
+      this.mostrarAlerta('warning', 'El número de documento es obligatorio.', 'Campo Requerido');
+      return;
+    }
+    if (!nom) {
+      this.mostrarAlerta('warning', 'El nombre o razón social es obligatorio.', 'Campo Requerido');
+      return;
+    }
+
+    this.docNumero = doc;
+    this.tipoDoc = doc.length === 11 ? 'RUC' : 'DNI';
+    this.customerName = nom;
+    this.customerCelular = this.modalCelular ? this.modalCelular.trim() : '';
+    this.customerEmail = this.modalEmail ? this.modalEmail.trim() : '';
+    this.customerDireccion = this.modalDireccion ? this.modalDireccion.trim() : '';
+    this.customerFechaNacimiento = this.modalFechaNacimiento ? this.modalFechaNacimiento.trim() : '';
+    this.clienteEncontrado = true;
+
+    // Persistir cliente en CustomerService con Sede
+    const sedeNombreActual = this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
+    const sedeIdActual = this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
+
+    this.customerService.addOrUpdateCustomer({
+      id: doc,
+      nombre: nom,
+      celular: this.customerCelular,
+      email: this.customerEmail,
+      direccion: this.customerDireccion,
+      fechaNacimiento: this.customerFechaNacimiento || undefined,
+      puntosAcumulados: this.customerPuntos,
+      sedeId: sedeIdActual,
+      sedeNombre: sedeNombreActual,
+      ultimaSede: sedeNombreActual,
+      sedesCompradas: [sedeNombreActual]
+    });
+
+    this.showClienteModal = false;
+    this.mostrarAlerta('success', `Cliente ${nom} asignado a la venta con éxito.`, 'Datos Guardados');
+  }
+
+  // --- CONSULTA DOCUMENTO Y GESTIÓN DE CLIENTES (MANUAL / LOCAL) ---
   consultarDocumento() {
     this.alertaDocumento = '';
     const num = this.docNumero ? this.docNumero.trim() : '';
@@ -416,23 +765,36 @@ export class Pos implements OnInit {
       return;
     }
 
-    this.consultandoDocumento = true;
+    this.consultandoDocumento = false;
+    this.clienteEncontrado = false;
     this.customerCelular = '';
     this.customerEmail = '';
     this.customerPuntos = 0;
 
+    // 1. Revisar si ya está guardado localmente con un nombre real
+    const clienteLocal = this.customerService.getCustomer(num);
+    if (clienteLocal && clienteLocal.nombre && clienteLocal.nombre !== 'Cliente de mostrador' && clienteLocal.nombre !== 'Cliente Público') {
+      this.customerName = clienteLocal.nombre;
+      this.customerCelular = clienteLocal.celular || '';
+      this.customerEmail = clienteLocal.email || '';
+      this.customerDireccion = clienteLocal.direccion || '';
+      this.customerFechaNacimiento = clienteLocal.fechaNacimiento || '';
+      this.customerPuntos = clienteLocal.puntosAcumulados || 0;
+      this.clienteEncontrado = true;
+      this.tipoDoc = num.length === 11 ? 'RUC' : 'DNI';
+      this.mostrarAlerta('success', `Cliente registrado identificado: ${this.customerName}`, 'Cliente Encontrado');
+      return;
+    }
+
+    // 2. Registro Manual para DNI (Sin consultas a RENIEC)
     if (num.length === 8) {
       this.tipoDoc = 'DNI';
-      this.consultandoDocumento = false;
-      this.alertaDocumento = '';
-      if (this.loadCustomerLoyalty(num)) {
-        this.mostrarAlerta('info', `Cliente registrado identificado: ${this.customerName}`, 'Cliente Encontrado');
-      } else {
-        this.isEditingCustomer = true; // Activa ingreso manual directo
-        this.mostrarAlerta('info', 'DNI registrado para la venta. Ingrese el nombre del cliente.', 'Ingreso Manual');
-      }
+      this.clienteEncontrado = false;
+      this.abrirModalCliente('CREAR');
+      this.mostrarAlerta('info', 'DNI no registrado. Complete los datos para registrar al cliente manualmente.', 'Registro Manual');
     } else if (num.length === 11) {
       this.tipoDoc = 'RUC';
+      this.consultandoDocumento = true;
       this.decolectaService.consultarRuc(num).subscribe({
         next: (res) => {
           this.consultandoDocumento = false;
@@ -441,17 +803,30 @@ export class Pos implements OnInit {
           if (res.direccion) {
             this.customerDireccion = res.direccion;
           }
+          this.clienteEncontrado = true;
           this.loadCustomerLoyalty(num);
-          this.mostrarAlerta('success', `Empresa SUNAT identificada: ${this.customerName}`, 'RUC Encontrado');
+
+          this.customerService.addOrUpdateCustomer({
+            id: num,
+            nombre: this.customerName,
+            direccion: this.customerDireccion,
+            celular: this.customerCelular,
+            email: this.customerEmail,
+            puntosAcumulados: this.customerPuntos
+          });
+
+          this.mostrarAlerta('success', `Datos encontrados (SUNAT): ${this.customerName}`, 'RUC Identificado');
         },
         error: (err) => {
           console.warn('Error Decolecta RUC en POS:', err);
           this.consultandoDocumento = false;
-          if (this.loadCustomerLoyalty(num)) {
-             this.mostrarAlerta('info', `Empresa encontrada en base de datos local: ${this.customerName}`, 'Cliente Local');
+          if (this.loadCustomerLoyalty(num) && this.customerName !== 'Cliente de mostrador' && this.customerName !== 'Cliente Público') {
+            this.clienteEncontrado = true;
+            this.mostrarAlerta('success', `Datos encontrados (Local): ${this.customerName}`, 'Cliente Identificado');
           } else {
-            this.isEditingCustomer = true;
-            this.mostrarAlerta('warning', 'La consulta automática en SUNAT no está disponible. Ingrese la Razón Social manualmente.', 'Aviso SUNAT');
+            this.clienteEncontrado = false;
+            this.abrirModalCliente('CREAR');
+            this.mostrarAlerta('info', 'RUC no encontrado en SUNAT. Ingrese la Razón Social para registrar la empresa.', 'Nueva Empresa');
           }
         }
       });
@@ -482,14 +857,24 @@ export class Pos implements OnInit {
   filterProducts() {
     let result = this.productos;
     if (this.selectedCategory !== 'Todos') {
-      result = result.filter(p => p.categoria === this.selectedCategory);
+      if (this.selectedCategory === 'Medicamentos') {
+        result = result.filter(p => !this.esSoloPorUnidad(p));
+      } else if (this.selectedCategory === 'Perfumes' || this.selectedCategory === 'Perfumería' || this.selectedCategory === 'Perfumería Fina') {
+        result = result.filter(p => p.tipoProducto === 'PERFUME');
+      } else if (this.selectedCategory === 'Otros') {
+        result = result.filter(p => p.tipoProducto === 'OTROS');
+      } else {
+        result = result.filter(p => p.categoria === this.selectedCategory);
+      }
     }
     if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase();
+      const q = this.searchQuery.toLowerCase().trim();
       result = result.filter(p => 
         p.nombre.toLowerCase().includes(q) || 
         p.principioActivo.toLowerCase().includes(q) ||
-        p.laboratorio.toLowerCase().includes(q)
+        p.laboratorio.toLowerCase().includes(q) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q))
       );
     }
     this.filteredProducts = result;
@@ -501,6 +886,108 @@ export class Pos implements OnInit {
     this.filterProducts();
   }
 
+  // --- MANEJO DE LECTOR DE CÓDIGO DE BARRAS EN POS ---
+  onSearchEnter(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const raw = (this.searchQuery || '').trim();
+    if (!raw) return;
+
+    const procesado = this.procesarCodigoEscaneado(raw);
+    if (!procesado) {
+      this.playBeep(false);
+      this.mostrarAlerta('warning', `Código de barras o producto "${raw}" no encontrado en el inventario.`, 'No Encontrado');
+      this.limpiarBusqueda();
+    }
+    this.enfocarLector();
+  }
+
+  procesarCodigoEscaneado(codigoRaw: string): boolean {
+    const q = (codigoRaw || '').trim().toLowerCase().replace(/[\r\n]/g, '');
+    if (!q) return false;
+
+    // 1. Coincidencia exacta por código de barra, SKU o ID
+    let exacto = this.productos.find(p => 
+      (p.codigoBarra && p.codigoBarra.trim().toLowerCase() === q) ||
+      (p.sku && p.sku.trim().toLowerCase() === q) ||
+      (String(p.id).toLowerCase() === q)
+    );
+
+    // 2. Coincidencia ignorando ceros a la izquierda (compatibilidad formatos EAN-13 / UPC)
+    if (!exacto && q.length >= 6) {
+      const qSinCeros = q.replace(/^0+/, '');
+      exacto = this.productos.find(p => {
+        const cb = (p.codigoBarra || '').trim().toLowerCase().replace(/^0+/, '');
+        const sku = (p.sku || '').trim().toLowerCase().replace(/^0+/, '');
+        return (cb && cb === qSinCeros) || (sku && sku === qSinCeros);
+      });
+    }
+
+    // 3. Si sólo hay un único producto filtrado en la grilla
+    if (!exacto && this.filteredProducts.length === 1) {
+      exacto = this.filteredProducts[0];
+    }
+
+    if (exacto) {
+      if (exacto.stockUnidades <= 0) {
+        this.playBeep(false);
+        this.mostrarAlerta('warning', `El producto "${exacto.nombre}" no cuenta con stock disponible en esta sede.`, 'Sin Stock');
+        this.limpiarBusqueda();
+        this.enfocarLector();
+        return true;
+      }
+
+      // Determinar la presentación para agregar (unidad o caja según tipo de producto)
+      const pres = this.getPresentacionCard(exacto);
+      const factorUnidades = this.esSoloPorUnidad(exacto) ? 1 : (
+        pres === 'caja' ? exacto.unidadesPorCaja :
+        pres === 'blister' ? exacto.unidadesPorBlister : 1
+      );
+
+      // Validar si supera el stock físico
+      const existing = this.cart.find(item => item.id === exacto!.id && item.presentacion === pres);
+      const unidadesEnCarrito = existing ? existing.unidadesTotales : 0;
+      if (unidadesEnCarrito + factorUnidades > exacto.stockUnidades) {
+        this.playBeep(false);
+        this.mostrarAlerta(
+          'warning', 
+          `Stock insuficiente para "${exacto.nombre}". Ya tienes ${existing?.cantidad || 0} en el carrito (Máximo disponible: ${exacto.stockUnidades} unidades).`, 
+          'Stock Límite'
+        );
+        this.limpiarBusqueda();
+        this.enfocarLector();
+        return true;
+      }
+
+      // Agregar 1 al carrito (si ya existe con la misma presentación, addToCart incrementa la cantidad)
+      this.addToCart(exacto, pres, 1);
+      this.playBeep(true);
+
+      const itemActualizado = this.cart.find(item => item.id === exacto!.id && item.presentacion === pres);
+      const cantActual = itemActualizado ? itemActualizado.cantidad : 1;
+
+      this.mostrarAlerta(
+        'success',
+        `[ESCANEADO] ${exacto.nombre} (+1). Total en carrito: ${cantActual} ${pres}(s).`,
+        'Pistola de Códigos'
+      );
+
+      this.limpiarBusqueda();
+      this.enfocarLector();
+      return true;
+    }
+
+    return false;
+  }
+
+  // Helper: Identifica si un producto es exclusivamente por unidad (Perfumes u Otros)
+  esSoloPorUnidad(prod: ProductoFarmacia | any): boolean {
+    if (!prod) return false;
+    return prod.tipoProducto === 'PERFUME' || prod.tipoProducto === 'OTROS';
+  }
+
   // --- GESTIÓN DE TARJETA: CANTIDAD Y PRESENTACIÓN ---
   getCantidadCard(id: string | number): number {
     return this.cantidadesPorProducto[id] || 1;
@@ -508,13 +995,13 @@ export class Pos implements OnInit {
 
   incrementarCantidadCard(prod: ProductoFarmacia) {
     const pres = this.getPresentacionCard(prod);
-    const factor = pres === 'caja' ? prod.unidadesPorCaja : pres === 'blister' ? prod.unidadesPorBlister : 1;
+    const factor = this.esSoloPorUnidad(prod) ? 1 : (pres === 'caja' ? prod.unidadesPorCaja : pres === 'blister' ? prod.unidadesPorBlister : 1);
     const actual = this.getCantidadCard(prod.id);
     const maxQty = Math.floor(prod.stockUnidades / factor);
     if (actual < maxQty) {
       this.cantidadesPorProducto[prod.id] = actual + 1;
     } else {
-      this.mostrarAlerta('warning', `Stock máximo disponible: ${maxQty} ${pres}(s).`, 'Stock Límite');
+      this.mostrarAlerta('warning', `Stock máximo disponible: ${maxQty} ${this.esSoloPorUnidad(prod) ? 'unidad(es)' : pres + '(s)'}.`, 'Stock Límite');
     }
   }
 
@@ -526,20 +1013,34 @@ export class Pos implements OnInit {
   }
 
   getPresentacionCard(prod: ProductoFarmacia): 'unidad' | 'blister' | 'caja' {
+    if (this.esSoloPorUnidad(prod)) {
+      return 'unidad';
+    }
     return this.presentacionPorProducto[prod.id] || (prod.precioUnidad ? 'unidad' : 'caja');
   }
 
   setPresentacionCard(prod: ProductoFarmacia, pres: 'unidad' | 'blister' | 'caja') {
+    if (this.esSoloPorUnidad(prod)) {
+      this.presentacionPorProducto[prod.id] = 'unidad';
+      this.cantidadesPorProducto[prod.id] = 1;
+      return;
+    }
     this.presentacionPorProducto[prod.id] = pres;
     this.cantidadesPorProducto[prod.id] = 1;
   }
 
   getPrecioCard(prod: ProductoFarmacia): number {
+    if (this.esSoloPorUnidad(prod)) {
+      return prod.precioUnidad || prod.precioCaja || 0;
+    }
     const pres = this.getPresentacionCard(prod);
     return pres === 'caja' ? prod.precioCaja : pres === 'blister' ? prod.precioBlister : prod.precioUnidad;
   }
 
   getStockPresentacion(prod: ProductoFarmacia): number {
+    if (this.esSoloPorUnidad(prod)) {
+      return prod.stockUnidades;
+    }
     const pres = this.getPresentacionCard(prod);
     const factor = pres === 'caja' ? prod.unidadesPorCaja : pres === 'blister' ? prod.unidadesPorBlister : 1;
     return Math.floor(prod.stockUnidades / factor);
@@ -558,6 +1059,15 @@ export class Pos implements OnInit {
       localStorage.setItem('medicare_pos_view_mode', modo);
     } catch (e) {
       console.warn('No se pudo guardar la preferencia de vista en localStorage:', e);
+    }
+  }
+
+  togglePosicionCarrito() {
+    this.posicionCarrito = this.posicionCarrito === 'izquierda' ? 'derecha' : 'izquierda';
+    try {
+      localStorage.setItem('medicare_pos_cart_position', this.posicionCarrito);
+    } catch (e) {
+      console.warn('No se pudo guardar la posición del carrito en localStorage:', e);
     }
   }
 
@@ -639,8 +1149,39 @@ export class Pos implements OnInit {
       this.mostrarAlerta('warning', 'El carrito está vacío. Agrega productos para realizar una venta.', 'Carrito Vacío');
       return;
     }
-    this.paymentMethod = this.metodoPagoRapido === 'Visa' ? 'Tarjeta' : this.metodoPagoRapido;
-    this.openPayment();
+    if (!this.cajaAbierta) {
+      this.mostrarAlerta('warning', 'Debe aperturar la caja antes de registrar ventas.', 'Caja Cerrada');
+      return;
+    }
+
+    if (this.metodoPagoRapido === 'Otros') {
+      this.openPayment();
+      this.setPaymentMode('mixto');
+      return;
+    }
+
+    // Configurar automáticamente el pago exacto según el método rápido seleccionado
+    this.paymentMode = 'simple';
+    this.paymentMethod = this.metodoPagoRapido === 'Visa' ? 'Tarjeta' : (this.metodoPagoRapido || 'Efectivo');
+    this.montoRecibido = this.total;
+    this.pagoEfectivo = null;
+    this.efectivoRecibido = null;
+    this.pagoYape = null;
+    this.pagoPlin = null;
+    this.pagoTarjeta = null;
+    this.pagoTransferencia = null;
+
+    const montoTotal = this.total;
+    const metodoUsado = this.paymentMethod;
+
+    // Completar y registrar la venta directamente sin abrir modal repetitivo
+    this.completeSale(false);
+
+    this.mostrarAlerta(
+      'success',
+      `¡Venta registrada con éxito! Total: S/ ${montoTotal.toFixed(2)} (${metodoUsado}).`,
+      'Venta Cobrada'
+    );
   }
 
   imprimirUltimoComprobante() {
@@ -661,6 +1202,10 @@ export class Pos implements OnInit {
 
   // --- VENTA FRACCIONADA (CAJA, BLISTER, UNIDAD) ---
   addToCart(prod: ProductoFarmacia, presentacion: 'caja' | 'blister' | 'unidad' = 'unidad', cantidad: number = 1) {
+    if (this.esSoloPorUnidad(prod)) {
+      presentacion = 'unidad';
+    }
+
     if (prod.stockUnidades === 0) {
       this.verSustitutos(prod);
       return;
@@ -695,11 +1240,19 @@ export class Pos implements OnInit {
   }
 
   private ejecutarAgregarAlCarrito(prod: ProductoFarmacia, presentacion: 'caja' | 'blister' | 'unidad', cantidad: number = 1, receta?: any) {
-    const factorUnidades = presentacion === 'caja' ? prod.unidadesPorCaja :
-                           presentacion === 'blister' ? prod.unidadesPorBlister : 1;
+    if (this.esSoloPorUnidad(prod)) {
+      presentacion = 'unidad';
+    }
 
-    const precioAplicado = presentacion === 'caja' ? prod.precioCaja :
-                           presentacion === 'blister' ? prod.precioBlister : prod.precioUnidad;
+    const factorUnidades = this.esSoloPorUnidad(prod) ? 1 : (
+      presentacion === 'caja' ? prod.unidadesPorCaja :
+      presentacion === 'blister' ? prod.unidadesPorBlister : 1
+    );
+
+    const precioAplicado = this.esSoloPorUnidad(prod) ? (prod.precioUnidad || prod.precioCaja || 0) : (
+      presentacion === 'caja' ? prod.precioCaja :
+      presentacion === 'blister' ? prod.precioBlister : prod.precioUnidad
+    );
 
     const itemLabel = `${prod.nombre}`;
     const unidadesToAdd = factorUnidades * cantidad;
@@ -716,6 +1269,7 @@ export class Pos implements OnInit {
     } else {
       this.cart.push({
         id: prod.id,
+        tipoProducto: prod.tipoProducto,
         nombre: itemLabel,
         prodRef: prod,
         presentacion,
@@ -734,12 +1288,19 @@ export class Pos implements OnInit {
   // --- SUSTITUTOS / GENÉRICOS ---
   verSustitutos(prod: ProductoFarmacia) {
     this.productoParaSustituir = prod;
-    // Buscar medicamentos con el mismo principio activo
-    this.sustitutosSugeridos = this.productos.filter(p => 
-      p.id !== prod.id && 
-      p.principioActivo.toLowerCase() === prod.principioActivo.toLowerCase() &&
-      p.stockUnidades > 0
-    );
+    if (this.esSoloPorUnidad(prod)) {
+      this.sustitutosSugeridos = this.productos.filter(p => 
+        p.id !== prod.id && 
+        (p.tipoProducto === prod.tipoProducto || p.categoria === prod.categoria) &&
+        p.stockUnidades > 0
+      );
+    } else {
+      this.sustitutosSugeridos = this.productos.filter(p => 
+        p.id !== prod.id && 
+        p.principioActivo.toLowerCase() === prod.principioActivo.toLowerCase() &&
+        p.stockUnidades > 0
+      );
+    }
     this.showSustitutosModal = true;
   }
 
@@ -870,7 +1431,7 @@ export class Pos implements OnInit {
     }
   }
 
-  completeSale() {
+  completeSale(mostrarModalTicket: boolean = true) {
     if (!this.puedeCompletarVenta) return;
 
     let metodoLabel = this.paymentMethod;
@@ -910,8 +1471,11 @@ export class Pos implements OnInit {
     // Extraer datos de receta si existiera en el carrito
     const itemConReceta = this.cart.find(it => it.receta);
 
-    // Guardar/Actualizar Cliente y Acumular Puntos
+    // Guardar/Actualizar Cliente con trazabilidad de Sede y Acumular Puntos
     if (this.docNumero) {
+      const sedeNombreActual = this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
+      const sedeIdActual = this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
+
       this.customerService.addOrUpdateCustomer({
         id: this.docNumero,
         nombre: this.customerName,
@@ -919,13 +1483,18 @@ export class Pos implements OnInit {
         email: this.customerEmail,
         direccion: this.customerDireccion,
         fechaNacimiento: this.customerFechaNacimiento ? this.customerFechaNacimiento.trim() : undefined,
-        puntosAcumulados: this.customerPuntos // Mantiene los anteriores
+        puntosAcumulados: this.customerPuntos,
+        sedeId: sedeIdActual,
+        sedeNombre: sedeNombreActual,
+        ultimaSede: sedeNombreActual,
+        sedesCompradas: [sedeNombreActual],
+        ultimaFechaCompra: new Date().toISOString()
       });
-      this.customerService.addPuntos(this.docNumero, this.total);
+      this.customerService.registrarCompraCliente(this.docNumero, sedeNombreActual, this.total, sedeIdActual);
     }
 
     const nuevoTicket: TicketVenta = {
-      id: (this.tipoComprobante === 'Factura' ? 'F001-' : this.tipoComprobante === 'Boleta' ? 'B001-' : 'TKT-') + Math.floor(100000 + Math.random() * 900000),
+      id: 'TKT-' + Math.floor(100000 + Math.random() * 900000),
       fecha: new Date(),
       items: [...this.cart],
       subtotal: this.subtotal,
@@ -938,8 +1507,9 @@ export class Pos implements OnInit {
       cambio: this.paymentMode === 'mixto' ? this.cambioEfectivoMixto : this.cambioSimple,
       cliente: this.customerName,
       dni: this.docNumero || '00000000',
-      tipoComprobante: this.tipoComprobante,
+      tipoComprobante: 'Ticket',
       datosReceta: itemConReceta ? itemConReceta.receta : undefined,
+      sedeId: this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111',
       sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central',
       estado: 'EMITIDO'
     };
@@ -951,25 +1521,28 @@ export class Pos implements OnInit {
     this.ventasTurno = this.ventaService.ventas as any;
     
     this.showPaymentModal = false;
-    this.showTicketModal = true;
+    this.showTicketModal = mostrarModalTicket;
     
     // Limpiar carrito y resetear datos del cliente para la siguiente venta
     this.cart = [];
     this.calculateTotal();
     this.docNumero = '';
-    this.customerName = 'Cliente Público';
+    this.customerName = 'Cliente de mostrador';
     this.customerDireccion = '';
     this.customerCelular = '';
     this.customerEmail = '';
     this.customerFechaNacimiento = '';
     this.customerPuntos = 0;
     this.alertaDocumento = '';
+    this.clienteEncontrado = false;
     this.isEditingCustomer = false;
+    this.enfocarLector();
   }
   
   closeTicket() {
     this.showTicketModal = false;
     this.ticketData = null;
+    this.enfocarLector();
   }
   
   printTicket() {

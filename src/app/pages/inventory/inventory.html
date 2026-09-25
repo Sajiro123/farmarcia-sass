@@ -24,34 +24,127 @@
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
 
-    <!-- ENCABEZADO PRINCIPAL -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-      <div>
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-            <i class="fa-solid fa-warehouse text-xl"></i>
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Inventario & Control FEFO</h1>
-            <p class="text-xs text-slate-500">Trazabilidad estricta por lotes vinculados al catálogo maestro, ubicación física en anaqueles y actas DIGEMID.</p>
+    <!-- ENCABEZADO DINÁMICO SEGÚN LA VISTA -->
+    @if (vistaActual === 'LISTADO') {
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+              <i class="fa-solid fa-warehouse text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Inventario & Control FEFO</h1>
+              <p class="text-xs text-slate-500">Trazabilidad estricta por lotes vinculados al catálogo maestro, ubicación física en anaqueles y actas DIGEMID.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="flex items-center gap-3">
-        <button (click)="cargarDatos()"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer">
-          <i class="fa-solid fa-rotate-right text-xs text-slate-500" [class.fa-spin]="cargando"></i>
-          <span>Actualizar</span>
-        </button>
+        <div class="flex items-center gap-3">
+          <button (click)="cargarDatos()"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer">
+            <i class="fa-solid fa-rotate-right text-xs text-slate-500" [class.fa-spin]="cargando"></i>
+            <span>Actualizar</span>
+          </button>
 
-        <button (click)="abrirModalNuevoLote()"
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/25 transition-all transform active:scale-95 cursor-pointer">
-          <i class="fa-solid fa-circle-plus text-sm"></i>
-          <span>+ Ingresar Lote / Mercadería</span>
-        </button>
+          <button (click)="irANuevoLote()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/25 transition-all transform active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-circle-plus text-sm"></i>
+            <span>+ Ingresar Lote / Mercadería</span>
+          </button>
+        </div>
       </div>
+    } @else {
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-md"
+              [ngClass]="modoModalLote === 'EDITAR' ? 'bg-gradient-to-tr from-amber-500 to-orange-500 shadow-amber-500/20' : 'bg-gradient-to-tr from-emerald-600 to-teal-600 shadow-emerald-600/20'">
+              <i class="text-xl" [ngClass]="modoModalLote === 'EDITAR' ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-boxes-packing'"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                @if (modoModalLote === 'EDITAR') {
+                  <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Editar Ficha de Lote</h1>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                    EDICIÓN
+                  </span>
+                } @else {
+                  <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Ingreso de Mercadería por Lote</h1>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    MÚLTIPLES PRODUCTOS
+                  </span>
+                }
+              </div>
+              <p class="text-xs text-slate-500">
+                {{ modoModalLote === 'EDITAR' ? 'Actualiza stock, fecha de vencimiento, ubicación física u otros datos de este lote específico.' : 'Registra un despacho asignando un número de lote común a múltiples productos con sus especificaciones de vencimiento y conservación.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          @if (modoModalLote !== 'EDITAR') {
+            <button (click)="limpiarLoteActual()"
+              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+              title="Reiniciar campos del lote">
+              <i class="fa-solid fa-arrows-rotate text-xs text-slate-500"></i>
+              <span>Limpiar Formulario</span>
+            </button>
+          }
+
+          <button (click)="volverAListado()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 shadow-sm transition-all cursor-pointer">
+            <i class="fa-solid fa-arrow-left text-xs"></i>
+            <span>Volver al Inventario</span>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- TABS DE NAVEGACIÓN SUPERIOR (PESTAÑAS) -->
+    <div class="flex items-center gap-2 border-b border-slate-200/80 mb-6 pb-2">
+      <button (click)="volverAListado()"
+        [ngClass]="vistaActual === 'LISTADO' 
+          ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 font-bold' 
+          : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 font-medium'"
+        class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Lotes & Stock en Almacén</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+          [ngClass]="vistaActual === 'LISTADO' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'">
+          {{ lotesFefo.length }}
+        </span>
+      </button>
+
+      <button (click)="irANuevoLote()"
+        [ngClass]="vistaActual === 'NUEVO_LOTE' && modoModalLote === 'NUEVO'
+          ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 font-bold' 
+          : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 font-medium'"
+        class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer">
+        <i class="fa-solid fa-boxes-packing"></i>
+        <span>Ingreso de Mercadería por Lote (Multiproducto)</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold"
+          [ngClass]="vistaActual === 'NUEVO_LOTE' && modoModalLote === 'NUEVO' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'">
+          Nuevo
+        </span>
+      </button>
+
+      @if (modoModalLote === 'EDITAR') {
+        <button
+          class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 bg-amber-600 text-white shadow-sm shadow-amber-600/20 font-bold cursor-default">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span>Modificando Ficha de Lote: {{ loteForm.lote || '...' }}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-700 text-white">
+            Edición
+          </span>
+        </button>
+      }
     </div>
+
+    <!-- ========================================== -->
+    <!-- VISTA 1: LISTADO DE LOTES & STOCK          -->
+    <!-- ========================================== -->
+    @if (vistaActual === 'LISTADO') {
 
     <!-- TARJETAS KPI RESUMEN DE INVENTARIO -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -102,10 +195,66 @@
 
     <!-- FILTROS Y BUSCADORES INTEGRADOS -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
+
+      <!-- Selector Rápido de Tipo de Producto (Chips / Pills) -->
+      <div class="flex flex-wrap items-center gap-2 mb-3.5 pb-3 border-b border-slate-100">
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1.5">
+          <i class="fa-solid fa-shapes text-emerald-600"></i> Tipo de Producto:
+        </span>
+
+        <button type="button"
+          (click)="filtroTipoProducto = 'TODOS'; paginaActual = 1"
+          [ngClass]="filtroTipoProducto === 'TODOS' ? 'bg-slate-900 text-white font-bold shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium'"
+          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-layer-group text-[10px]"></i>
+          <span>Todos</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
+            [ngClass]="filtroTipoProducto === 'TODOS' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600'">
+            {{ lotesFefo.length }}
+          </span>
+        </button>
+
+        <button type="button"
+          (click)="filtroTipoProducto = 'MEDICAMENTO'; paginaActual = 1"
+          [ngClass]="filtroTipoProducto === 'MEDICAMENTO' ? 'bg-emerald-600 text-white font-bold shadow-xs shadow-emerald-600/20' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium border border-emerald-200/60'"
+          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-pills text-[10px]"></i>
+          <span>Medicamentos</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
+            [ngClass]="filtroTipoProducto === 'MEDICAMENTO' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-700'">
+            {{ totalMedicamentos }}
+          </span>
+        </button>
+
+        <button type="button"
+          (click)="filtroTipoProducto = 'PERFUME'; paginaActual = 1"
+          [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-600 text-white font-bold shadow-xs shadow-purple-600/20' : 'bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium border border-purple-200/60'"
+          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-spray-can-sparkles text-[10px]"></i>
+          <span>Perfumes & Fragancias</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
+            [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-700 text-white' : 'bg-white text-purple-700'">
+            {{ totalPerfumes }}
+          </span>
+        </button>
+
+        <button type="button"
+          (click)="filtroTipoProducto = 'OTROS'; paginaActual = 1"
+          [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-600 text-white font-bold shadow-xs shadow-sky-600/20' : 'bg-sky-50 hover:bg-sky-100 text-sky-800 font-medium border border-sky-200/60'"
+          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-box-open text-[10px]"></i>
+          <span>Otros / Aseo & Cuidado</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
+            [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-700 text-white' : 'bg-white text-sky-700'">
+            {{ totalOtros }}
+          </span>
+        </button>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         
         <!-- Buscador principal -->
-        <div class="md:col-span-5 relative">
+        <div class="md:col-span-4 relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
           <input type="text"
             [(ngModel)]="busqueda"
@@ -119,12 +268,24 @@
           }
         </div>
 
+        <!-- Filtro Tipo de Producto (Select) -->
+        <div class="md:col-span-2">
+          <select [(ngModel)]="filtroTipoProducto"
+            (ngModelChange)="paginaActual = 1"
+            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+            <option value="TODOS">📦 Todo Tipo</option>
+            <option value="MEDICAMENTO">💊 Medicamentos</option>
+            <option value="PERFUME">✨ Perfumería</option>
+            <option value="OTROS">🧴 Otros / Aseo</option>
+          </select>
+        </div>
+
         <!-- Filtro Estado FEFO -->
-        <div class="md:col-span-3">
+        <div class="md:col-span-2">
           <select [(ngModel)]="filtroEstado"
             (ngModelChange)="paginaActual = 1"
             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="TODOS">🛡️ Todos los Estados FEFO</option>
+            <option value="TODOS">🛡️ Todos Estados</option>
             <option value="OPTIMO">🟢 Óptimo (>90 días)</option>
             <option value="ALERTA">🟡 Alerta (≤90 días)</option>
             <option value="CRITICO">🟠 Crítico (≤30 días)</option>
@@ -150,7 +311,7 @@
           <select [(ngModel)]="ordenarPor"
             (ngModelChange)="paginaActual = 1"
             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="FEFO_ASC">FEFO (Vence antes primero)</option>
+            <option value="FEFO_ASC">FEFO (Vence antes)</option>
             <option value="FEFO_DESC">FEFO (Vence después)</option>
             <option value="PRODUCTO_ASC">Producto (A → Z)</option>
             <option value="STOCK_DESC">Mayor Stock</option>
@@ -160,11 +321,21 @@
       </div>
 
       <!-- Barra de estado de filtros aplicados -->
-      @if (busqueda || filtroEstado !== 'TODOS' || filtroCondicion !== 'TODOS' || ordenarPor !== 'FEFO_ASC') {
+      @if (busqueda || filtroTipoProducto !== 'TODOS' || filtroEstado !== 'TODOS' || filtroCondicion !== 'TODOS' || ordenarPor !== 'FEFO_ASC') {
         <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
             <span class="font-medium text-slate-700">Filtros aplicados:</span>
+            @if (filtroTipoProducto !== 'TODOS') {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                [ngClass]="{
+                  'bg-emerald-100 text-emerald-800': filtroTipoProducto === 'MEDICAMENTO',
+                  'bg-purple-100 text-purple-800': filtroTipoProducto === 'PERFUME',
+                  'bg-sky-100 text-sky-800': filtroTipoProducto === 'OTROS'
+                }">
+                Tipo: {{ filtroTipoProducto === 'MEDICAMENTO' ? 'Medicamentos' : (filtroTipoProducto === 'PERFUME' ? 'Perfumes' : 'Otros') }}
+              </span>
+            }
             <span>Mostrando {{ lotesFiltrados.length }} de {{ lotesFefo.length }} lotes</span>
           </div>
           <button (click)="limpiarFiltros()"
@@ -176,125 +347,99 @@
       }
     </div>
 
-    <!-- TABLA DE GRILLA ESTILIZADA (IDÉNTICA A CATÁLOGO DE PRODUCTOS) -->
+    <!-- TABLA DE GRILLA ESTILIZADA (COMPACTA) -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
-          <!-- HEADER DARK SLATE (IDÉNTICO A PRODUCTS.HTML) -->
+          <!-- HEADER DARK SLATE (COMPACTO) -->
           <thead>
-            <tr class="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider border-b border-slate-700">
-              <th (click)="alternarOrden('FEFO')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-arrow-down-short-wide text-sky-400 text-xs"></i>
-                  <span># FEFO</span>
-                  <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+            <tr class="bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider border-b border-slate-700">
+              <th class="py-2.5 px-2.5 whitespace-nowrap">
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-barcode text-emerald-400 text-[10px]"></i>
+                  <span>LOTE / REG.</span>
                 </div>
               </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-barcode text-emerald-400 text-xs"></i>
-                  <span>LOTE & REG. SANITARIO</span>
+              <th (click)="alternarOrden('PRODUCTO')" class="py-2.5 px-2.5 cursor-pointer hover:bg-slate-700/80 transition-colors">
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-pills text-teal-300 text-[10px]"></i>
+                  <span>PRODUCTO</span>
+                  <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                 </div>
               </th>
-              <th (click)="alternarOrden('PRODUCTO')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-pills text-teal-300 text-xs"></i>
-                  <span>PRODUCTO / FICHA</span>
-                  <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+              <th class="py-2.5 px-2.5 whitespace-nowrap">
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-location-dot text-amber-300 text-[10px]"></i>
+                  <span>UBICACIÓN</span>
                 </div>
               </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-location-dot text-amber-300 text-xs"></i>
-                  <span>UBICACIÓN EN ALMACÉN</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-temperature-half text-sky-300 text-xs"></i>
+              <th class="py-2.5 px-2.5 whitespace-nowrap">
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-temperature-half text-sky-300 text-[10px]"></i>
                   <span>CONDICIÓN</span>
                 </div>
               </th>
-              <th (click)="alternarOrden('STOCK')" class="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                <div class="flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-cubes text-emerald-300 text-xs"></i>
-                  <span>STOCK FÍSICO</span>
-                  <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+              <th (click)="alternarOrden('STOCK')" class="py-2.5 px-2.5 text-center cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-cubes text-emerald-300 text-[10px]"></i>
+                  <span>STOCK</span>
+                  <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                 </div>
               </th>
-              <th (click)="alternarOrden('FEFO')" class="py-3.5 px-4 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-calendar-days text-rose-300 text-xs"></i>
-                  <span>VENCIMIENTO</span>
-                  <i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+              <th (click)="alternarOrden('FEFO')" class="py-2.5 px-2.5 cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-days text-rose-300 text-[10px]"></i>
+                  <span>VENC. / INGRESO</span>
+                  <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                 </div>
               </th>
-              <th class="py-3.5 px-4 text-center whitespace-nowrap">
-                <div class="flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-shield-halved text-emerald-300 text-xs"></i>
+              <th class="py-2.5 px-2.5 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-shield-halved text-emerald-300 text-[10px]"></i>
                   <span>ESTADO FEFO</span>
                 </div>
               </th>
-              <th class="py-3.5 px-4 text-right whitespace-nowrap">
-                <div class="flex items-center justify-end gap-2">
-                  <i class="fa-solid fa-gear text-slate-400 text-xs"></i>
+              <th class="py-2.5 px-2.5 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-1.5">
+                  <i class="fa-solid fa-gear text-slate-400 text-[10px]"></i>
                   <span>ACCIONES</span>
                 </div>
               </th>
             </tr>
           </thead>
 
-          <!-- CUERPO DE LA TABLA -->
-          <tbody class="divide-y divide-slate-100 text-xs">
+          <!-- CUERPO DE LA TABLA (COMPACTO) -->
+          <tbody class="divide-y divide-slate-100/80 text-[11px]">
             @for (item of lotesPaginados; track item.id; let i = $index) {
               <tr class="hover:bg-slate-50/90 transition-colors group">
-                <!-- # FEFO -->
-                <td class="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-slate-400">
-                  #{{ (paginaActual - 1) * itemsPorPagina + i + 1 }}
-                </td>
 
                 <!-- Lote & Reg. Sanitario -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
+                <td class="py-1.5 px-2.5 whitespace-nowrap">
                   <div>
-                    <div class="flex items-center gap-1.5">
-                      <span class="font-mono font-bold text-slate-900 text-xs">{{ item.lote }}</span>
-                      @if (item.destinoUnidad === 'TESTER') {
-                        <span class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-extrabold border border-amber-200">
-                          TESTER
-                        </span>
-                      }
-                    </div>
-                    @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                      @if (item.batchCode) {
-                        <p class="text-[10px] text-purple-600 font-mono font-medium mt-0.5">Batch: {{ item.batchCode }}</p>
-                      }
-                    } @else if (item.registroSanitario) {
-                      <p class="text-[10px] text-slate-400 mt-0.5">{{ item.registroSanitario }}</p>
+                    <span class="font-mono font-bold text-slate-900 text-[11px]">{{ item.lote }}</span>
+                    @if (item.tipoProducto !== 'PERFUME' && item.registroSanitario) {
+                      <p class="text-[9px] text-slate-400 leading-tight">{{ item.registroSanitario }}</p>
                     }
                   </div>
                 </td>
 
                 <!-- Producto / Ficha -->
-                <td class="py-3.5 px-4">
+                <td class="py-1.5 px-2.5">
                   <div>
-                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-1.5">
+                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-1 text-[11px] leading-tight">
                       <span>{{ item.producto }}</span>
                       @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                        <span class="text-[9px] bg-purple-50 text-purple-700 border border-purple-200/80 px-1.5 py-0.5 rounded font-extrabold">
-                          PERFUME
-                        </span>
+                        <span class="text-[8px] bg-purple-50 text-purple-700 border border-purple-200/80 px-1 py-px rounded font-extrabold shrink-0">PERF</span>
+                      } @else if (item.tipoProducto === 'OTROS') {
+                        <span class="text-[8px] bg-sky-50 text-sky-700 border border-sky-200/80 px-1 py-px rounded font-extrabold shrink-0">OTROS</span>
                       }
                     </div>
-                    <div class="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <div class="text-[10px] text-slate-500 leading-tight flex flex-wrap items-center gap-1">
                       @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
                         <span>{{ item.concentracionFragancia || 'Fragancia' }}</span>
                         @if (item.volumenMl) {
                           <span>•</span>
-                          <span class="text-slate-600 font-medium">{{ item.volumenMl }}ml</span>
-                        }
-                        @if (item.familiaOlfativa) {
-                          <span>•</span>
-                          <span class="text-slate-600 font-medium">{{ item.familiaOlfativa }}</span>
+                          <span class="text-purple-700 font-bold font-mono">{{ item.volumenMl }}ml</span>
                         }
                       } @else {
                         <span>{{ item.principioActivo }}</span>
@@ -308,97 +453,97 @@
                 </td>
 
                 <!-- Ubicación Física -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
+                <td class="py-1.5 px-2.5 whitespace-nowrap">
                   @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-50 text-purple-700 font-semibold text-[10px]">
-                      <i class="fa-solid fa-store text-[9px] text-purple-400"></i>
-                      Mostrador / Vitrina
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold text-[9px]">
+                      <i class="fa-solid fa-store text-[8px] text-purple-400"></i>
+                      Vitrina
                     </span>
                   } @else {
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono font-bold text-[10px]">
-                      <i class="fa-solid fa-location-dot text-[9px] text-slate-400"></i>
-                      {{ item.pasillo }}-{{ item.estante }}-{{ item.nivel }}-{{ item.gaveta }}
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-bold text-[9px] max-w-[130px] truncate" [title]="item.ubicacion || item.pasillo || 'Sin asignar'">
+                      {{ item.ubicacion || (item.pasillo ? (item.pasillo + (item.estante ? '-' + item.estante : '') + (item.nivel ? '-' + item.nivel : '') + (item.gaveta ? '-' + item.gaveta : '')) : '—') }}
                     </span>
                   }
                 </td>
 
                 <!-- Condición / Temperatura -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
+                <td class="py-1.5 px-2.5 whitespace-nowrap">
                   @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="text-slate-400 text-[11px]">—</span>
+                    <span class="text-slate-400 text-[10px]">—</span>
                   } @else {
-                    <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
-                      <i class="fa-solid fa-temperature-half text-[10px] text-slate-400"></i>
+                    <span class="text-[10px] text-slate-600 font-medium">
                       {{ item.temperatura || 'Ambiente' }}
                     </span>
                   }
                 </td>
 
                 <!-- Stock Físico -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span class="font-mono font-bold text-xs" [ngClass]="item.stock === 0 ? 'text-rose-600' : 'text-slate-900'">
-                    {{ item.stock | number }} unid.
+                <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
+                  <span class="font-mono font-bold text-[11px]" [ngClass]="item.stock === 0 ? 'text-rose-600' : 'text-slate-900'">
+                    {{ item.stock | number }}
                   </span>
                 </td>
 
-                <!-- Fecha Vencimiento -->
-                <td class="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-xs">
+                <!-- Fecha Vencimiento + Fecha Ingreso -->
+                <td class="py-1.5 px-2.5 whitespace-nowrap">
                   @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="inline-flex items-center gap-1 text-purple-700 font-bold text-[11px]">
-                      <i class="fa-solid fa-infinity text-[10px] text-purple-400"></i>
+                    <span class="inline-flex items-center gap-1 text-purple-700 font-bold text-[10px]">
+                      <i class="fa-solid fa-infinity text-[9px] text-purple-400"></i>
                       No expira
                     </span>
                   } @else {
-                    <span class="text-slate-800">{{ item.vencimiento }}</span>
+                    <div>
+                      <span class="font-mono font-bold text-slate-800 text-[11px]">{{ item.vencimiento }}</span>
+                      @if (item.fechaIngreso) {
+                        <p class="text-[9px] text-slate-400 leading-tight">
+                          <i class="fa-solid fa-right-to-bracket text-[8px] mr-0.5"></i>Ing: {{ item.fechaIngreso }}
+                        </p>
+                      }
+                    </div>
                   }
                 </td>
 
                 <!-- Estado FEFO -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
                   @let badge = getBadgeStatus(item.dias, item.tipoProducto);
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border {{ badge.class }}">
-                    <i class="{{ badge.icon }} text-[10px]"></i>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border {{ badge.class }}">
+                    <i class="{{ badge.icon }} text-[9px]"></i>
                     {{ badge.text }}
                   </span>
                 </td>
 
-                <!-- ACCIONES (EDITAR, ACTA DE BAJA, ELIMINAR) -->
-                <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-1">
-                    <!-- BOTÓN EDITAR LOTE -->
+                <!-- ACCIONES -->
+                <td class="py-1.5 px-2.5 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-0.5">
                     <button (click)="abrirModalEditarLote(item)"
                       title="Editar datos del lote"
-                      class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-pen-to-square text-sm"></i>
+                      class="p-1 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer">
+                      <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
-
-                    <!-- BOTÓN ACTA DE BAJA -->
                     <button (click)="openBajaModal(item)"
                       title="Generar Acta de Baja DIGEMID"
-                      class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-file-excel text-sm"></i>
+                      class="p-1 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer">
+                      <i class="fa-solid fa-file-excel text-xs"></i>
                     </button>
-
-                    <!-- BOTÓN ELIMINAR LOTE -->
                     <button (click)="abrirModalEliminar(item)"
                       title="Eliminar lote del inventario"
-                      class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-trash-can text-sm"></i>
+                      class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                   </div>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="9" class="py-14 text-center text-slate-400">
-                  <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+                <td colspan="8" class="py-10 text-center text-slate-400">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
                   </div>
-                  <p class="font-medium text-slate-700 mb-1">No se encontraron lotes en el inventario</p>
-                  <p class="text-xs text-slate-400 mb-4">Comienza registrando un ingreso de mercadería por lote para un producto del catálogo.</p>
+                  <p class="font-medium text-slate-700 mb-1 text-xs">No se encontraron lotes en el inventario</p>
+                  <p class="text-[11px] text-slate-400 mb-3">Comienza registrando un ingreso de mercadería por lote.</p>
                   <button (click)="abrirModalNuevoLote()"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
-                    <i class="fa-solid fa-circle-plus text-xs"></i>
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-circle-plus text-[10px]"></i>
                     Ingresar Lote Ahora
                   </button>
                 </td>
@@ -409,15 +554,15 @@
           <!-- FILA DE TOTALES EN FOOTER -->
           @if (lotesFiltrados.length > 0) {
             <tfoot>
-              <tr class="border-t-2 border-slate-200 bg-slate-50/75 text-slate-900 font-bold text-xs">
-                <td colspan="5" class="py-3.5 px-4 uppercase tracking-wider font-extrabold text-slate-800">
-                  TOTAL CONSOLIDADO ({{ lotesFiltrados.length }} LOTES EN INVENTARIO)
+              <tr class="border-t-2 border-slate-200 bg-slate-50/75 text-slate-900 font-bold text-[11px]">
+                <td colspan="4" class="py-2 px-2.5 uppercase tracking-wider font-extrabold text-slate-800">
+                  TOTAL ({{ lotesFiltrados.length }} LOTES)
                 </td>
-                <td class="py-3.5 px-4 text-center font-mono font-black text-slate-900 text-sm whitespace-nowrap">
-                  {{ totalStockFiltrado | number }} unid.
+                <td class="py-2 px-2.5 text-center font-mono font-black text-slate-900 text-xs whitespace-nowrap">
+                  {{ totalStockFiltrado | number }} und.
                 </td>
-                <td colspan="3" class="py-3.5 px-4 text-right text-[11px] text-slate-500 font-medium">
-                  Control FEFO Estricto • Stock Descontable en Tiempo Real desde POS
+                <td colspan="3" class="py-2 px-2.5 text-right text-[10px] text-slate-500 font-medium">
+                  Control FEFO • Stock en Tiempo Real
                 </td>
               </tr>
             </tfoot>
@@ -469,290 +614,853 @@
         </div>
       </div>
     </div>
+  }
 
-  </div>
-
-</div>
-
-<!-- MODAL: CREAR / EDITAR LOTE DE INVENTARIO -->
-@if (showLoteModal) {
-  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-xl w-full border border-slate-200 shadow-2xl space-y-4 animate-slide-up">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white"
-            [ngClass]="esProductoPerfume ? 'bg-purple-600' : (modoModalLote === 'EDITAR' ? 'bg-amber-600' : 'bg-emerald-600')">
-            <i class="fa-solid" [ngClass]="esProductoPerfume ? 'fa-spray-can-sparkles' : (modoModalLote === 'EDITAR' ? 'fa-pen-to-square' : 'fa-box')"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-base font-bold text-slate-900">
-                {{ modoModalLote === 'EDITAR' ? 'Modificar Ficha de Lote' : 'Ingreso de Mercadería por Lote' }}
-              </h3>
-              @if (esProductoPerfume) {
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1">
-                  <i class="fa-solid fa-spray-can-sparkles text-[9px]"></i> PERFUMERÍA
-                </span>
-              } @else {
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                  <i class="fa-solid fa-pills text-[9px]"></i> MEDICAMENTO
-                </span>
-              }
-            </div>
-            <p class="text-[11px] text-slate-500">
-              {{ esProductoPerfume 
-                 ? 'Gestión de lote para fragancias y cosmética (sin expiración FEFO ni registros farmacéuticos)' 
-                 : (modoModalLote === 'EDITAR' ? 'Actualiza stock, fecha de vencimiento o ubicación física del lote' : 'Asocia un lote con vencimiento FEFO a un producto del Catálogo Maestro') }}
-            </p>
-          </div>
-        </div>
-        <button (click)="showLoteModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">
-          <i class="fa-solid fa-xmark text-base"></i>
-        </button>
-      </div>
+  <!-- ============================================================== -->
+  <!-- VISTA 2: INGRESO DE MERCADERÍA POR LOTE (PÁGINA COMPLETA)     -->
+  <!-- ============================================================== -->
+  @if (vistaActual === 'NUEVO_LOTE') {
+    <div class="space-y-6">
 
       @if (errorModalLote) {
-        <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
-          <i class="fa-solid fa-circle-exclamation"></i>
-          <span>{{ errorModalLote }}</span>
+        <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs flex items-center gap-2.5">
+          <i class="fa-solid fa-circle-exclamation text-base"></i>
+          <span class="font-medium">{{ errorModalLote }}</span>
         </div>
       }
 
-      <div class="space-y-3.5 text-xs">
-        <!-- Selector de Producto del Catálogo -->
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-700">
-              Producto del Catálogo Maestro <span class="text-rose-500">*</span>
-            </label>
-            @if (productoSeleccionado) {
-              <span class="text-[10px] font-bold" [ngClass]="esProductoPerfume ? 'text-purple-600' : 'text-emerald-600'">
-                Tipo: {{ esProductoPerfume ? 'Perfume / Fragancia' : 'Medicamento / Fármaco' }}
-              </span>
-            }
-          </div>
-          @if (productosCatalogo.length === 0) {
-            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs">
-              <i class="fa-solid fa-circle-info mr-1"></i> No tienes productos en el catálogo. Ve a <strong>Catálogo de Productos</strong> para crear uno primero.
-            </div>
-          } @else {
-            <select [(ngModel)]="loteForm.productoId"
-              (ngModelChange)="onProductoChange()"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
-              @for (prod of productosCatalogo; track prod.id) {
-                <option [value]="prod.id">
-                  {{ prod.tipoProducto === 'PERFUME' ? '🧴 [PERFUME]' : '💊 [MEDICAMENTO]' }} {{ prod.nombreComercial }} {{ prod.concentracion || '' }} [SKU: {{ prod.sku }}] — {{ prod.laboratorio || prod.marca || prod.tipoProducto }}
-                </option>
-              }
-            </select>
-          }
-        </div>
+      @if (modoModalLote === 'EDITAR') {
+        <!-- ============================================================== -->
+        <!-- FORMULARIO DE EDICIÓN DE FICHA DE LOTE (PÁGINA COMPLETA)       -->
+        <!-- ============================================================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        <!-- ================= CAMPOS EXCLUSIVOS PARA MEDICAMENTOS ================= -->
-        @if (!esProductoPerfume) {
-          <!-- Código de Lote y Fecha Vencimiento -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Código / N° de Lote <span class="text-rose-500">*</span>
-              </label>
-              <input [(ngModel)]="loteForm.lote"
-                placeholder="Ej: LT-2026-001"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
-            </div>
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Fecha Vencimiento (FEFO) <span class="text-rose-500">*</span>
-              </label>
-              <input [(ngModel)]="loteForm.vencimiento"
-                type="date"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
-            </div>
-          </div>
+          <!-- COLUMNA IZQUIERDA: FORMULARIO PRINCIPAL DE EDICIÓN (8 COLS) -->
+          <div class="lg:col-span-8 space-y-5">
 
-          <!-- Cantidad en Stock y Registro Sanitario -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Stock Físico (Unidades) <span class="text-rose-500">*</span>
-              </label>
-              <input [(ngModel)]="loteForm.stock"
-                type="number"
-                min="0"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
-            </div>
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Registro Sanitario (DIGEMID)
-              </label>
-              <input [(ngModel)]="loteForm.registroSanitario"
-                placeholder="Ej: EE-04829"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
-            </div>
-          </div>
-
-          <!-- Ubicación Física en Anaquel -->
-          <div>
-            <label class="font-bold text-slate-700 block mb-1">Ubicación Física en Almacén</label>
-            <div class="grid grid-cols-4 gap-2">
-              <div>
-                <span class="text-[10px] text-slate-400 block mb-0.5">Pasillo</span>
-                <input [(ngModel)]="loteForm.pasillo" placeholder="P1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-center font-bold text-slate-800" />
+            <!-- 1. DATOS GENERALES DEL LOTE Y PRODUCTO -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-5">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-base shadow-xs">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </div>
+                  <div>
+                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">1. Producto y Datos del Lote</h2>
+                    <p class="text-[11px] text-slate-400">Modifica el producto asociado, código de lote y stock físico actual</p>
+                  </div>
+                </div>
+                @if (productoSeleccionado) {
+                  <span class="px-3 py-1 rounded-full text-[11px] font-extrabold border"
+                    [ngClass]="{
+                      'bg-purple-50 text-purple-700 border-purple-200': esProductoPerfume,
+                      'bg-sky-50 text-sky-700 border-sky-200': esProductoOtros,
+                      'bg-emerald-50 text-emerald-700 border-emerald-200': !esProductoPerfume && !esProductoOtros
+                    }">
+                    {{ esProductoPerfume ? '✨ Perfumería' : (esProductoOtros ? '🧴 Otros / Aseo' : '💊 Medicamento') }}
+                  </span>
+                }
               </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block mb-0.5">Estante</span>
-                <input [(ngModel)]="loteForm.estante" placeholder="E1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-center font-bold text-slate-800" />
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block mb-0.5">Nivel</span>
-                <input [(ngModel)]="loteForm.nivel" placeholder="N1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-center font-bold text-slate-800" />
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block mb-0.5">Gaveta</span>
-                <input [(ngModel)]="loteForm.gaveta" placeholder="G1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-center font-bold text-slate-800" />
-              </div>
-            </div>
-          </div>
 
-          <!-- Condición de Conservación -->
-          <div>
-            <label class="font-bold text-slate-700 block mb-1">Condición de Conservación & Temperatura</label>
-            <select [(ngModel)]="loteForm.temperatura"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
-              <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
-              <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
-              <option value="Lugar Fresco y Seco">Lugar Fresco y Seco (&lt; 30°C)</option>
-              <option value="Caja de Seguridad">Caja Fuerte / Seguridad (Psicotrópicos)</option>
-            </select>
-          </div>
-        }
+              <!-- Selector de Producto (Buscador con Autocompletado) -->
+              <div class="relative">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                  Producto del Catálogo Maestro <span class="text-rose-500">*</span>
+                </label>
 
-        <!-- ================= CAMPOS EXCLUSIVOS PARA PERFUMES ================= -->
-        @if (esProductoPerfume) {
-          <!-- Identificador de Lote y Stock Físico -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Código / N° de Lote <span class="text-rose-500">*</span>
-              </label>
-              <input [(ngModel)]="loteForm.lote"
-                placeholder="Ej: BATCH-8492"
-                class="w-full bg-purple-50/40 border border-purple-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
-            </div>
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">
-                Stock Físico (Unidades) <span class="text-rose-500">*</span>
-              </label>
-              <input [(ngModel)]="loteForm.stock"
-                type="number"
-                min="0"
-                class="w-full bg-purple-50/40 border border-purple-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
-            </div>
-          </div>
+                @if (productoSeleccionado && !mostrarBuscadorProducto) {
+                  <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/70 transition-colors">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0"
+                        [ngClass]="{
+                          'bg-purple-50 text-purple-700 border-purple-200': esProductoPerfume,
+                          'bg-sky-50 text-sky-700 border-sky-200': esProductoOtros,
+                          'bg-emerald-50 text-emerald-700 border-emerald-200': !esProductoPerfume && !esProductoOtros
+                        }">
+                        {{ esProductoPerfume ? '✨ PERFUME' : (esProductoOtros ? '🧴 OTROS' : '💊 MEDICAMENTO') }}
+                      </span>
+                      <div class="truncate">
+                        <span class="font-bold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
+                        <span class="text-[10px] text-slate-500 ml-2 font-mono">SKU: {{ productoSeleccionado.sku }}</span>
+                        @if (productoSeleccionado.principioActivo) {
+                          <span class="text-[10px] text-slate-400 ml-1">• {{ productoSeleccionado.principioActivo }}</span>
+                        }
+                      </div>
+                    </div>
+                    <button type="button"
+                      (click)="abrirBuscadorProducto()"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-amber-700 hover:text-amber-800 bg-white hover:bg-amber-50 border border-slate-200 rounded-lg shadow-2xs transition-colors shrink-0 ml-2 cursor-pointer">
+                      <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                      <span>Cambiar</span>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text"
+                      [(ngModel)]="busquedaProductoCatalogo"
+                      (focus)="mostrarDropdownProductos = true"
+                      (input)="mostrarDropdownProductos = true"
+                      placeholder="Escribe para buscar por nombre, SKU o principio activo..."
+                      class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs" />
+                    
+                    @if (busquedaProductoCatalogo) {
+                      <button type="button"
+                        (click)="limpiarBusquedaProducto()"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i>
+                      </button>
+                    }
+                  </div>
 
-          <!-- Ficha Especializada de Perfumería -->
-          <div class="p-3.5 bg-gradient-to-br from-purple-50/60 to-slate-50 border border-purple-100 rounded-2xl space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-extrabold text-purple-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-gem text-purple-600"></i> Atributos Específicos de Perfumería
-              </span>
-              <span class="text-[10px] text-purple-700 bg-purple-100/90 border border-purple-200 px-2 py-0.5 rounded-full font-bold">
-                <i class="fa-solid fa-infinity mr-1 text-[9px]"></i> Sin Vencimiento FEFO
-              </span>
-            </div>
+                  @if (mostrarDropdownProductos) {
+                    <div class="absolute left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-slide-up max-h-60 overflow-y-auto divide-y divide-slate-100">
+                      <div class="p-2 bg-slate-50 text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-100">
+                        <span>{{ productosFiltradosParaLote.length }} productos encontrados</span>
+                        <button type="button" (click)="cerrarDropdownProductos()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+                          <i class="fa-solid fa-xmark"></i> Cerrar
+                        </button>
+                      </div>
 
-            <!-- Concentración y Mililitros -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Concentración / Tipo</label>
-                <select [(ngModel)]="loteForm.concentracionFragancia"
-                  class="w-full bg-white border border-slate-200 rounded-xl p-2 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
-                  <option value="Eau de Parfum (EDP)">Eau de Parfum (EDP)</option>
-                  <option value="Eau de Toilette (EDT)">Eau de Toilette (EDT)</option>
-                  <option value="Eau de Cologne (EDC)">Eau de Cologne (EDC)</option>
-                  <option value="Parfum / Extracto">Parfum / Extracto Puro</option>
-                  <option value="Body Mist / Splash">Body Mist / Body Splash</option>
-                </select>
+                      @for (prod of productosFiltradosParaLote; track prod.id) {
+                        <div (click)="seleccionarProductoCatalogo(prod)"
+                          class="p-2.5 hover:bg-amber-50/80 cursor-pointer transition-colors flex items-center justify-between gap-3 text-xs"
+                          [class.bg-amber-50]="loteForm.productoId === prod.id">
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                              <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold border shrink-0"
+                                [ngClass]="{
+                                  'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
+                                  'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
+                                  'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto === 'MEDICAMENTO'
+                                }">
+                                {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
+                              </span>
+                              <span class="font-bold text-slate-900 truncate">
+                                {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
+                              </span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
+                              <span class="font-mono text-slate-400">SKU: {{ prod.sku }}</span>
+                              @if (prod.principioActivo) {
+                                <span>• {{ prod.principioActivo }}</span>
+                              } @else if (prod.marca) {
+                                <span>• {{ prod.marca }}</span>
+                              }
+                            </div>
+                          </div>
+                          @if (loteForm.productoId === prod.id) {
+                            <i class="fa-solid fa-check text-amber-600 text-xs shrink-0"></i>
+                          }
+                        </div>
+                      } @empty {
+                        <div class="p-4 text-center text-xs text-slate-400">
+                          No se encontraron productos coincidentes.
+                        </div>
+                      }
+                    </div>
+                  }
+                }
               </div>
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Volumen / Mililitros</label>
-                <div class="flex items-center gap-2">
-                  <input [(ngModel)]="loteForm.volumenMl"
-                    type="number"
-                    placeholder="100"
-                    class="w-full bg-white border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
-                  <span class="text-xs font-bold text-slate-400">ml</span>
+
+              <!-- Código de Lote y Stock Físico -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    N° / Código de Lote <span class="text-rose-500">*</span>
+                  </label>
+                  <input type="text"
+                    [(ngModel)]="loteForm.lote"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Stock Físico en Unidades <span class="text-rose-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <input type="number" min="0"
+                      [(ngModel)]="loteForm.stock"
+                      class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" />
+                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">unid.</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Batch Code de Fábrica y Destino de Unidad -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">
-                  Batch Code (Grabado en Frasco/Caja)
-                </label>
-                <input [(ngModel)]="loteForm.batchCode"
-                  placeholder="Ej: 38U400 o 2103A"
-                  class="w-full bg-white border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
-                <span class="text-[9.5px] text-slate-400 mt-0.5 block">Código de originalidad de fábrica</span>
+            <!-- 2. CONTROL CLÍNICO Y ALMACENAMIENTO -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-5">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-base shadow-xs"
+                    [ngClass]="esProductoPerfume ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'">
+                    <i [ngClass]="esProductoPerfume ? 'fa-solid fa-spray-can-sparkles' : 'fa-solid fa-shield-halved'"></i>
+                  </div>
+                  <div>
+                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                      {{ esProductoPerfume ? '2. Especificaciones de Perfumería' : '2. Almacenamiento, FEFO y DIGEMID' }}
+                    </h2>
+                    <p class="text-[11px] text-slate-400">
+                      {{ esProductoPerfume ? 'Concentración olfativa y volumen en mililitros' : 'Ubicación física en anaquel, fecha de vencimiento y temperatura' }}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Destino de Unidad</label>
-                <select [(ngModel)]="loteForm.destinoUnidad"
-                  class="w-full bg-white border border-slate-200 rounded-xl p-2 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
-                  <option value="VENTA">Para la Venta (Caja Sellada)</option>
-                  <option value="TESTER">Tester / Probador (Muestra Mostrador)</option>
-                </select>
-                <span class="text-[9.5px] text-slate-400 mt-0.5 block">Separa muestras de unidades vendibles</span>
-              </div>
+
+              <!-- SI ES PERFUME -->
+              @if (esProductoPerfume) {
+                <div class="bg-purple-50/50 border border-purple-200/80 rounded-2xl p-4 space-y-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-bold text-purple-950 mb-1.5">Concentración de Fragancia</label>
+                      <select [(ngModel)]="loteForm.concentracionFragancia"
+                        class="w-full bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                        <option value="Eau de Parfum (EDP)">Eau de Parfum (EDP)</option>
+                        <option value="Eau de Toilette (EDT)">Eau de Toilette (EDT)</option>
+                        <option value="Eau de Cologne (EDC)">Eau de Cologne (EDC)</option>
+                        <option value="Parfum / Extracto">Parfum / Extracto Puro</option>
+                        <option value="Body Mist / Splash">Body Mist / Body Splash</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-purple-950 mb-1.5">Volumen (ml)</label>
+                      <div class="flex items-center gap-2">
+                        <input [(ngModel)]="loteForm.volumenMl"
+                          type="number" min="1"
+                          placeholder="100"
+                          class="w-full bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
+                        <span class="text-xs font-extrabold text-purple-700">ml</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-[11px] text-purple-600/90 italic">
+                    ℹ️ Los perfumes no tienen fecha de caducidad FEFO ni requieren registro sanitario DIGEMID.
+                  </p>
+                </div>
+              } @else {
+                <!-- MEDICAMENTO U OTROS -->
+                <div class="space-y-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        Fecha Vencimiento {{ esProductoOtros ? '(Opcional)' : '(FEFO) *' }}
+                      </label>
+                      <input [(ngModel)]="loteForm.vencimiento"
+                        type="date"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1.5">Registro Sanitario DIGEMID</label>
+                      <input [(ngModel)]="loteForm.registroSanitario"
+                        placeholder="Ej: EE-12345"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" />
+                    </div>
+                  </div>
+
+                  <!-- Ubicación Textarea (Opcional) -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                      Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                    </label>
+                    <textarea [(ngModel)]="loteForm.ubicacion"
+                      rows="2"
+                      placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
+                      class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"></textarea>
+                  </div>
+
+                  <!-- Temperatura / Condición -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Condición de Conservación & Temperatura</label>
+                    <select [(ngModel)]="loteForm.temperatura"
+                      class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-medium text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
+                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
+                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco (&lt; 30°C)</option>
+                      <option value="Caja de Seguridad">Caja Fuerte / Seguridad</option>
+                    </select>
+                  </div>
+                </div>
+              }
             </div>
 
-            <!-- Género y Familia Olfativa -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Público / Género</label>
-                <select [(ngModel)]="loteForm.genero"
-                  class="w-full bg-white border border-slate-200 rounded-xl p-2 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
-                  <option value="Unisex">Unisex</option>
-                  <option value="Hombre">Masculino / Hombre</option>
-                  <option value="Mujer">Femenino / Mujer</option>
-                  <option value="Infantil">Infantil / Niños</option>
-                </select>
+          </div>
+
+          <!-- COLUMNA DERECHA: RESUMEN Y BOTONES DE ACCIÓN (4 COLS) -->
+          <div class="lg:col-span-4 space-y-5">
+
+            <!-- TARJETA RESUMEN -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                  </div>
+                  <div>
+                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Resumen de Ficha</h2>
+                    <p class="text-[11px] text-slate-400">Verifica los cambios antes de guardar</p>
+                  </div>
+                </div>
+                <span class="text-[10px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                  ID: {{ loteEnEdicionId }}
+                </span>
               </div>
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Familia Olfativa</label>
-                <select [(ngModel)]="loteForm.familiaOlfativa"
-                  class="w-full bg-white border border-slate-200 rounded-xl p-2 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
-                  <option value="Amaderada">Amaderada (Woody)</option>
-                  <option value="Cítrica">Cítrica (Citrus)</option>
-                  <option value="Floral">Floral</option>
-                  <option value="Oriental / Ámbar">Oriental / Ámbar</option>
-                  <option value="Frutal / Gourmand">Frutal / Dulce Gourmand</option>
-                  <option value="Aromática / Fresca">Aromática / Fresca Acuática</option>
-                </select>
+
+              <!-- Producto Resumen -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-1.5">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Producto</div>
+                <div class="font-bold text-slate-900 text-xs">
+                  {{ productoSeleccionado?.nombreComercial || 'No seleccionado' }}
+                </div>
+                <div class="text-[11px] text-slate-500">
+                  {{ productoSeleccionado?.principioActivo || productoSeleccionado?.marca || '' }}
+                  @if (productoSeleccionado?.sku) {
+                    <span class="font-mono text-slate-400">• SKU: {{ productoSeleccionado.sku }}</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Lote y Stock Resumen -->
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">N° Lote</span>
+                  <span class="font-mono font-bold text-slate-900 text-xs">{{ loteForm.lote || '—' }}</span>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Stock Físico</span>
+                  <span class="font-mono font-bold text-slate-900 text-xs">{{ loteForm.stock || 0 }} unid.</span>
+                </div>
+              </div>
+
+              <!-- Vencimiento & Ubicación -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-1">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Vencimiento:</span>
+                  <span class="font-mono font-bold text-slate-800">
+                    {{ esProductoPerfume ? 'No expira' : (loteForm.vencimiento || '—') }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Ubicación:</span>
+                  <span class="font-mono font-medium text-slate-800">
+                    {{ esProductoPerfume ? 'Vitrina' : (loteForm.pasillo + '-' + loteForm.estante + '-' + loteForm.nivel + '-' + loteForm.gaveta) }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Conservación:</span>
+                  <span class="font-medium text-slate-800">{{ loteForm.temperatura }}</span>
+                </div>
+              </div>
+
+              <!-- BOTONES DE ACCIÓN -->
+              <div class="pt-3 border-t border-slate-100 space-y-2.5">
+                <button (click)="guardarLote()"
+                  class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-black text-xs transition-all shadow-md shadow-amber-600/25 cursor-pointer flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-circle-check text-sm"></i>
+                  <span>Actualizar Ficha de Lote</span>
+                </button>
+
+                <button (click)="volverAListado()"
+                  class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer text-center">
+                  Cancelar y Volver al Inventario
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      } @else {
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- COLUMNA IZQUIERDA: CONFIGURACIÓN DE LOTE Y AGREGADOR DE PRODUCTO -->
+        <div class="lg:col-span-7 space-y-5">
+
+          <!-- 1. CABECERA GENERAL DEL LOTE (DATOS COMPARTIDOS) -->
+          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                  <i class="fa-solid fa-barcode"></i>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">1. Cabecera del Lote Compartido</h2>
+                  <p class="text-[11px] text-slate-400">Todos los productos que agregues compartirán este número de lote</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                DESPACHO / GUÍA
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+              <!-- N° Lote Compartido -->
+              <div class="sm:col-span-5">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                  N° / Código de Lote <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <input type="text"
+                    [(ngModel)]="loteCabecera.lote"
+                    placeholder="Ej: LT-2026-001 o BATCH-4819"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                  <button type="button"
+                    (click)="generarCodigoLoteNuevo()"
+                    title="Generar nuevo código correlativo aleatorio"
+                    class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Fecha de Ingreso -->
+              <div class="sm:col-span-3">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Fecha de Ingreso</label>
+                <input type="date"
+                  [(ngModel)]="loteCabecera.fechaIngreso"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-mono font-bold text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
+
+              <!-- Guía / Factura de Referencia -->
+              <div class="sm:col-span-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Guía / Factura (Opcional)</label>
+                <input type="text"
+                  [(ngModel)]="loteCabecera.guiaReferencia"
+                  placeholder="Ej: GR-001-4920 o F001-921"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-semibold text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
               </div>
             </div>
           </div>
-        }
-      </div>
 
-      <!-- BOTONES DEL MODAL -->
-      <div class="flex gap-2 pt-3 border-t border-slate-100">
-        <button (click)="showLoteModal = false"
-          class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer">
-          Cancelar
-        </button>
-        <button (click)="guardarLote()"
-          [disabled]="productosCatalogo.length === 0"
-          class="flex-1 py-2.5 text-white rounded-xl font-extrabold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          [ngClass]="modoModalLote === 'EDITAR' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'">
-          {{ modoModalLote === 'EDITAR' ? 'Actualizar Ficha de Lote' : 'Guardar Lote en Inventario' }}
-        </button>
+          <!-- 2. FORMULARIO DINÁMICO DE AGREGAR PRODUCTO AL LOTE -->
+          <div class="bg-white border-2 border-emerald-500/30 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shadow-emerald-500/30">
+                  <i class="fa-solid fa-plus"></i>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">2. Agregar Producto al Lote</h2>
+                  <p class="text-[11px] text-slate-400">Selecciona el producto y define sus parámetros de almacenamiento</p>
+                </div>
+              </div>
+              @if (productoSeleccionado) {
+                <span class="px-3 py-1 rounded-full text-[11px] font-extrabold border"
+                  [ngClass]="{
+                    'bg-purple-50 text-purple-700 border-purple-200': esProductoPerfume,
+                    'bg-sky-50 text-sky-700 border-sky-200': esProductoOtros,
+                    'bg-emerald-50 text-emerald-700 border-emerald-200': !esProductoPerfume && !esProductoOtros
+                  }">
+                  {{ esProductoPerfume ? '✨ Perfumería' : (esProductoOtros ? '🧴 Otros / Aseo' : '💊 Medicamento') }}
+                </span>
+              }
+            </div>
+
+            <!-- Selector de Producto (Buscador con Autocompletado) -->
+            <div class="relative">
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Seleccionar Producto del Catálogo <span class="text-rose-500">*</span>
+              </label>
+
+              @if (productoSeleccionado && !mostrarBuscadorProducto) {
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/70 transition-colors">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0"
+                      [ngClass]="{
+                        'bg-purple-50 text-purple-700 border-purple-200': esProductoPerfume,
+                        'bg-sky-50 text-sky-700 border-sky-200': esProductoOtros,
+                        'bg-emerald-50 text-emerald-700 border-emerald-200': !esProductoPerfume && !esProductoOtros
+                      }">
+                      {{ esProductoPerfume ? '✨ PERFUME' : (esProductoOtros ? '🧴 OTROS' : '💊 MEDICAMENTO') }}
+                    </span>
+                    <div class="truncate">
+                      <span class="font-bold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
+                      <span class="text-[10px] text-slate-500 ml-2 font-mono">SKU: {{ productoSeleccionado.sku }}</span>
+                      @if (productoSeleccionado.codigoBarra) {
+                        <span class="text-[10px] text-emerald-700 ml-1 font-mono inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
+                          <i class="fa-solid fa-barcode text-[8px]"></i> {{ productoSeleccionado.codigoBarra }}
+                        </span>
+                      }
+                      @if (productoSeleccionado.principioActivo) {
+                        <span class="text-[10px] text-slate-400 ml-1">• {{ productoSeleccionado.principioActivo }}</span>
+                      }
+                    </div>
+                  </div>
+                  <button type="button"
+                    (click)="abrirBuscadorProducto()"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-white hover:bg-emerald-50 border border-slate-200 rounded-lg shadow-2xs transition-colors shrink-0 ml-2 cursor-pointer">
+                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                    <span>Cambiar</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="relative">
+                  <i class="fa-solid fa-barcode absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="text"
+                    [(ngModel)]="busquedaProductoCatalogo"
+                    (focus)="mostrarDropdownProductos = true"
+                    (input)="mostrarDropdownProductos = true"
+                    placeholder="Escribe o escanea código de barras, SKU, nombre comercial..."
+                    class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs" />
+                  
+                  @if (busquedaProductoCatalogo) {
+                    <button type="button"
+                      (click)="limpiarBusquedaProducto()"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                      <i class="fa-solid fa-circle-xmark text-xs"></i>
+                    </button>
+                  }
+                </div>
+
+                @if (mostrarDropdownProductos) {
+                  <div class="absolute left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-slide-up max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    <div class="p-2 bg-slate-50 text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-100">
+                      <span>{{ productosFiltradosParaLote.length }} productos encontrados</span>
+                      <button type="button" (click)="cerrarDropdownProductos()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i> Cerrar
+                      </button>
+                    </div>
+
+                    @for (prod of productosFiltradosParaLote; track prod.id) {
+                      <div (click)="seleccionarProductoCatalogo(prod)"
+                        class="p-2.5 hover:bg-emerald-50/80 cursor-pointer transition-colors flex items-center justify-between gap-3 text-xs"
+                        [class.bg-emerald-50]="loteForm.productoId === prod.id">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-1.5">
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold border shrink-0"
+                              [ngClass]="{
+                                'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
+                                'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
+                                'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto === 'MEDICAMENTO'
+                              }">
+                              {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
+                            </span>
+                            <span class="font-bold text-slate-900 truncate">
+                              {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
+                            </span>
+                          </div>
+                          <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
+                            <span class="font-mono text-slate-400">SKU: {{ prod.sku }}</span>
+                            @if (prod.codigoBarra) {
+                              <span class="font-mono text-slate-400 flex items-center gap-0.5">
+                                <i class="fa-solid fa-barcode text-[8px]"></i>{{ prod.codigoBarra }}
+                              </span>
+                            }
+                            @if (prod.principioActivo) {
+                              <span>• {{ prod.principioActivo }}</span>
+                            } @else if (prod.marca) {
+                              <span>• {{ prod.marca }}</span>
+                            }
+                          </div>
+                        </div>
+                        @if (loteForm.productoId === prod.id) {
+                          <i class="fa-solid fa-check text-emerald-600 text-xs shrink-0"></i>
+                        }
+                      </div>
+                    } @empty {
+                      <div class="p-4 text-center text-xs text-slate-400">
+                        No se encontraron productos coincidentes.
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- CASO A: PERFUMERÍA -->
+            @if (esProductoPerfume) {
+              <div class="bg-purple-50/50 border border-purple-200/80 rounded-2xl p-4 space-y-3.5">
+                <div class="flex items-center gap-2 text-purple-900 font-bold text-xs">
+                  <i class="fa-solid fa-spray-can-sparkles text-purple-600"></i>
+                  <span>Especificaciones de Fragancia (Sin Vencimiento / Sin DIGEMID)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-purple-950 mb-1">
+                      Cantidad (Frascos / Und) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="number" min="1"
+                      [(ngModel)]="loteForm.stock"
+                      placeholder="50"
+                      class="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-purple-950 mb-1">Concentración</label>
+                    <select [(ngModel)]="loteForm.concentracionFragancia"
+                      class="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                      <option value="Eau de Parfum (EDP)">Eau de Parfum (EDP)</option>
+                      <option value="Eau de Toilette (EDT)">Eau de Toilette (EDT)</option>
+                      <option value="Eau de Cologne (EDC)">Eau de Cologne (EDC)</option>
+                      <option value="Parfum / Extracto">Parfum / Extracto Puro</option>
+                      <option value="Body Mist / Splash">Body Mist / Splash</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-purple-950 mb-1">Volumen (ml)</label>
+                    <div class="flex items-center gap-1.5">
+                      <input type="number" min="1"
+                        [(ngModel)]="loteForm.volumenMl"
+                        placeholder="100"
+                        class="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                      <span class="text-xs font-extrabold text-purple-700">ml</span>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-[11px] text-purple-600/90 italic">
+                  ℹ️ Los perfumes no requieren fecha de vencimiento FEFO, registro sanitario DIGEMID ni ubicación física estricta.
+                </p>
+              </div>
+            }
+
+            <!-- CASO B: OTROS (PAÑALES, ASEO, VARIOS) -->
+            @else if (esProductoOtros) {
+              <div class="bg-sky-50/50 border border-sky-200/80 rounded-2xl p-4 space-y-3.5">
+                <div class="flex items-center gap-2 text-sky-900 font-bold text-xs">
+                  <i class="fa-solid fa-box-open text-sky-600"></i>
+                  <span>Especificaciones de Producto (Aseo, Pañales o Misceláneos)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                      Cantidad (Unidades) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="number" min="1"
+                      [(ngModel)]="loteForm.stock"
+                      placeholder="50"
+                      class="w-full bg-white border border-sky-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Vencimiento (Opcional)</label>
+                    <input type="date"
+                      [(ngModel)]="loteForm.vencimiento"
+                      class="w-full bg-white border border-sky-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div class="sm:col-span-7">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                      Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                    </label>
+                    <textarea [(ngModel)]="loteForm.ubicacion"
+                      rows="2"
+                      placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
+                      class="w-full bg-white border border-sky-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-none"></textarea>
+                  </div>
+                  <div class="sm:col-span-5">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Condición de Conservación</label>
+                    <select [(ngModel)]="loteForm.temperatura"
+                      class="w-full bg-white border border-sky-200 rounded-xl p-2 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500">
+                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
+                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco</option>
+                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- CASO C: MEDICAMENTOS (DIGEMID / FEFO) -->
+            @else {
+              <div class="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 space-y-3.5">
+                <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                  <i class="fa-solid fa-pills text-emerald-600"></i>
+                  <span>Control Clínico & FEFO (DIGEMID)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                      Cantidad (Unidades) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="number" min="1"
+                      [(ngModel)]="loteForm.stock"
+                      placeholder="50"
+                      class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                      Vencimiento (FEFO) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="date"
+                      [(ngModel)]="loteForm.vencimiento"
+                      class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Registro Sanitario</label>
+                    <input type="text"
+                      [(ngModel)]="loteForm.registroSanitario"
+                      placeholder="EE-12345"
+                      class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div class="sm:col-span-7">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                      Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                    </label>
+                    <textarea [(ngModel)]="loteForm.ubicacion"
+                      rows="2"
+                      placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
+                      class="w-full bg-white border border-emerald-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"></textarea>
+                  </div>
+                  <div class="sm:col-span-5">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Condición & Temperatura</label>
+                    <select [(ngModel)]="loteForm.temperatura"
+                      class="w-full bg-white border border-emerald-200 rounded-xl p-2 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
+                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
+                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco (&lt; 30°C)</option>
+                      <option value="Caja de Seguridad">Caja Fuerte / Psicotrópicos</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Botón para Agregar a la Lista Temporal -->
+            <div class="flex justify-end pt-2">
+              <button type="button"
+                (click)="agregarProductoALote()"
+                class="px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>+ Agregar Producto a la Lista del Lote</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: RESUMEN DEL LOTE Y PRODUCTOS AGREGADOS -->
+        <div class="lg:col-span-5 space-y-5">
+
+          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center font-bold text-sm">
+                  <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">3. Productos en este Lote</h2>
+                  <p class="text-[11px] text-slate-400">Verifica la lista antes de registrar</p>
+                </div>
+              </div>
+              <span class="text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                {{ totalUnidadesEnLoteTemporal }} und. totales
+              </span>
+            </div>
+
+            <!-- Tarjetas Resumen de Cabecera -->
+            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-xs">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Lote Asignado</span>
+                <span class="font-mono font-bold text-slate-900 text-xs">{{ loteCabecera.lote || 'Sin especificar' }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Fecha Ingreso</span>
+                <span class="font-mono font-bold text-slate-700 text-xs">{{ loteCabecera.fechaIngreso }}</span>
+              </div>
+            </div>
+
+            <!-- Lista de Productos Agregados -->
+            @if (productosEnLoteTemporal.length === 0) {
+              <div class="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/50">
+                <i class="fa-solid fa-boxes-packing text-slate-300 text-4xl mb-3 block"></i>
+                <p class="text-xs font-bold text-slate-700">Aún no hay productos en este lote</p>
+                <p class="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                  Selecciona los productos en la sección izquierda y pulsa <strong>"+ Agregar Producto a la Lista del Lote"</strong>.
+                </p>
+              </div>
+            } @else {
+              <div class="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
+                <div class="max-h-[380px] overflow-y-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider sticky top-0 z-10 border-b border-slate-200">
+                      <tr>
+                        <th class="py-2.5 px-3">Producto / SKU</th>
+                        <th class="py-2.5 px-2 text-center">Tipo</th>
+                        <th class="py-2.5 px-3 text-right">Cant.</th>
+                        <th class="py-2.5 px-2 text-center w-10">Quitar</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                      @for (item of productosEnLoteTemporal; track item.productoId; let i = $index) {
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                          <td class="py-2.5 px-3">
+                            <div class="font-bold text-slate-900 text-xs leading-tight">
+                              {{ item.productoNombre }}
+                            </div>
+                            <div class="font-mono text-[10px] text-slate-400 mt-0.5">
+                              SKU: {{ item.sku }}
+                            </div>
+                            <!-- Detalle específico según tipo -->
+                            <div class="text-[10px] text-slate-500 mt-0.5">
+                              @if (item.tipoProducto === 'PERFUME') {
+                                <span class="text-purple-700 font-semibold">{{ item.concentracionFragancia }} • {{ item.volumenMl }} ml</span>
+                              } @else if (item.tipoProducto === 'MEDICAMENTO') {
+                                <span class="text-emerald-700 font-semibold">Vence: {{ item.vencimiento }}</span>
+                                @if (item.registroSanitario) { <span class="text-slate-400"> • {{ item.registroSanitario }}</span> }
+                              } @else {
+                                <span class="text-sky-700 font-semibold">Vence: {{ item.vencimiento }}</span>
+                              }
+                            </div>
+                          </td>
+                          <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold border"
+                              [ngClass]="{
+                                'bg-purple-50 text-purple-700 border-purple-200': item.tipoProducto === 'PERFUME',
+                                'bg-sky-50 text-sky-700 border-sky-200': item.tipoProducto === 'OTROS',
+                                'bg-emerald-50 text-emerald-700 border-emerald-200': item.tipoProducto === 'MEDICAMENTO'
+                              }">
+                              {{ item.tipoProducto === 'PERFUME' ? '✨ PERF' : (item.tipoProducto === 'OTROS' ? '🧴 OTROS' : '💊 MED') }}
+                            </span>
+                          </td>
+                          <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                            {{ item.stock }}
+                          </td>
+                          <td class="py-2.5 px-2 text-center">
+                            <button type="button"
+                              (click)="eliminarProductoDeLoteTemporal(i)"
+                              title="Quitar este producto del lote"
+                              class="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer">
+                              <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- Botones de Guardado Completo -->
+            <div class="pt-3 border-t border-slate-100 space-y-2.5">
+              <button (click)="guardarLoteCompleto()"
+                [disabled]="productosEnLoteTemporal.length === 0 || !loteCabecera.lote.trim()"
+                class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-xs transition-all shadow-md shadow-emerald-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <i class="fa-solid fa-circle-check text-sm"></i>
+                <span>Guardar Lote Completo ({{ productosEnLoteTemporal.length }} {{ productosEnLoteTemporal.length === 1 ? 'Producto' : 'Productos' }} - {{ totalUnidadesEnLoteTemporal }} Und)</span>
+              </button>
+
+              <button (click)="volverAListado()"
+                class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer text-center">
+                Cancelar y Volver al Inventario
+              </button>
+            </div>
+          </div>
+
+        </div>
+
       </div>
+      }
+
     </div>
+  }
+
   </div>
-}
+
+</div>
 
 <!-- MODAL: CONFIRMAR ELIMINACIÓN DE LOTE -->
 @if (showEliminarModal && loteAEliminar) {
@@ -827,17 +1535,10 @@
           </select>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="font-bold text-slate-700 block mb-1">Químico Responsable:</label>
-            <input [(ngModel)]="quimicoResponsable"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800" />
-          </div>
-          <div>
-            <label class="font-bold text-slate-700 block mb-1">N° Colegio (CQFP):</label>
-            <input [(ngModel)]="cmpQuimico"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono font-bold text-slate-800" />
-          </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Químico Responsable:</label>
+          <input [(ngModel)]="quimicoResponsable"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800" />
         </div>
 
         <div>
@@ -879,7 +1580,7 @@
         <p>Lote Retirado: <strong>{{ actaParaImprimir.lote }}</strong></p>
         <p>Cantidad de Baja: <strong>{{ actaParaImprimir.cantidadBaja }} unidades</strong></p>
         <p>Motivo: {{ actaParaImprimir.motivo }}</p>
-        <p>Responsable: {{ actaParaImprimir.responsable }} ({{ actaParaImprimir.cmpQuimico }})</p>
+        <p>Responsable: {{ actaParaImprimir.responsable }}</p>
         @if (actaParaImprimir.observaciones) {
           <p class="text-[11px] text-slate-500">Obs: {{ actaParaImprimir.observaciones }}</p>
         }
