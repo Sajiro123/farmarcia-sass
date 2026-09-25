@@ -38,7 +38,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     {
       rol: 'ADMIN',
       titulo: 'Administrador Farmacia',
-      nombre: 'Carlos Alberto Mendoza',
+      nombre: 'Ericka Díaz',
       email: 'admin@medicare.com',
       password: 'admin123',
       badge: 'Propietario & Finanzas',

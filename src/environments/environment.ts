@@ -1,7 +1,7 @@
 export const environment = {
-  production: false,
-  saasMasterApiUrl: 'http://localhost:8081/api/v1',
-  masterApiUrl: 'http://localhost:8081/api/v1',
+  production: true,
+  saasMasterApiUrl: 'https://saas-master-api.onrender.com/api/v1',
+  masterApiUrl: 'https://saas-master-api.onrender.com/api/v1',
   farmaciaApiUrl: 'http://localhost:8082/api/v1',
   defaultTenantId: 'a0000000-0000-0000-0000-000000000001',
   defaultSubdomain: 'farmacia-medicare',

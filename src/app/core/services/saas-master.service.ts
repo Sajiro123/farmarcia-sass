@@ -37,7 +37,7 @@ export interface SaasApiResponse<T> {
   providedIn: 'root'
 })
 export class SaasMasterService {
-  private readonly apiUrl = environment.saasMasterApiUrl || 'http://localhost:8081/api/v1';
+  private readonly apiUrl = environment.saasMasterApiUrl || 'https://saas-master-api.onrender.com/api/v1';
   public readonly tenantId = environment.defaultTenantId || 'a0000000-0000-0000-0000-000000000001';
   public readonly defaultDomain = environment.defaultEmailDomain || '@medicare.com';
 

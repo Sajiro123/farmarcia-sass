@@ -63,7 +63,7 @@ export class AuthService {
 
   /**
    * Login unificado compatible con RESTAURANTE y Farmacia:
-   * 1. Consulta al Control Plane (saas-master-api en puerto 8081).
+   * 1. Consulta al Control Plane (SaaS Master API en producción: https://saas-master-api.onrender.com/api/v1).
    * 2. Soporta Superadmin bypass (acceso total irrestricto).
    * 3. Si es usuario de tenant, valida vertical FARMACIA.
    * 4. Mapea rol a 'ADMIN' | 'QUIMICO' | 'CAJERO'.

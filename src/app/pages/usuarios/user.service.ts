@@ -52,7 +52,7 @@ export interface AccionDTO {
 })
 export class UserService {
   private http = inject(HttpClient);
-  private masterApiUrl = (environment.saasMasterApiUrl || 'http://localhost:8081/api/v1') + '/usuarios-negocio';
+  private masterApiUrl = (environment.saasMasterApiUrl || 'https://saas-master-api.onrender.com/api/v1') + '/usuarios-negocio';
 
   get currentTenantId(): string {
     const tid = localStorage.getItem('tenant_id');
