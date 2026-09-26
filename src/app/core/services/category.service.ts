@@ -39,11 +39,21 @@ export function mapTipoProductoToIdTipo(tipo?: TipoProducto | 'TODOS'): number {
 export class CategoryService {
   private supabase = inject(SupabaseService);
 
-  private readonly STORAGE_KEY = 'medicare_categorias_productos_v4';
-  private categorias: CategoriaItem[] = this.cargarCategoriasStorage();
+  private categorias: CategoriaItem[] = [];
 
   constructor() {
+    this.limpiarStorageAntiguo();
     this.sincronizarConSupabase();
+  }
+
+  private limpiarStorageAntiguo(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('medicare_categorias_productos_v4');
+      }
+    } catch {
+      // Ignorar
+    }
   }
 
   private mapSupabaseToCategoria(c: any): CategoriaItem {
@@ -76,35 +86,8 @@ export class CategoryService {
         .then(res => {
           if (res.data && res.data.length > 0) {
             this.categorias = res.data.map(c => this.mapSupabaseToCategoria(c));
-            this.persistirCategorias();
-          }
+                      }
         });
-    }
-  }
-
-  private cargarCategoriasStorage(): CategoriaItem[] {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const guardado = localStorage.getItem(this.STORAGE_KEY);
-        if (guardado) {
-          const parsed: CategoriaItem[] = JSON.parse(guardado);
-          const reales = (parsed || []).filter(c => !c.id.startsWith('cat-med-0') && !c.id.startsWith('cat-perf-0') && !c.id.startsWith('cat-otr-0'));
-          if (reales.length > 0) return reales;
-        }
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  private persistirCategorias(): void {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.categorias));
-      }
-    } catch (e) {
-      console.error('Error persistiendo categorías en storage:', e);
     }
   }
 
@@ -124,8 +107,7 @@ export class CategoryService {
           if (res.data && res.data.length > 0) {
             const mapped = res.data.map(c => this.mapSupabaseToCategoria(c));
             this.categorias = mapped;
-            this.persistirCategorias();
-            return mapped;
+                        return mapped;
           }
           return this.categorias;
         }),
@@ -175,8 +157,7 @@ export class CategoryService {
     } else {
       this.categorias.unshift(nuevoItem);
     }
-    this.persistirCategorias();
-
+    
     // Persistir directamente en Supabase con la columna idtipoproducto
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
@@ -203,8 +184,7 @@ export class CategoryService {
    */
   eliminarCategoria(id: string): Observable<boolean> {
     this.categorias = this.categorias.filter(c => c.id !== id);
-    this.persistirCategorias();
-
+    
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
       return from(

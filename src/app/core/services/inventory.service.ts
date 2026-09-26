@@ -58,14 +58,24 @@ export class InventoryService {
   private supabase = inject(SupabaseService);
   private authService = inject(AuthService);
 
-  private readonly STORAGE_KEY_LOTES = 'medicare_inventario_lotes_v3';
-  private readonly STORAGE_KEY_ACTAS = 'medicare_inventario_actas_v3';
-
-  private lotesInventario: LoteItem[] = this.cargarLotesStorage();
-  private actasBaja: ActaBaja[] = this.cargarActasStorage();
+  lotesInventario: LoteItem[] = [];
+  private actasBaja: ActaBaja[] = [];
 
   constructor() {
+    this.limpiarStorageAntiguo();
     this.sincronizarLotesSupabase();
+  }
+
+  private limpiarStorageAntiguo(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('medicare_inventario_lotes_v3');
+        localStorage.removeItem('medicare_inventario_actas_v3');
+        localStorage.removeItem('medicare_inventario_lotes_v1');
+      }
+    } catch {
+      // Ignorar errores
+    }
   }
 
   private mapSupabaseToLote(s: any): LoteItem {
@@ -103,55 +113,6 @@ export class InventoryService {
     };
   }
 
-  private cargarLotesStorage(): LoteItem[] {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('medicare_inventario_lotes_v1');
-        const guardado = localStorage.getItem(this.STORAGE_KEY_LOTES);
-        if (guardado) {
-          const parsed = JSON.parse(guardado);
-          const reales = (parsed || []).filter((l: any) => !String(l.id).startsWith('lote-0'));
-          if (reales.length > 0) return reales;
-        }
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  private persistirLotes(): void {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.STORAGE_KEY_LOTES, JSON.stringify(this.lotesInventario));
-      }
-    } catch (e) {
-      console.error('Error persistiendo lotes en storage:', e);
-    }
-  }
-
-  private cargarActasStorage(): ActaBaja[] {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const guardado = localStorage.getItem(this.STORAGE_KEY_ACTAS);
-        return guardado ? JSON.parse(guardado) : [];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  private persistirActas(): void {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.STORAGE_KEY_ACTAS, JSON.stringify(this.actasBaja));
-      }
-    } catch (e) {
-      console.error('Error persistiendo actas en storage:', e);
-    }
-  }
-
   private sincronizarLotesSupabase(): void {
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
@@ -164,12 +125,34 @@ export class InventoryService {
           almacenes!inner (id, nombre, sucursal_id, sucursales(id, nombre))
         `)
         .then(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data !== null && Array.isArray(res.data)) {
             this.lotesInventario = res.data.map(s => this.mapSupabaseToLote(s));
-            this.persistirLotes();
-          }
+                      }
         });
     }
+  }
+
+  /**
+   * Vaciar completamente el inventario (para reiniciar pruebas desde cero)
+   */
+  vaciarInventario(): Observable<boolean> {
+    this.lotesInventario = [];
+    this.actasBaja = [];
+    this.limpiarStorageAntiguo();
+
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      return from(
+        client
+          .from('stock_inventario')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000')
+      ).pipe(
+        map(() => true),
+        catchError(() => of(true))
+      );
+    }
+    return of(true);
   }
 
   // ==========================================
@@ -200,13 +183,16 @@ export class InventoryService {
 
       return from(query).pipe(
         map(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data !== null && Array.isArray(res.data) && !res.error) {
             const mapped = res.data.map(s => this.mapSupabaseToLote(s));
             // Actualizar memoria
-            const otherSedes = this.lotesInventario.filter(l => l.sucursalId && l.sucursalId !== targetSede);
-            this.lotesInventario = [...otherSedes, ...mapped];
-            this.persistirLotes();
-
+            if (targetSede && targetSede !== 'TODAS') {
+              const otherSedes = this.lotesInventario.filter(l => l.sucursalId && l.sucursalId !== targetSede);
+              this.lotesInventario = [...otherSedes, ...mapped];
+            } else {
+              this.lotesInventario = mapped;
+            }
+            
             return mapped.sort((a, b) => new Date(a.vencimiento).getTime() - new Date(b.vencimiento).getTime());
           }
           return this.filtrarLotesLocales(targetSede);
@@ -260,7 +246,7 @@ export class InventoryService {
   /**
    * Agregar un nuevo lote al inventario e insertarlo en Supabase
    */
-  agregarLote(lote: LoteItem): Observable<LoteItem> {
+  async agregarLoteAsync(lote: LoteItem): Promise<LoteItem> {
     if (!lote.id || String(lote.id).startsWith('lote-')) {
       lote.id = crypto.randomUUID();
     }
@@ -270,84 +256,109 @@ export class InventoryService {
     const targetSede = lote.sucursalId || this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
     lote.sucursalId = targetSede;
 
-    const now = Date.now();
-    const vtoDate = new Date(lote.vencimiento).getTime();
-    lote.dias = isNaN(vtoDate) ? 999 : Math.round((vtoDate - now) / (1000 * 3600 * 24));
+    // Normalizar fecha de vencimiento para base de datos (PostgreSQL tipo DATE)
+    const fechaVtoValida = (lote.vencimiento && lote.vencimiento !== 'No expira')
+      ? lote.vencimiento
+      : '2099-12-31';
 
-    this.lotesInventario.push({ ...lote });
-    this.persistirLotes();
+    const now = Date.now();
+    const vtoDate = new Date(fechaVtoValida).getTime();
+    lote.dias = isNaN(vtoDate) ? 99999 : Math.round((vtoDate - now) / (1000 * 3600 * 24));
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
-      // 1. Crear lote en lotes_producto
-      const loteDbId = crypto.randomUUID();
-      client.from('lotes_producto').insert([{
-        id: loteDbId,
-        producto_id: lote.productoId,
-        numero_lote: lote.lote,
-        fecha_vencimiento: lote.vencimiento,
-        registro_sanitario: lote.registroSanitario || 'EN-04512',
-        estado: 'ACTIVO'
-      }]).then(() => {
-        // 2. Obtener almacen de la sede
-        client.from('almacenes').select('id').eq('sucursal_id', targetSede).limit(1).then(almRes => {
-          const almId = almRes.data?.[0]?.id || '22222222-2222-2222-2222-222222222222';
-          // 3. Crear stock_inventario
-          client.from('stock_inventario').insert([{
-            id: lote.id,
-            almacen_id: almId,
-            producto_id: lote.productoId,
-            lote_id: loteDbId,
-            cantidad: Number(lote.stock) || 0
-          }]).then();
-        });
-      });
+      try {
+        // 1. Crear lote en lotes_producto
+        const loteDbId = crypto.randomUUID();
+        await client.from('lotes_producto').insert([{
+          id: loteDbId,
+          producto_id: lote.productoId,
+          numero_lote: lote.lote,
+          fecha_vencimiento: fechaVtoValida,
+          registro_sanitario: lote.registroSanitario || 'EN-04512',
+          estado: 'ACTIVO'
+        }]);
+
+        // 2. Obtener almacen de la sede de destino
+        const almRes = await client.from('almacenes').select('id').eq('sucursal_id', targetSede).limit(1);
+        const almId = almRes.data?.[0]?.id || (targetSede === '45fca103-2669-48b8-8a1c-7e5380da5e1f' ? '7b2a76c2-1007-417c-b960-aa2e6394489c' : '22222222-2222-2222-2222-222222222222');
+
+        // 3. Crear registro en stock_inventario
+        await client.from('stock_inventario').insert([{
+          id: lote.id,
+          almacen_id: almId,
+          producto_id: lote.productoId,
+          lote_id: loteDbId,
+          cantidad: Number(lote.stock) || 0
+        }]);
+      } catch (err) {
+        console.error('[InventoryService] Error registrando lote en Supabase:', err);
+      }
     }
 
-    return of({ ...lote });
+    this.lotesInventario.push({ ...lote });
+    return { ...lote };
+  }
+
+  agregarLote(lote: LoteItem): Observable<LoteItem> {
+    return from(this.agregarLoteAsync(lote));
   }
 
   /**
-   * Agregar múltiples lotes en bloque al inventario
+   * Agregar múltiples lotes en bloque al inventario esperando confirmación de Supabase
    */
   agregarLotesBatch(lotes: LoteItem[]): Observable<LoteItem[]> {
-    lotes.forEach(l => this.agregarLote(l).subscribe());
-    return of(lotes);
+    const promises = lotes.map(l => this.agregarLoteAsync(l));
+    return from(Promise.all(promises));
   }
 
   /**
    * Actualizar un lote existente en el inventario y Supabase
    */
-  actualizarLote(lote: LoteItem): Observable<LoteItem> {
+  async actualizarLoteAsync(lote: LoteItem): Promise<LoteItem> {
     const idx = this.lotesInventario.findIndex(l => l.id === lote.id);
     if (idx >= 0) {
       this.lotesInventario[idx] = { ...lote };
-      this.persistirLotes();
     }
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
-      client.from('stock_inventario').update({
-        cantidad: Number(lote.stock) || 0
-      }).eq('id', lote.id).then();
+      try {
+        await client.from('stock_inventario').update({
+          cantidad: Number(lote.stock) || 0
+        }).eq('id', lote.id);
+      } catch (err) {
+        console.error('[InventoryService] Error actualizando stock en Supabase:', err);
+      }
     }
 
-    return of({ ...lote });
+    return { ...lote };
+  }
+
+  actualizarLote(lote: LoteItem): Observable<LoteItem> {
+    return from(this.actualizarLoteAsync(lote));
   }
 
   /**
    * Eliminar un lote del inventario
    */
-  eliminarLote(id: string | number): Observable<boolean> {
+  async eliminarLoteAsync(id: string | number): Promise<boolean> {
     this.lotesInventario = this.lotesInventario.filter(l => l.id !== id);
-    this.persistirLotes();
-
+    
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
-      client.from('stock_inventario').delete().eq('id', id).then();
+      try {
+        await client.from('stock_inventario').delete().eq('id', id);
+      } catch (err) {
+        console.error('[InventoryService] Error eliminando lote en Supabase:', err);
+      }
     }
 
-    return of(true);
+    return true;
+  }
+
+  eliminarLote(id: string | number): Observable<boolean> {
+    return from(this.eliminarLoteAsync(id));
   }
 
   /**
@@ -357,8 +368,7 @@ export class InventoryService {
     const idx = this.lotesInventario.findIndex(l => l.id === loteId);
     if (idx >= 0 && this.lotesInventario[idx].stock >= cantidad) {
       this.lotesInventario[idx].stock -= cantidad;
-      this.persistirLotes();
-
+      
       const client = this.supabase.client;
       if (this.supabase.isConfigured && client) {
         client.from('stock_inventario').update({
@@ -398,8 +408,7 @@ export class InventoryService {
       }
     }
 
-    this.persistirLotes();
-    return of(restante <= 0);
+        return of(restante <= 0);
   }
 
   /**
@@ -414,8 +423,7 @@ export class InventoryService {
       const idx = this.lotesInventario.findIndex(l => l.id === loteProd[0].id);
       if (idx >= 0) {
         this.lotesInventario[idx].stock += cantidadUnidades;
-        this.persistirLotes();
-
+        
         const client = this.supabase.client;
         if (this.supabase.isConfigured && client) {
           client.from('stock_inventario').update({
@@ -441,8 +449,7 @@ export class InventoryService {
     const idx = this.lotesInventario.findIndex(l => l.id == acta.loteId || l.lote == acta.lote);
     if (idx !== -1) {
       this.lotesInventario[idx].stock = Math.max(0, this.lotesInventario[idx].stock - acta.cantidadBaja);
-      this.persistirLotes();
-
+      
       const client = this.supabase.client;
       if (this.supabase.isConfigured && client) {
         client.from('stock_inventario').update({
@@ -452,7 +459,6 @@ export class InventoryService {
     }
 
     this.actasBaja.unshift(acta);
-    this.persistirActas();
-    return of(true);
+        return of(true);
   }
 }

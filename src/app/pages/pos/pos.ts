@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, inject, HostListener, ViewChild, ElementRef, AfterViewInit, ChangeDetectorRef, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of, timeout, catchError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
 import { InventoryService } from '../../core/services/inventory.service';
@@ -88,6 +89,36 @@ export class Pos implements OnInit, AfterViewInit {
   private decolectaService = inject(DecolectaService);
   private customerService = inject(CustomerService);
   public storageService = inject(StorageService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
+
+  constructor() {
+    this.limpiarStorageResidual();
+    // Reactivar carga automática de existencias al conmutar de sede
+    effect(() => {
+      const sede = this.authService.activeSede();
+      if (sede) {
+        this.cargarProductosYVentas();
+      }
+    });
+  }
+
+  private limpiarStorageResidual(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('medicare_inventario_lotes_v3');
+        localStorage.removeItem('medicare_inventario_lotes_v1');
+        localStorage.removeItem('medicare_catalogo_maestro_v3');
+        localStorage.removeItem('medicare_catalogo_maestro_v2');
+        localStorage.removeItem('medicare_inventario_actas_v3');
+        localStorage.removeItem('medicare_categorias_productos_v4');
+      }
+    } catch {
+      // Ignorar entornos sin storage
+    }
+  }
+
+  cargandoProductos = true;
   
   // ================= 1. CONTROL DE CAJA Y TURNOS =================
 
@@ -393,96 +424,151 @@ export class Pos implements OnInit, AfterViewInit {
   }
 
   cargarProductosYVentas() {
+    this.cargandoProductos = true;
+    this.cdr.markForCheck();
     const activeSedeId = this.authService.activeSede()?.id;
-    this.productService.listarCatalogoActivos().subscribe(catalogo => {
-      this.inventoryService.listarLotesFefo(activeSedeId).subscribe(lotes => {
-        this.productos = (catalogo || []).map(p => {
-          const lotesProd = (lotes || []).filter(l => l.productoId === p.id && l.stock > 0);
-          const stockReal = lotesProd.length > 0
-            ? lotesProd.reduce((sum, l) => sum + l.stock, 0)
-            : (p.stockDisponible || 0);
-          const loteMasCercano = lotesProd[0]; // Ya ordenado FEFO
 
-          const esPerfume = p.tipoProducto === 'PERFUME' || p.sku?.startsWith('PERF') || p.categoriaNombre === 'Perfumería Fina';
-          const esOtros = p.tipoProducto === 'OTROS' || p.sku?.startsWith('OTR');
-          const esSoloUnidad = esPerfume || esOtros;
-          const tipoProd: 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
+    // Si existen productos previamente en memoria o caché, mapearlos inmediatamente
+    if (this.productService.productosCatalogo && this.productService.productosCatalogo.length > 0) {
+      this.mapearProductos(this.productService.productosCatalogo, this.inventoryService.lotesInventario || []);
+    }
 
-          const vtoStr = loteMasCercano && loteMasCercano.vencimiento
-            ? (loteMasCercano.vencimiento === 'No expira' ? 'No expira' : loteMasCercano.vencimiento.slice(2, 7).replace('-', '/'))
-            : (esPerfume ? 'No expira' : (p.creadoEn ? '12/25' : '11/25'));
-
-          const precioBase = p.precioVenta || p.precioUnidad || p.precioCaja || 0;
-
-          if (esSoloUnidad) {
-            return {
-              id: p.id,
-              sku: p.sku || '',
-              codigoBarra: p.codigoBarra || '',
-              tipoProducto: tipoProd,
-              nombre: p.nombreComercial,
-              principioActivo: p.principioActivo || (esPerfume ? (p.marca || 'Perfumería') : (p.marca || 'Cuidado General')),
-              concentracion: p.concentracion || '',
-              laboratorio: p.laboratorio || (esPerfume ? (p.marca || 'Cosmética') : (p.marca || 'Fabricante')),
-              tipo: esPerfume ? ('Perfume' + (p.volumenMl ? ` • ${p.volumenMl}ml` : '')) : 'Unidad',
-              categoria: p.categoriaNombre || (esPerfume ? 'Perfumería Fina' : 'Cuidado Personal'),
-              ubicacion: p.ubicacionAlmacen || 'Vitrina / Estante',
-              requiereReceta: false,
-              esControlado: false,
-              lote: loteMasCercano ? loteMasCercano.lote : 'SIN-LOTE',
-              vto: vtoStr,
-              diasParaVencer: esPerfume ? 99999 : (loteMasCercano ? loteMasCercano.dias : 999),
-              stockUnidades: stockReal,
-              unidadesPorCaja: 1,
-              unidadesPorBlister: 1,
-              precioCaja: precioBase,
-              precioBlister: 0,
-              precioUnidad: precioBase,
-              imagenUrl: p.imagenUrl || this.storageService.obtenerImagenPorDefecto(p.nombreComercial, p.categoriaNombre)
-            };
+    // Consultar catálogo activo y lotes FEFO en paralelo desde Supabase con timeout de protección
+    forkJoin({
+      catalogo: this.productService.listarCatalogoActivos().pipe(
+        timeout(8000),
+        catchError(err => {
+          console.warn('Aviso timeout/error cargando catálogo activo:', err);
+          return of(this.productService.productosCatalogo || []);
+        })
+      ),
+      lotes: this.inventoryService.listarLotesFefo(activeSedeId).pipe(
+        timeout(8000),
+        catchError(err => {
+          console.warn('Aviso timeout/error cargando lotes FEFO:', err);
+          return of(this.inventoryService.lotesInventario || []);
+        })
+      )
+    }).subscribe({
+      next: ({ catalogo, lotes }) => {
+        this.ngZone.run(() => {
+          this.cargandoProductos = false;
+          this.mapearProductos(catalogo || [], lotes || []);
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        this.ngZone.run(() => {
+          this.cargandoProductos = false;
+          console.warn('Aviso cargando productos en POS:', err);
+          if (this.productos.length === 0 && this.productService.productosCatalogo?.length > 0) {
+            this.mapearProductos(this.productService.productosCatalogo, this.inventoryService.lotesInventario || []);
           }
-
-          return {
-            id: p.id,
-            sku: p.sku || '',
-            codigoBarra: p.codigoBarra || '',
-            tipoProducto: 'MEDICAMENTO',
-            nombre: p.nombreComercial,
-            principioActivo: p.principioActivo || 'Genérico',
-            concentracion: p.concentracion || '',
-            laboratorio: p.laboratorio || 'Laboratorio',
-            tipo: p.unidadesPorBlister ? `Blíster x ${p.unidadesPorBlister}` : 'Caja',
-            categoria: p.categoriaNombre || 'Venta Libre (OTC)',
-            ubicacion: p.ubicacionAlmacen || 'P1-E1-N1',
-            requiereReceta: !!p.requiereReceta,
-            esControlado: !!p.esControlado,
-            lote: loteMasCercano ? loteMasCercano.lote : 'SIN-LOTE',
-            vto: vtoStr,
-            diasParaVencer: loteMasCercano ? loteMasCercano.dias : 999,
-            stockUnidades: stockReal,
-            unidadesPorCaja: p.unidadesPorCaja || 20,
-            unidadesPorBlister: p.unidadesPorBlister || 10,
-            precioCaja: p.precioCaja || p.precioVenta || 0,
-            precioBlister: p.precioBlister || (p.precioCaja ? Number((p.precioCaja / Math.max(1, (p.unidadesPorCaja || 20) / (p.unidadesPorBlister || 10))).toFixed(2)) : p.precioVenta || 0),
-            precioUnidad: p.precioUnidad || (p.precioCaja ? Number((p.precioCaja / (p.unidadesPorCaja || 20)).toFixed(2)) : p.precioVenta || 0),
-            imagenUrl: p.imagenUrl || this.storageService.obtenerImagenPorDefecto(p.nombreComercial, p.categoriaNombre)
-          };
+          this.filterProducts();
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
         });
-
-        // Actualizar categorías dinámicamente según productos en el catálogo
-        const catSet = new Set(['Todos', 'Medicamentos', 'Perfumes', 'Otros', 'Analgésicos', 'Antibióticos', 'Cardiología', 'Venta Libre (OTC)', 'Cuidado Personal', 'Vitaminas']);
-        this.productos.forEach(pr => {
-          if (pr.categoria) catSet.add(pr.categoria);
-        });
-        this.categories = Array.from(catSet);
-
-        this.filterProducts();
-      });
+      }
     });
 
     if (this.ventaService.ventas.length > 0) {
       this.ventasTurno = this.ventaService.ventas as any;
     }
+  }
+
+  private mapearProductos(catalogo: any[], lotes: any[]) {
+    const activeSedeId = this.authService.activeSede()?.id;
+
+    this.productos = (catalogo || []).map(p => {
+      // Filtrar lotes estrictamente para este producto y para la sede activa (si hay sede seleccionada y no es 'TODAS')
+      const lotesProd = (lotes || []).filter(l => {
+        const prodMatch = (l.productoId === p.id || l.productoId === String(p.id));
+        if (!prodMatch) return false;
+        if (activeSedeId && activeSedeId !== 'TODAS') {
+          if (l.sucursalId && l.sucursalId !== activeSedeId) return false;
+        }
+        return Number(l.stock) > 0;
+      });
+
+      // ¡STOCK REAL DIRECTO DE LA BASE DE DATOS! Si no hay lotes en el almacén de la sede, el stock es 0 estrictamente
+      const stockReal = lotesProd.reduce((sum, l) => sum + (Number(l.stock) || 0), 0);
+      const loteMasCercano = lotesProd[0]; // Ya ordenado FEFO
+
+      const esPerfume = p.tipoProducto === 'PERFUME' || p.sku?.startsWith('PERF') || p.categoriaNombre === 'Perfumería Fina' || p.categoria?.nombre === 'Perfumería Fina';
+      const esOtros = p.tipoProducto === 'OTROS' || p.sku?.startsWith('OTR');
+      const esSoloUnidad = esPerfume || esOtros;
+      const tipoProd: 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
+
+      const vtoStr = loteMasCercano && loteMasCercano.vencimiento
+        ? (loteMasCercano.vencimiento === 'No expira' ? 'No expira' : loteMasCercano.vencimiento.slice(2, 7).replace('-', '/'))
+        : (esPerfume ? 'No expira' : (stockReal > 0 ? '12/26' : 'Sin Lote'));
+
+      const precioBase = Number(p.precioVenta) || Number(p.precioUnidad) || Number(p.precioCaja) || 0;
+
+      if (esSoloUnidad) {
+        return {
+          id: p.id,
+          sku: p.sku || '',
+          codigoBarra: p.codigoBarra || '',
+          tipoProducto: tipoProd,
+          nombre: p.nombreComercial || p.nombre || 'Producto',
+          principioActivo: p.principioActivo || (esPerfume ? (p.marca || 'Perfumería') : (p.marca || 'Cuidado General')),
+          concentracion: p.concentracion || '',
+          laboratorio: p.laboratorio || (esPerfume ? (p.marca || 'Cosmética') : (p.marca || 'Fabricante')),
+          tipo: esPerfume ? ('Perfume' + (p.volumenMl ? ` • ${p.volumenMl}ml` : '')) : 'Unidad',
+          categoria: p.categoriaNombre || (esPerfume ? 'Perfumería Fina' : 'Cuidado Personal'),
+          ubicacion: loteMasCercano?.ubicacion || (stockReal > 0 ? (p.ubicacionAlmacen || 'Vitrina / Estante') : 'Sin Stock'),
+          requiereReceta: false,
+          esControlado: false,
+          lote: loteMasCercano ? loteMasCercano.lote : 'SIN-LOTE',
+          vto: vtoStr,
+          diasParaVencer: esPerfume ? 99999 : (loteMasCercano ? loteMasCercano.dias : 0),
+          stockUnidades: stockReal,
+          unidadesPorCaja: 1,
+          unidadesPorBlister: 1,
+          precioCaja: precioBase,
+          precioBlister: 0,
+          precioUnidad: precioBase,
+          imagenUrl: p.imagenUrl || this.storageService.obtenerImagenPorDefecto(p.nombreComercial, p.categoriaNombre)
+        };
+      }
+
+      return {
+        id: p.id,
+        sku: p.sku || '',
+        codigoBarra: p.codigoBarra || '',
+        tipoProducto: 'MEDICAMENTO',
+        nombre: p.nombreComercial || p.nombre || 'Medicamento',
+        principioActivo: p.principioActivo || 'Genérico',
+        concentracion: p.concentracion || '',
+        laboratorio: p.laboratorio || 'Laboratorio',
+        tipo: p.unidadesPorBlister ? `Blíster x ${p.unidadesPorBlister}` : 'Caja',
+        categoria: p.categoriaNombre || 'Venta Libre (OTC)',
+        ubicacion: loteMasCercano?.ubicacion || (stockReal > 0 ? (p.ubicacionAlmacen || 'P1-E1-N1') : 'Sin Stock'),
+        requiereReceta: !!p.requiereReceta,
+        esControlado: !!p.esControlado,
+        lote: loteMasCercano ? loteMasCercano.lote : 'SIN-LOTE',
+        vto: vtoStr,
+        diasParaVencer: loteMasCercano ? loteMasCercano.dias : 0,
+        stockUnidades: stockReal,
+        unidadesPorCaja: p.unidadesPorCaja || 20,
+        unidadesPorBlister: p.unidadesPorBlister || 10,
+        precioCaja: Number(p.precioCaja) || Number(p.precioVenta) || 0,
+        precioBlister: Number(p.precioBlister) || (p.precioCaja ? Number((p.precioCaja / Math.max(1, (p.unidadesPorCaja || 20) / (p.unidadesPorBlister || 10))).toFixed(2)) : Number(p.precioVenta) || 0),
+        precioUnidad: Number(p.precioUnidad) || (p.precioCaja ? Number((p.precioCaja / (p.unidadesPorCaja || 20)).toFixed(2)) : Number(p.precioVenta) || 0),
+        imagenUrl: p.imagenUrl || this.storageService.obtenerImagenPorDefecto(p.nombreComercial, p.categoriaNombre)
+      };
+    });
+
+    // Actualizar categorías dinámicamente según productos en el catálogo
+    const catSet = new Set(['Todos', 'Medicamentos', 'Perfumes', 'Otros']);
+    this.productos.forEach(pr => {
+      if (pr.categoria) catSet.add(pr.categoria);
+    });
+    this.categories = Array.from(catSet);
+
+    this.filterProducts();
   }
 
   // --- MÉTODOS DE CAJA ---
@@ -864,7 +950,12 @@ export class Pos implements OnInit, AfterViewInit {
       } else if (this.selectedCategory === 'Otros') {
         result = result.filter(p => p.tipoProducto === 'OTROS');
       } else {
-        result = result.filter(p => p.categoria === this.selectedCategory);
+        const catNorm = this.selectedCategory.toLowerCase();
+        result = result.filter(p => 
+          p.categoria?.toLowerCase() === catNorm || 
+          p.categoria?.toLowerCase().includes(catNorm) ||
+          catNorm.includes(p.categoria?.toLowerCase() || '')
+        );
       }
     }
     if (this.searchQuery.trim()) {
@@ -878,6 +969,7 @@ export class Pos implements OnInit, AfterViewInit {
       );
     }
     this.filteredProducts = result;
+    this.cdr.markForCheck();
   }
 
   // --- LIMPIEZA RÁPIDA DE BÚSQUEDA ---

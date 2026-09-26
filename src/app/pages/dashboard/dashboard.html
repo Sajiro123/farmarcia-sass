@@ -1,88 +1,337 @@
-<div class="space-y-6 animate-fade-in">
+<div class="space-y-6 animate-fade-in pb-12">
 
-  <!-- Header Dashboard -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-        <i class="pi pi-chart-bar text-emerald-600 dark:text-emerald-400 text-2xl"></i>
-        Dashboard & Indicadores Clave de Desempeño (KPIs)
-      </h1>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Métricas clínicas y financieras en tiempo real para la toma de decisiones
+  <!-- ======================================================== -->
+  <!-- 1. ENCABEZADO & BARRA DE FILTROS REACTIVOS POR FECHA Y SEDE -->
+  <!-- ======================================================== -->
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-sm space-y-4">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <i class="pi pi-chart-bar text-lg"></i>
+          </div>
+          <span>Dashboard & Indicadores Clave de Desempeño (KPIs)</span>
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Métricas de facturación, medios de pago (Yape/Efectivo/Plin), rentabilidad neta y trazabilidad de productos vendidos.
+        </p>
+      </div>
+
+      <!-- Sede Selector & Botón Actualizar -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Selector de Sede -->
+        <div class="relative">
+          <select
+            [ngModel]="sedeFiltroId"
+            (ngModelChange)="onSedeChange($event)"
+            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer appearance-none">
+            <option value="TODAS">🏢 Todas las Sedes (Consolidado)</option>
+            @for (s of sedesDisponibles; track s.id) {
+              <option [value]="s.id">📍 {{ s.nombre }}</option>
+            }
+          </select>
+          <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+            <i class="pi pi-chevron-down"></i>
+          </div>
+        </div>
+
+        <!-- Botón Recargar / Actualizar -->
+        <button
+          (click)="cargarMetricas()"
+          title="Actualizar datos desde la base de datos"
+          class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5">
+          <i class="pi pi-refresh text-xs" [class.pi-spin]="cargando"></i>
+          <span>{{ cargando ? 'Cargando...' : 'Actualizar' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Filtros de Fecha Rápidos -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+      <!-- Botones de Acceso Rápido -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
+          <i class="pi pi-calendar text-emerald-600"></i> Periodo:
+        </span>
+        
+        <button
+          (click)="setModoFecha('HOY')"
+          [class.bg-emerald-600]="filtroFechaModo === 'HOY'"
+          [class.text-white]="filtroFechaModo === 'HOY'"
+          [class.bg-slate-100]="filtroFechaModo !== 'HOY'"
+          [class.text-slate-700]="filtroFechaModo !== 'HOY'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:opacity-90 dark:bg-slate-900 dark:text-slate-300">
+          Hoy
+        </button>
+
+        <button
+          (click)="setModoFecha('AYER')"
+          [class.bg-emerald-600]="filtroFechaModo === 'AYER'"
+          [class.text-white]="filtroFechaModo === 'AYER'"
+          [class.bg-slate-100]="filtroFechaModo !== 'AYER'"
+          [class.text-slate-700]="filtroFechaModo !== 'AYER'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:opacity-90 dark:bg-slate-900 dark:text-slate-300">
+          Ayer
+        </button>
+
+        <button
+          (click)="setModoFecha('SEMANA')"
+          [class.bg-emerald-600]="filtroFechaModo === 'SEMANA'"
+          [class.text-white]="filtroFechaModo === 'SEMANA'"
+          [class.bg-slate-100]="filtroFechaModo !== 'SEMANA'"
+          [class.text-slate-700]="filtroFechaModo !== 'SEMANA'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:opacity-90 dark:bg-slate-900 dark:text-slate-300">
+          Últimos 7 Días
+        </button>
+
+        <button
+          (click)="setModoFecha('MES')"
+          [class.bg-emerald-600]="filtroFechaModo === 'MES'"
+          [class.text-white]="filtroFechaModo === 'MES'"
+          [class.bg-slate-100]="filtroFechaModo !== 'MES'"
+          [class.text-slate-700]="filtroFechaModo !== 'MES'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:opacity-90 dark:bg-slate-900 dark:text-slate-300">
+          Este Mes
+        </button>
+
+        <button
+          (click)="setModoFecha('TODOS')"
+          [class.bg-emerald-600]="filtroFechaModo === 'TODOS'"
+          [class.text-white]="filtroFechaModo === 'TODOS'"
+          [class.bg-slate-100]="filtroFechaModo !== 'TODOS'"
+          [class.text-slate-700]="filtroFechaModo !== 'TODOS'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:opacity-90 dark:bg-slate-900 dark:text-slate-300">
+          Histórico Completo
+        </button>
+      </div>
+
+      <!-- Selector de Fecha Específica / Calendario -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+          Seleccionar Día:
+        </label>
+        <input
+          type="date"
+          [(ngModel)]="fechaSeleccionada"
+          (change)="onFechaChange()"
+          class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 font-mono font-bold text-xs text-slate-800 dark:text-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer" />
+        
+        <span class="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-lg text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+          {{ labelPeriodoActivo }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 2. TARJETAS DE KPIS PRINCIPALES: VENTAS & MEDIOS DE PAGO -->
+  <!-- ======================================================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+    <!-- KPI 1: VENTA TOTAL DEL DÍA/PERIODO -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-3 relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ventas Totales</span>
+        <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold">
+          <i class="pi pi-chart-line text-sm"></i>
+        </div>
+      </div>
+      <div>
+        <p class="text-2xl font-black text-slate-900 dark:text-white font-mono">
+          S/ {{ resumen.totalVentas | number:'1.2-2' }}
+        </p>
+        <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">
+          <i class="pi pi-check-circle"></i>
+          <span>{{ resumen.ticketsEmitidos }} ticket{{ resumen.ticketsEmitidos === 1 ? '' : 's' }} emitido{{ resumen.ticketsEmitidos === 1 ? '' : 's' }}</span>
+        </p>
+      </div>
+      <p class="text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-700/60 pt-2 font-medium">
+        Ticket Prom: S/ {{ resumen.ticketPromedio | number:'1.2-2' }}
       </p>
     </div>
 
-    <div class="flex items-center gap-2">
-      <span class="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-        <i class="pi pi-clock"></i> Actualizado en vivo
-      </span>
-    </div>
-  </div>
-
-  <!-- 4 TARJETAS DE KPIS PRINCIPALES -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    @for (kpi of kpis; track kpi.label) {
-      <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ kpi.label }}</span>
-          <div class="w-8 h-8 rounded-xl {{ kpi.color }} flex items-center justify-center">
-            <i class="{{ kpi.icono }} text-sm"></i>
-          </div>
+    <!-- KPI 2: TOTAL YAPE (DIGITAL) -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-purple-200 dark:border-purple-800/60 shadow-2xs space-y-3 relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">Total Yape (BCP)</span>
+        <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 flex items-center justify-center font-bold">
+          <i class="pi pi-mobile text-sm"></i>
         </div>
-
-        <div>
-          <p class="text-2xl font-black text-slate-900 dark:text-white font-mono">{{ kpi.valor }}</p>
-          <div class="flex items-center gap-1.5 mt-1">
-            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-              <i class="pi pi-arrow-up text-[10px]"></i>
-              {{ kpi.cambio }}
-            </span>
-          </div>
-        </div>
-
-        <p class="text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-700/60 pt-2">{{ kpi.detalle }}</p>
       </div>
-    }
+      <div>
+        <p class="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">
+          S/ {{ resumen.totalYape | number:'1.2-2' }}
+        </p>
+        <p class="text-[11px] text-purple-600 dark:text-purple-400 font-bold mt-1">
+          {{ resumen.totalVentas > 0 ? (resumen.totalYape / resumen.totalVentas * 100 | number:'1.0-0') : 0 }}% del total recaudado
+        </p>
+      </div>
+      <p class="text-[11px] text-slate-400 border-t border-purple-100 dark:border-slate-700/60 pt-2 font-medium">
+        Billetera digital sin comisión
+      </p>
+    </div>
+
+    <!-- KPI 3: TOTAL EFECTIVO (CAJA) -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-teal-200 dark:border-teal-800/60 shadow-2xs space-y-3 relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">Total Efectivo</span>
+        <div class="w-8 h-8 rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 flex items-center justify-center font-bold">
+          <i class="pi pi-money-bill text-sm"></i>
+        </div>
+      </div>
+      <div>
+        <p class="text-2xl font-black text-teal-700 dark:text-teal-300 font-mono">
+          S/ {{ resumen.totalEfectivo | number:'1.2-2' }}
+        </p>
+        <p class="text-[11px] text-teal-600 dark:text-teal-400 font-bold mt-1">
+          {{ resumen.totalVentas > 0 ? (resumen.totalEfectivo / resumen.totalVentas * 100 | number:'1.0-0') : 0 }}% del total recaudado
+        </p>
+      </div>
+      <p class="text-[11px] text-slate-400 border-t border-teal-100 dark:border-slate-700/60 pt-2 font-medium">
+        Dinero disponible en gaveta
+      </p>
+    </div>
+
+    <!-- KPI 4: PLIN / TARJETAS / OTROS -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-cyan-200 dark:border-cyan-800/60 shadow-2xs space-y-3 relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">Plin / Tarjetas</span>
+        <div class="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 flex items-center justify-center font-bold">
+          <i class="pi pi-credit-card text-sm"></i>
+        </div>
+      </div>
+      <div>
+        <p class="text-2xl font-black text-cyan-700 dark:text-cyan-300 font-mono">
+          S/ {{ (resumen.totalPlin + resumen.totalTarjeta + resumen.totalOtros) | number:'1.2-2' }}
+        </p>
+        <p class="text-[11px] text-cyan-600 dark:text-cyan-400 font-bold mt-1">
+          Plin: S/ {{ resumen.totalPlin | number:'1.2-2' }} | Tarj: S/ {{ resumen.totalTarjeta | number:'1.2-2' }}
+        </p>
+      </div>
+      <p class="text-[11px] text-slate-400 border-t border-cyan-100 dark:border-slate-700/60 pt-2 font-medium">
+        Cobros electrónicos auxiliares
+      </p>
+    </div>
+
+    <!-- KPI 5: GANANCIA NETA & MARGEN -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs space-y-3 relative overflow-hidden bg-gradient-to-b from-white to-emerald-50/30 dark:from-slate-800 dark:to-emerald-950/20">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Ganancia Neta</span>
+        <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm shadow-emerald-500/30">
+          <i class="pi pi-wallet text-sm"></i>
+        </div>
+      </div>
+      <div>
+        <p class="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono">
+          +S/ {{ resumen.totalGananciaNeta | number:'1.2-2' }}
+        </p>
+        <p class="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1">
+          Margen Neto: {{ resumen.margenNetoGlobal }}%
+        </p>
+      </div>
+      <p class="text-[11px] text-slate-400 border-t border-emerald-100 dark:border-slate-700/60 pt-2 font-medium">
+        {{ resumen.unidadesVendidasTotal }} unidades dispensadas
+      </p>
+    </div>
+
   </div>
 
-  <!-- SECCIÓN INTERMEDIA: TOP PRODUCTOS RENTABLES & MEDIOS DE PAGO -->
+  <!-- ======================================================== -->
+  <!-- 3. SECCIÓN INTERMEDIA: TOP PRODUCTOS RENTABLES & MIX COBROS -->
+  <!-- ======================================================== -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     
-    <!-- Top Medicamentos Rentables (2 Cols) -->
-    <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
-      <div class="flex justify-between items-center">
-        <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-          <i class="pi pi-star text-emerald-600"></i>
-          Top Medicamentos con Mayor Rentabilidad Neta
-        </h2>
-        <span class="text-xs font-bold text-emerald-600">Margen Real</span>
+    <!-- TOP MEDICAMENTOS CON MAYOR RENTABILIDAD NETA (2 Cols) -->
+    <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="pi pi-star-fill text-amber-500"></i>
+            <span>Top Medicamentos con Mayor Rentabilidad Neta</span>
+          </h2>
+          <p class="text-[11px] text-slate-400">Ordenados por utilidad neta generada (Venta Total - Costo de Adquisición)</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto">
+          Margen Comercial Real
+        </span>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-xs text-left">
-          <thead class="bg-surface-container dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-outline-variant dark:border-slate-700">
+          <thead class="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-slate-200 dark:border-slate-700">
             <tr>
-              <th class="p-3">Medicamento</th>
-              <th class="p-3 text-center">Unid. Vendidas</th>
-              <th class="p-3 text-right">Venta Total</th>
-              <th class="p-3 text-right">Ganancia Neta</th>
-              <th class="p-3 text-right">Margen %</th>
+              <th class="p-2.5 w-10 text-center">Rank</th>
+              <th class="p-2.5">Medicamento / Producto</th>
+              <th class="p-2.5 text-center">Unid. Vendidas</th>
+              <th class="p-2.5 text-right">Venta Total</th>
+              <th class="p-2.5 text-right">Costo Total</th>
+              <th class="p-2.5 text-right">Ganancia Neta</th>
+              <th class="p-2.5 text-right">Margen %</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-            @for (p of topRentables; track p.nombre) {
-              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
-                <td class="p-3">
-                  <p class="font-bold text-slate-800 dark:text-white">{{ p.nombre }}</p>
-                  <p class="text-[10px] text-slate-400">{{ p.principioActivo }} • {{ p.laboratorio }}</p>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700/80">
+            @for (p of resumen.topRentables; track p.nombre) {
+              <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/40 transition-colors">
+                <!-- Rank Badge -->
+                <td class="p-2.5 text-center font-bold">
+                  @if (p.rank === 1) {
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-[11px] font-extrabold shadow-2xs">🥇</span>
+                  } @else if (p.rank === 2) {
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-800 text-[11px] font-extrabold shadow-2xs">🥈</span>
+                  } @else if (p.rank === 3) {
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-800 text-[11px] font-extrabold shadow-2xs">🥉</span>
+                  } @else {
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">#{{ p.rank }}</span>
+                  }
                 </td>
-                <td class="p-3 text-center font-mono font-bold">{{ p.unidadesVendidas }}</td>
-                <td class="p-3 text-right font-mono text-slate-700 dark:text-slate-300">S/ {{ p.ingresoTotal | number:'1.2-2' }}</td>
-                <td class="p-3 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+
+                <!-- Medicamento Info -->
+                <td class="p-2.5">
+                  <p class="font-bold text-slate-900 dark:text-white">{{ p.nombre }}</p>
+                  <p class="text-[10px] text-slate-400 mt-0.5">
+                    {{ p.principioActivo }} • {{ p.laboratorio }}
+                  </p>
+                </td>
+
+                <!-- Unidades Vendidas -->
+                <td class="p-2.5 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
+                  <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-md">
+                    {{ p.unidadesVendidas }}
+                  </span>
+                </td>
+
+                <!-- Venta Total -->
+                <td class="p-2.5 text-right font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                  S/ {{ p.ingresoTotal | number:'1.2-2' }}
+                </td>
+
+                <!-- Costo Total -->
+                <td class="p-2.5 text-right font-mono text-slate-400 text-[11px]">
+                  S/ {{ p.costoTotal | number:'1.2-2' }}
+                </td>
+
+                <!-- Ganancia Neta -->
+                <td class="p-2.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
                   +S/ {{ p.gananciaNeta | number:'1.2-2' }}
                 </td>
-                <td class="p-3 text-right font-mono font-bold text-emerald-700 dark:text-emerald-300">
-                  {{ p.margenPorcentaje }}%
+
+                <!-- Margen % -->
+                <td class="p-2.5 text-right">
+                  <div class="flex items-center justify-end gap-1.5 font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                    <span>{{ p.margenPorcentaje }}%</span>
+                  </div>
+                  <div class="w-16 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden ml-auto mt-1">
+                    <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="p.margenPorcentaje > 100 ? 100 : p.margenPorcentaje"></div>
+                  </div>
+                </td>
+              </tr>
+            }
+
+            @if (resumen.topRentables.length === 0) {
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-400">
+                  <i class="pi pi-info-circle text-lg mb-1 block"></i>
+                  <span>No hay ventas registradas para el periodo seleccionado.</span>
                 </td>
               </tr>
             }
@@ -91,58 +340,258 @@
       </div>
     </div>
 
-    <!-- Distribución por Medios de Pago (1 Col) -->
-    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4 flex flex-col justify-between">
+    <!-- DISTRIBUCIÓN POR MEDIOS DE PAGO (1 Col) -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-4 flex flex-col justify-between">
       <div>
-        <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 mb-3">
-          <i class="pi pi-wallet text-emerald-600"></i>
-          Mix de Cobros & Medios de Pago
-        </h2>
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="pi pi-wallet text-emerald-600"></i>
+              <span>Mix de Cobros & Pagos</span>
+            </h2>
+            <p class="text-[11px] text-slate-400">Desglose de ingresos por canal</p>
+          </div>
+          <span class="text-xs font-mono font-bold text-slate-900 dark:text-white">
+            S/ {{ resumen.totalVentas | number:'1.2-2' }}
+          </span>
+        </div>
 
-        <div class="space-y-3 text-xs">
-          @for (mp of mediosPagoDistribucion; track mp.metodo) {
-            <div class="space-y-1">
-              <div class="flex justify-between font-semibold">
-                <span class="text-slate-700 dark:text-slate-300">{{ mp.metodo }}</span>
-                <span class="font-mono font-bold text-slate-900 dark:text-white">{{ mp.porcentaje }}% (S/ {{ mp.monto | number:'1.2-2' }})</span>
+        <div class="space-y-3.5 text-xs">
+          @for (mp of resumen.mediosPago; track mp.codigo) {
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center font-semibold">
+                <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <i class="{{ mp.icono }} text-xs"></i>
+                  <span>{{ mp.metodo }}</span>
+                </span>
+                <div class="text-right">
+                  <span class="font-mono font-bold text-slate-900 dark:text-white">S/ {{ mp.monto | number:'1.2-2' }}</span>
+                  <span class="text-[10px] text-slate-400 ml-1.5 font-mono">({{ mp.porcentaje }}%)</span>
+                </div>
               </div>
               <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                <div class="h-full {{ mp.color }} rounded-full" [style.width.%]="mp.porcentaje"></div>
+                <div class="h-full {{ mp.color }} rounded-full transition-all duration-500" [style.width.%]="mp.porcentaje"></div>
               </div>
+              @if (mp.numTransacciones > 0) {
+                <p class="text-[10px] text-slate-400 text-right">{{ mp.numTransacciones }} transacción{{ mp.numTransacciones === 1 ? '' : 'es' }}</p>
+              }
+            </div>
+          }
+
+          @if (resumen.mediosPago.length === 0) {
+            <div class="py-6 text-center text-slate-400">
+              <i class="pi pi-wallet text-xl mb-1 block"></i>
+              <span>Sin cobros en este periodo</span>
             </div>
           }
         </div>
       </div>
 
-      <div class="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-200 dark:border-purple-800 text-xs text-purple-900 dark:text-purple-200">
-        <p class="font-bold flex items-center gap-1.5"><i class="pi pi-mobile"></i> Yape y Plin lideran los cobros digitales</p>
-        <p class="text-[11px] text-purple-700 dark:text-purple-300 mt-0.5">Representan el 48% de las transacciones digitales sin cobro de comisiones bancarias.</p>
+      <!-- Resumen Destacado de Pagos Digitales -->
+      <div class="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50/50 dark:from-purple-950/40 dark:to-indigo-950/20 rounded-2xl border border-purple-200 dark:border-purple-800 text-xs text-purple-900 dark:text-purple-200 space-y-1">
+        <p class="font-bold flex items-center gap-1.5 text-purple-800 dark:text-purple-300">
+          <i class="pi pi-mobile text-sm"></i>
+          <span>Cobros Digitales vs Efectivo</span>
+        </p>
+        <p class="text-[11px] text-purple-700 dark:text-purple-300 leading-relaxed">
+          Yape y Plin suman 
+          <strong class="font-bold">S/ {{ (resumen.totalYape + resumen.totalPlin) | number:'1.2-2' }}</strong>
+          ({{ resumen.totalVentas > 0 ? ((resumen.totalYape + resumen.totalPlin) / resumen.totalVentas * 100 | number:'1.0-0') : 0 }}% de la recaudación total).
+        </p>
       </div>
     </div>
 
   </div>
 
-  <!-- SECCIÓN INFERIOR: VENTAS POR CATEGORÍA -->
-  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-outline-variant dark:border-slate-700 shadow-2xs space-y-4">
-    <h2 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-      <i class="pi pi-tags text-emerald-600"></i>
-      Distribución de Demanda por Categoría Farmacéutica
-    </h2>
+  <!-- ======================================================== -->
+  <!-- 4. SECCIÓN PRINCIPAL SOLICITADA: PRODUCTOS VENDIDOS EN EL DÍA -->
+  <!-- ======================================================== -->
+  <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-3">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <i class="pi pi-shopping-bag text-emerald-600"></i>
+          <span>Productos Vendidos en el Periodo (Detalle Diario)</span>
+        </h2>
+        <p class="text-[11px] text-slate-400">
+          Trazabilidad de cada medicamento y producto despachado, cantidades, precios y rentabilidad
+        </p>
+      </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      @for (cat of ventasPorCategoria; track cat.cat) {
-        <div class="p-4 bg-surface-container-low dark:bg-slate-900 rounded-2xl border border-outline-variant dark:border-slate-700 space-y-2">
-          <p class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{{ cat.cat }}</p>
-          <div class="flex items-baseline justify-between font-mono">
-            <span class="text-lg font-black text-slate-900 dark:text-white">{{ cat.valor }}</span>
-            <span class="text-xs font-bold text-emerald-600">{{ cat.porcentaje }}%</span>
-          </div>
-          <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-            <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="cat.porcentaje"></div>
-          </div>
+      <!-- Filtro Rápido de Texto y Categoría en la tabla -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Buscador de Producto -->
+        <div class="relative">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input
+            type="text"
+            [(ngModel)]="busquedaProductoVendido"
+            placeholder="Filtrar por nombre, principio activo..."
+            class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 w-56" />
         </div>
-      }
+
+        <!-- Filtro por Categoría -->
+        @if (categoriasDisponibles.length > 0) {
+          <div class="relative">
+            <select
+              [(ngModel)]="filtroCategoriaVendido"
+              class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-2.5 pr-7 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer appearance-none">
+              <option value="TODAS">Todas las Categorías</option>
+              @for (cat of categoriasDisponibles; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+            <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
+              <i class="pi pi-chevron-down"></i>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Tabla Detallada de Productos Vendidos -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-y border-slate-200 dark:border-slate-700">
+          <tr>
+            <th class="p-2.5">Producto Farmacéutico</th>
+            <th class="p-2.5">Categoría</th>
+            <th class="p-2.5 text-center">Cant. Vendida</th>
+            <th class="p-2.5 text-right">Precio Prom.</th>
+            <th class="p-2.5 text-right">Total Venta</th>
+            <th class="p-2.5 text-right">Costo Total</th>
+            <th class="p-2.5 text-right">Ganancia Neta</th>
+            <th class="p-2.5 text-right">Margen %</th>
+            <th class="p-2.5 text-center">N° Ventas</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/80">
+          @for (prod of productosVendidosFiltrados; track prod.id) {
+            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/40 transition-colors">
+              <!-- Producto -->
+              <td class="p-2.5">
+                <p class="font-bold text-slate-900 dark:text-white text-xs">{{ prod.nombre }}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">
+                  {{ prod.generico }}{{ prod.concentracion ? ' ' + prod.concentracion : '' }} • {{ prod.laboratorio }}
+                </p>
+              </td>
+
+              <!-- Categoría -->
+              <td class="p-2.5 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                  {{ prod.categoria }}
+                </span>
+              </td>
+
+              <!-- Cantidad Vendida -->
+              <td class="p-2.5 text-center font-mono font-bold text-slate-900 dark:text-white">
+                <span class="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs">
+                  {{ prod.cantidadTotal }}
+                </span>
+              </td>
+
+              <!-- Precio Promedio -->
+              <td class="p-2.5 text-right font-mono text-slate-600 dark:text-slate-400">
+                S/ {{ prod.precioPromedio | number:'1.2-2' }}
+              </td>
+
+              <!-- Total Venta -->
+              <td class="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
+                S/ {{ prod.ingresoTotal | number:'1.2-2' }}
+              </td>
+
+              <!-- Costo Total -->
+              <td class="p-2.5 text-right font-mono text-slate-400 text-[11px]">
+                S/ {{ prod.costoTotal | number:'1.2-2' }}
+              </td>
+
+              <!-- Ganancia Neta -->
+              <td class="p-2.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                +S/ {{ prod.gananciaNeta | number:'1.2-2' }}
+              </td>
+
+              <!-- Margen % -->
+              <td class="p-2.5 text-right font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                {{ prod.margenPorcentaje }}%
+              </td>
+
+              <!-- N° Ventas -->
+              <td class="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400">
+                {{ prod.numVentas }}
+              </td>
+            </tr>
+          }
+
+          @if (productosVendidosFiltrados.length === 0) {
+            <tr>
+              <td colspan="9" class="py-10 text-center text-slate-400">
+                <i class="pi pi-inbox text-2xl mb-2 block"></i>
+                <span class="text-xs font-semibold">No se encontraron productos vendidos en este periodo o filtro.</span>
+                <p class="text-[11px] text-slate-400 mt-1">Prueba seleccionando otra fecha en los botones de arriba.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+
+        <!-- Footer con Totales de la Tabla -->
+        @if (productosVendidosFiltrados.length > 0) {
+          <tfoot class="bg-slate-50 dark:bg-slate-900/90 font-bold text-slate-800 dark:text-slate-200 border-t-2 border-slate-200 dark:border-slate-700">
+            <tr>
+              <td colspan="2" class="p-2.5 text-right uppercase text-[10px] tracking-wider text-slate-500">
+                Total Filtrado ({{ productosVendidosFiltrados.length }} productos):
+              </td>
+              <td class="p-2.5 text-center font-mono text-emerald-700 dark:text-emerald-300 text-xs">
+                {{ totalesProductosFiltrados.unidades }} unid.
+              </td>
+              <td></td>
+              <td class="p-2.5 text-right font-mono text-slate-900 dark:text-white text-xs">
+                S/ {{ totalesProductosFiltrados.ingreso | number:'1.2-2' }}
+              </td>
+              <td></td>
+              <td class="p-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 text-xs">
+                +S/ {{ totalesProductosFiltrados.ganancia | number:'1.2-2' }}
+              </td>
+              <td class="p-2.5 text-right font-mono text-emerald-700 dark:text-emerald-300 text-xs">
+                {{ totalesProductosFiltrados.margen }}%
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        }
+      </table>
     </div>
   </div>
+
+  <!-- ======================================================== -->
+  <!-- 5. SECCIÓN INFERIOR: DEMANDA POR CATEGORÍA FARMACÉUTICA   -->
+  <!-- ======================================================== -->
+  @if (resumen.ventasPorCategoria.length > 0) {
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="pi pi-tags text-emerald-600"></i>
+            <span>Distribución de Demanda por Categoría</span>
+          </h2>
+          <p class="text-[11px] text-slate-400">Participación en ventas del periodo seleccionado</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        @for (cat of resumen.ventasPorCategoria; track cat.cat) {
+          <div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{{ cat.cat }}</p>
+            <div class="flex items-baseline justify-between font-mono">
+              <span class="text-base font-black text-slate-900 dark:text-white">{{ cat.valor }}</span>
+              <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ cat.porcentaje }}%</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="cat.porcentaje"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
 </div>

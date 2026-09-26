@@ -1,7 +1,15 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
-import { DashboardService, ProductoRentableDTO, MedioPagoDTO, CategoriaVentaDTO } from '../../core/services/dashboard.service';
+import {
+  DashboardService,
+  DashboardResumen,
+  ProductoRentableDTO,
+  ProductoVendidoDTO,
+  MedioPagoDTO,
+  CategoriaVentaDTO
+} from '../../core/services/dashboard.service';
 
 export interface KpiFarmaceutico {
   label: string;
@@ -13,92 +21,186 @@ export interface KpiFarmaceutico {
   detalle: string;
 }
 
-export type ProductoRentable = ProductoRentableDTO;
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.html'
 })
 export class Dashboard implements OnInit {
   public authService = inject(AuthService);
   private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
 
-  kpis: KpiFarmaceutico[] = [
-    {
-      label: 'Ticket Promedio',
-      valor: 'S/ 0.00',
-      cambio: 'En tiempo real',
-      positivo: true,
-      icono: 'pi pi-shopping-bag',
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50',
-      detalle: '0 clientes atendidos hoy'
-    },
-    {
-      label: 'Ventas Totales (Hoy)',
-      valor: 'S/ 0.00',
-      cambio: 'Sede en vivo',
-      positivo: true,
-      icono: 'pi pi-chart-line',
-      color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/50',
-      detalle: 'Ventas validadas en Supabase'
-    },
-    {
-      label: 'Índice de Merma (Vencimiento)',
-      valor: '0.0%',
-      cambio: 'Meta: <2%',
-      positivo: true,
-      icono: 'pi pi-shield',
-      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50',
-      detalle: 'Control FEFO estricto activo'
-    },
-    {
-      label: 'Rotación de Inventario',
-      valor: '21 días',
-      cambio: 'Alta rotación de stock',
-      positivo: true,
-      icono: 'pi pi-sync',
-      color: 'text-purple-600 bg-purple-50 dark:bg-purple-950/50',
-      detalle: 'Catálogo sincronizado'
-    }
-  ];
+  constructor() {
+    // Sincronizar automáticamente cuando el usuario cambia de sede en la cabecera
+    effect(() => {
+      const sede = this.authService.activeSede();
+      if (sede) {
+        this.sedeFiltroId = sede.id;
+        this.cargarMetricas();
+      }
+    });
+  }
 
-  topRentables: ProductoRentableDTO[] = [];
-  mediosPagoDistribucion: MedioPagoDTO[] = [];
-  ventasPorCategoria: CategoriaVentaDTO[] = [];
+  // Estado de carga
+  cargando = false;
+
+  // Filtros de Sede
+  sedeFiltroId = this.authService.activeSede()?.id || 'TODAS';
+
+  get sedesDisponibles() {
+    return this.authService.getSedes();
+  }
+
+  // Filtro de Fechas
+  filtroFechaModo: 'HOY' | 'AYER' | 'SEMANA' | 'MES' | 'PERSONALIZADO' | 'TODOS' = 'HOY';
+  fechaSeleccionada: string = new Date().toISOString().split('T')[0];
+  fechaInicio: string = new Date().toISOString().split('T')[0];
+  fechaFin: string = new Date().toISOString().split('T')[0];
+
+  // Filtros de búsqueda en la tabla de productos vendidos
+  busquedaProductoVendido = '';
+  filtroCategoriaVendido = 'TODAS';
+
+  // Datos consolidados del Dashboard
+  resumen: DashboardResumen = {
+    totalVentas: 0,
+    totalEfectivo: 0,
+    totalYape: 0,
+    totalPlin: 0,
+    totalTarjeta: 0,
+    totalOtros: 0,
+    totalGananciaNeta: 0,
+    margenNetoGlobal: 0,
+    ticketsEmitidos: 0,
+    ticketPromedio: 0,
+    unidadesVendidasTotal: 0,
+    mediosPago: [],
+    topRentables: [],
+    productosVendidos: [],
+    ventasPorCategoria: []
+  };
 
   ngOnInit() {
+    this.setModoFecha('HOY');
+  }
+
+  setModoFecha(modo: 'HOY' | 'AYER' | 'SEMANA' | 'MES' | 'PERSONALIZADO' | 'TODOS') {
+    this.filtroFechaModo = modo;
+    const hoy = new Date();
+    const hoyStr = hoy.toISOString().split('T')[0];
+
+    if (modo === 'HOY') {
+      this.fechaInicio = hoyStr;
+      this.fechaFin = hoyStr;
+      this.fechaSeleccionada = hoyStr;
+    } else if (modo === 'AYER') {
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const ayerStr = ayer.toISOString().split('T')[0];
+      this.fechaInicio = ayerStr;
+      this.fechaFin = ayerStr;
+      this.fechaSeleccionada = ayerStr;
+    } else if (modo === 'SEMANA') {
+      const hace7Dias = new Date();
+      hace7Dias.setDate(hace7Dias.getDate() - 6);
+      this.fechaInicio = hace7Dias.toISOString().split('T')[0];
+      this.fechaFin = hoyStr;
+    } else if (modo === 'MES') {
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      this.fechaInicio = inicioMes.toISOString().split('T')[0];
+      this.fechaFin = hoyStr;
+    } else if (modo === 'TODOS') {
+      this.fechaInicio = 'TODOS';
+      this.fechaFin = 'TODOS';
+    }
+
+    this.cargarMetricas();
+  }
+
+  onFechaChange() {
+    if (this.fechaSeleccionada) {
+      this.filtroFechaModo = 'PERSONALIZADO';
+      this.fechaInicio = this.fechaSeleccionada;
+      this.fechaFin = this.fechaSeleccionada;
+      this.cargarMetricas();
+    }
+  }
+
+  onSedeChange(sedeId: string) {
+    this.sedeFiltroId = sedeId;
     this.cargarMetricas();
   }
 
   cargarMetricas() {
-    const sedeId = this.authService.activeSede()?.id;
+    this.cargando = true;
+    const targetSede = this.sedeFiltroId === 'TODAS' ? undefined : this.sedeFiltroId;
 
-    // 1. KPIs
-    this.dashboardService.getKpis(sedeId).subscribe(data => {
-      if (data) {
-        this.kpis[0].valor = `S/ ${data.ticketPromedio.toFixed(2)}`;
-        this.kpis[0].detalle = `${data.ticketsEmitidos} ticket${data.ticketsEmitidos === 1 ? '' : 's'} emitido${data.ticketsEmitidos === 1 ? '' : 's'} hoy`;
-        this.kpis[1].valor = `S/ ${data.ventasHoy.toFixed(2)}`;
-        this.kpis[1].detalle = `Total ventas del día en ${this.authService.activeSede()?.nombre || 'Sede Central'}`;
-        this.kpis[2].valor = `${data.mermaPorcentaje}%`;
+    this.dashboardService.getDashboardCompleto(this.fechaInicio, this.fechaFin, targetSede).subscribe({
+      next: (data) => {
+        this.resumen = data;
+        this.cargando = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al cargar métricas del dashboard:', err);
+        this.cargando = false;
+        this.cdr.markForCheck();
       }
     });
+  }
 
-    // 2. Top Rentables
-    this.dashboardService.getTopRentables(sedeId).subscribe(data => {
-      this.topRentables = data;
-    });
+  // Filtrado reactivo de productos vendidos en el día/periodo
+  get productosVendidosFiltrados(): ProductoVendidoDTO[] {
+    let list = this.resumen.productosVendidos || [];
 
-    // 3. Medios de pago
-    this.dashboardService.getMediosPago(sedeId).subscribe(data => {
-      this.mediosPagoDistribucion = data;
-    });
+    if (this.filtroCategoriaVendido !== 'TODAS') {
+      list = list.filter(p => p.categoria === this.filtroCategoriaVendido);
+    }
 
-    // 4. Ventas por categoría
-    this.dashboardService.getVentasPorCategoria(sedeId).subscribe(data => {
-      this.ventasPorCategoria = data;
+    if (this.busquedaProductoVendido.trim()) {
+      const q = this.busquedaProductoVendido.toLowerCase().trim();
+      list = list.filter(p =>
+        (p.nombre && p.nombre.toLowerCase().includes(q)) ||
+        (p.generico && p.generico.toLowerCase().includes(q)) ||
+        (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
+        (p.categoria && p.categoria.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }
+
+  get categoriasDisponibles(): string[] {
+    const set = new Set<string>();
+    (this.resumen.productosVendidos || []).forEach(p => {
+      if (p.categoria) set.add(p.categoria);
     });
+    return Array.from(set).sort();
+  }
+
+  get totalesProductosFiltrados() {
+    const list = this.productosVendidosFiltrados;
+    const unidades = list.reduce((sum, p) => sum + p.cantidadTotal, 0);
+    const ingreso = list.reduce((sum, p) => sum + p.ingresoTotal, 0);
+    const ganancia = list.reduce((sum, p) => sum + p.gananciaNeta, 0);
+    const margen = ingreso > 0 ? (ganancia / ingreso) * 100 : 0;
+
+    return {
+      unidades,
+      ingreso: Number(ingreso.toFixed(2)),
+      ganancia: Number(ganancia.toFixed(2)),
+      margen: Number(margen.toFixed(1))
+    };
+  }
+
+  get labelPeriodoActivo(): string {
+    if (this.filtroFechaModo === 'HOY') return `Hoy (${this.fechaInicio})`;
+    if (this.filtroFechaModo === 'AYER') return `Ayer (${this.fechaInicio})`;
+    if (this.filtroFechaModo === 'SEMANA') return `Últimos 7 días (${this.fechaInicio} al ${this.fechaFin})`;
+    if (this.filtroFechaModo === 'MES') return `Este Mes (${this.fechaInicio} al ${this.fechaFin})`;
+    if (this.filtroFechaModo === 'TODOS') return 'Histórico Consolidado (Todas las fechas)';
+    return `Fecha: ${this.fechaSeleccionada}`;
   }
 }

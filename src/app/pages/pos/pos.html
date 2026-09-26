@@ -160,7 +160,12 @@
           placeholder="Escanear código de barras con la pistola o buscar por medicamento, SKU, marca..."
           class="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-xs rounded-2xl py-3 pl-11 pr-24 border border-slate-200/90 dark:border-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400" />
         
-        @if (searchQuery) {
+        @if (cargandoProductos) {
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+            <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+            <span class="hidden sm:inline">Cargando...</span>
+          </div>
+        } @else if (searchQuery) {
           <button (click)="limpiarBusqueda()"
             class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-lg transition-colors cursor-pointer">
             Limpiar
@@ -223,13 +228,28 @@
 
     <!-- Product Grid or Table depending on vistaModo -->
     <div class="flex-1 overflow-y-auto pr-1">
-      @if (filteredProducts.length === 0) {
+      @if (cargandoProductos) {
+        <!-- Estado de carga con indicador moderno -->
+        <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+            <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+          </div>
+          <h3 class="text-sm font-bold text-slate-800 dark:text-white mb-1">Cargando catálogo farmacéutico...</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm">Consultando medicamentos, lotes y existencias FEFO en tiempo real.</p>
+        </div>
+      } @else if (filteredProducts.length === 0) {
         <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
           <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 mb-3">
             <i class="fa-solid fa-magnifying-glass text-xl"></i>
           </div>
           <h3 class="text-sm font-bold text-slate-800 dark:text-white mb-1">No se encontraron productos</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-4">No hay medicamentos que coincidan con "{{ searchQuery }}" en la categoría seleccionada.</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-4">
+            @if (searchQuery) {
+              No hay medicamentos que coincidan con "{{ searchQuery }}" en la categoría seleccionada.
+            } @else {
+              No hay productos disponibles en la categoría "{{ selectedCategory }}" para esta sede.
+            }
+          </p>
           <button (click)="limpiarBusqueda(); selectCategory('Todos')"
             class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer">
             Restablecer búsqueda y filtros

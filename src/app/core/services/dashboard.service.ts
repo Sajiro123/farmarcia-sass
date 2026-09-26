@@ -10,12 +10,21 @@ export interface DashboardKpis {
   stockBajo: number;
   ticketPromedio: number;
   mermaPorcentaje: number;
+  totalEfectivo: number;
+  totalYape: number;
+  totalPlin: number;
+  totalTarjeta: number;
+  totalOtros: number;
+  gananciaNeta: number;
+  margenPorcentaje: number;
 }
 
 export interface ProductoRentableDTO {
+  rank: number;
   nombre: string;
   principioActivo: string;
   laboratorio: string;
+  categoria: string;
   unidadesVendidas: number;
   ingresoTotal: number;
   costoTotal: number;
@@ -23,17 +32,63 @@ export interface ProductoRentableDTO {
   margenPorcentaje: number;
 }
 
+export interface ProductoVendidoDTO {
+  id: string;
+  nombre: string;
+  generico: string;
+  concentracion: string;
+  categoria: string;
+  laboratorio: string;
+  cantidadTotal: number;
+  precioPromedio: number;
+  ingresoTotal: number;
+  costoTotal: number;
+  gananciaNeta: number;
+  margenPorcentaje: number;
+  numVentas: number;
+  ultimaVentaHora?: string;
+}
+
 export interface MedioPagoDTO {
   metodo: string;
+  codigo: string;
+  icono: string;
   porcentaje: number;
   monto: number;
+  numTransacciones: number;
   color: string;
+  bgBadge: string;
+  textBadge: string;
 }
 
 export interface CategoriaVentaDTO {
   cat: string;
   porcentaje: number;
+  monto: number;
   valor: string;
+}
+
+export interface DashboardResumen {
+  // Totales Financieros
+  totalVentas: number;
+  totalEfectivo: number;
+  totalYape: number;
+  totalPlin: number;
+  totalTarjeta: number;
+  totalOtros: number;
+  totalGananciaNeta: number;
+  margenNetoGlobal: number;
+
+  // Operaciones
+  ticketsEmitidos: number;
+  ticketPromedio: number;
+  unidadesVendidasTotal: number;
+
+  // Colecciones
+  mediosPago: MedioPagoDTO[];
+  topRentables: ProductoRentableDTO[];
+  productosVendidos: ProductoVendidoDTO[];
+  ventasPorCategoria: CategoriaVentaDTO[];
 }
 
 @Injectable({
@@ -43,32 +98,52 @@ export class DashboardService {
   private supabase = inject(SupabaseService);
   private authService = inject(AuthService);
 
-  getKpis(sucursalId?: string): Observable<DashboardKpis> {
+  /**
+   * Consulta centralizada y reactiva del Dashboard directamente desde Supabase.
+   * Agrupa ventas, pagos (Efectivo, Yape, Plin, Tarjeta), productos vendidos y márgenes netos.
+   */
+  getDashboardCompleto(fechaInicio?: string, fechaFin?: string, sucursalId?: string): Observable<DashboardResumen> {
     const client = this.supabase.client;
     const targetSede = sucursalId || this.authService.activeSede()?.id;
 
-    const baseKpis: DashboardKpis = {
-      ventasHoy: 0,
+    const baseResumen: DashboardResumen = {
+      totalVentas: 0,
+      totalEfectivo: 0,
+      totalYape: 0,
+      totalPlin: 0,
+      totalTarjeta: 0,
+      totalOtros: 0,
+      totalGananciaNeta: 0,
+      margenNetoGlobal: 0,
       ticketsEmitidos: 0,
-      lotesPorVencer: 0,
-      stockBajo: 0,
       ticketPromedio: 0,
-      mermaPorcentaje: 0
+      unidadesVendidasTotal: 0,
+      mediosPago: [],
+      topRentables: [],
+      productosVendidos: [],
+      ventasPorCategoria: []
     };
 
     if (!this.supabase.isConfigured || !client) {
-      return of(baseKpis);
+      return of(baseResumen);
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const selectQuery = 'id, total, subtotal, monto_igv, estado, creado_en, sucursal_id, pagos_venta(metodo_pago, monto), detalle_ventas(id, producto_id, cantidad, precio_unitario, costo_unitario, total, productos(id, codigo_interno, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, categorias_producto(nombre), laboratorios(nombre), principios_activos(nombre)))';
 
     let query = client
       .from('ventas')
-      .select('total, estado, creado_en')
-      .gte('creado_en', todayStart.toISOString())
-      .eq('estado', 'COMPLETADA');
+      .select(selectQuery)
+      .eq('estado', 'COMPLETADA')
+      .order('creado_en', { ascending: false });
 
+    // Filtro por fecha si no es 'TODOS'
+    if (fechaInicio && fechaInicio !== 'TODOS') {
+      query = query.gte('creado_en', `${fechaInicio}T00:00:00`);
+      const fFin = fechaFin || fechaInicio;
+      query = query.lte('creado_en', `${fFin}T23:59:59.999Z`);
+    }
+
+    // Filtro por sede
     if (targetSede && targetSede !== 'TODAS') {
       query = query.eq('sucursal_id', targetSede);
     }
@@ -76,207 +151,290 @@ export class DashboardService {
     return from(query).pipe(
       map(res => {
         const rows = res.data || [];
-        const totalHoy = rows.reduce((acc: number, curr: any) => acc + (Number(curr.total) || 0), 0);
-        const count = rows.length;
-
-        return {
-          ventasHoy: Number(totalHoy.toFixed(2)),
-          ticketsEmitidos: count,
-          lotesPorVencer: 0,
-          stockBajo: 2,
-          ticketPromedio: count > 0 ? Number((totalHoy / count).toFixed(2)) : 0,
-          mermaPorcentaje: 0.0
-        };
-      }),
-      catchError(() => of(baseKpis))
-    );
-  }
-
-  getTopRentables(sucursalId?: string): Observable<ProductoRentableDTO[]> {
-    const client = this.supabase.client;
-    const targetSede = sucursalId || this.authService.activeSede()?.id;
-
-    if (!this.supabase.isConfigured || !client) {
-      return of([]);
-    }
-
-    let query = client
-      .from('detalle_ventas')
-      .select(`
-        cantidad, total, costo_unitario,
-        productos (id, nombre_comercial, nombre_generico, laboratorios(nombre), principios_activos(nombre)),
-        ventas!inner (estado, sucursal_id)
-      `)
-      .eq('ventas.estado', 'COMPLETADA');
-
-    if (targetSede && targetSede !== 'TODAS') {
-      query = query.eq('ventas.sucursal_id', targetSede);
-    }
-
-    return from(query).pipe(
-      map(res => {
-        if (!res.data || res.data.length === 0) return [];
-
-        const prodMap = new Map<string, ProductoRentableDTO>();
-
-        res.data.forEach((d: any) => {
-          const nombre = d.productos?.nombre_comercial || 'Producto';
-          const pa = d.productos?.principios_activos?.nombre || d.productos?.nombre_generico || 'Genérico';
-          const lab = d.productos?.laboratorios?.nombre || 'Laboratorio';
-          const cant = Number(d.cantidad) || 1;
-          const tot = Number(d.total) || 0;
-          const costo = (Number(d.costo_unitario) || 0) * cant;
-
-          if (prodMap.has(nombre)) {
-            const item = prodMap.get(nombre)!;
-            item.unidadesVendidas += cant;
-            item.ingresoTotal += tot;
-            item.costoTotal += costo;
-            item.gananciaNeta = item.ingresoTotal - item.costoTotal;
-            item.margenPorcentaje = item.ingresoTotal > 0 ? Number(((item.gananciaNeta / item.ingresoTotal) * 100).toFixed(1)) : 0;
-          } else {
-            const ganancia = tot - costo;
-            const margen = tot > 0 ? Number(((ganancia / tot) * 100).toFixed(1)) : 0;
-            prodMap.set(nombre, {
-              nombre,
-              principioActivo: pa,
-              laboratorio: lab,
-              unidadesVendidas: cant,
-              ingresoTotal: Number(tot.toFixed(2)),
-              costoTotal: Number(costo.toFixed(2)),
-              gananciaNeta: Number(ganancia.toFixed(2)),
-              margenPorcentaje: margen
-            });
-          }
-        });
-
-        const list = Array.from(prodMap.values());
-        list.sort((a, b) => b.gananciaNeta - a.gananciaNeta);
-        return list.slice(0, 5);
-      }),
-      catchError(() => of([]))
-    );
-  }
-
-  getMediosPago(sucursalId?: string): Observable<MedioPagoDTO[]> {
-    const client = this.supabase.client;
-    const targetSede = sucursalId || this.authService.activeSede()?.id;
-
-    if (!this.supabase.isConfigured || !client) {
-      return of([]);
-    }
-
-    let query = client
-      .from('pagos_venta')
-      .select(`
-        metodo_pago, monto,
-        ventas!inner (estado, sucursal_id)
-      `)
-      .eq('ventas.estado', 'COMPLETADA');
-
-    if (targetSede && targetSede !== 'TODAS') {
-      query = query.eq('ventas.sucursal_id', targetSede);
-    }
-
-    return from(query).pipe(
-      map(res => {
-        if (!res.data || res.data.length === 0) {
-          return [
-            { metodo: 'Efectivo Contado', porcentaje: 100, monto: 0, color: 'bg-emerald-500' }
-          ];
+        if (rows.length === 0) {
+          return baseResumen;
         }
 
-        const mapMonto = new Map<string, number>();
-        let granTotal = 0;
+        let totalVentas = 0;
+        let totalEfectivo = 0;
+        let totalYape = 0;
+        let totalPlin = 0;
+        let totalTarjeta = 0;
+        let totalOtros = 0;
+        let totalCostoGlobal = 0;
+        let totalUnidadesVendidas = 0;
 
-        res.data.forEach((p: any) => {
-          const raw = (p.metodo_pago || 'EFECTIVO').toUpperCase();
-          let label = 'Efectivo Contado';
-          if (raw.includes('YAPE')) label = 'Yape (BCP)';
-          else if (raw.includes('PLIN')) label = 'Plin (Interbank/BBVA)';
-          else if (raw.includes('TARJETA') || raw.includes('VISA')) label = 'Tarjetas (POS)';
-          else if (raw.includes('TRANS')) label = 'Transferencia Bancaria';
-
-          const monto = Number(p.monto) || 0;
-          mapMonto.set(label, (mapMonto.get(label) || 0) + monto);
-          granTotal += monto;
-        });
-
-        const colorMap: { [key: string]: string } = {
-          'Efectivo Contado': 'bg-emerald-500',
-          'Yape (BCP)': 'bg-purple-500',
-          'Plin (Interbank/BBVA)': 'bg-cyan-500',
-          'Tarjetas (POS)': 'bg-blue-500',
-          'Transferencia Bancaria': 'bg-indigo-500'
+        interface ContadorMetodo { monto: number; count: number; }
+        const countPagos: {
+          EFECTIVO: ContadorMetodo;
+          YAPE: ContadorMetodo;
+          PLIN: ContadorMetodo;
+          TARJETA: ContadorMetodo;
+          OTROS: ContadorMetodo;
+        } = {
+          EFECTIVO: { monto: 0, count: 0 },
+          YAPE: { monto: 0, count: 0 },
+          PLIN: { monto: 0, count: 0 },
+          TARJETA: { monto: 0, count: 0 },
+          OTROS: { monto: 0, count: 0 }
         };
 
-        const result: MedioPagoDTO[] = [];
-        mapMonto.forEach((monto, metodo) => {
-          const pct = granTotal > 0 ? Math.round((monto / granTotal) * 100) : 0;
-          result.push({
-            metodo,
-            monto: Number(monto.toFixed(2)),
-            porcentaje: pct,
-            color: colorMap[metodo] || 'bg-slate-500'
+        const prodMap = new Map<string, ProductoVendidoDTO>();
+        const catMap = new Map<string, number>();
+
+        rows.forEach((v: any) => {
+          const vTotal = Number(v.total) || 0;
+          totalVentas += vTotal;
+
+          // 1. Pagos por medio de pago
+          const pagos = v.pagos_venta || [];
+          if (pagos.length === 0) {
+            totalEfectivo += vTotal;
+            countPagos.EFECTIVO.monto += vTotal;
+            countPagos.EFECTIVO.count += 1;
+          } else {
+            pagos.forEach((p: any) => {
+              const m = Number(p.monto) || 0;
+              const raw = (p.metodo_pago || '').toUpperCase();
+              if (raw.includes('YAPE')) {
+                totalYape += m;
+                countPagos.YAPE.monto += m;
+                countPagos.YAPE.count += 1;
+              } else if (raw.includes('PLIN')) {
+                totalPlin += m;
+                countPagos.PLIN.monto += m;
+                countPagos.PLIN.count += 1;
+              } else if (raw.includes('TARJETA') || raw.includes('VISA') || raw.includes('POS')) {
+                totalTarjeta += m;
+                countPagos.TARJETA.monto += m;
+                countPagos.TARJETA.count += 1;
+              } else if (raw.includes('TRANS') || raw.includes('DEPOSITO')) {
+                totalOtros += m;
+                countPagos.OTROS.monto += m;
+                countPagos.OTROS.count += 1;
+              } else {
+                totalEfectivo += m;
+                countPagos.EFECTIVO.monto += m;
+                countPagos.EFECTIVO.count += 1;
+              }
+            });
+          }
+
+          // 2. Detalle de productos vendidos
+          const detalles = v.detalle_ventas || [];
+          detalles.forEach((d: any) => {
+            const pObj = d.productos || {};
+            const pid = d.producto_id || pObj.id || 'prod';
+            const nombre = pObj.nombre_comercial || 'Producto sin nombre';
+            const cant = Number(d.cantidad) || 0;
+            const tot = Number(d.total) || 0;
+            const costoUnit = Number(d.costo_unitario) || Number(pObj.precio_costo) || 0;
+            const costoTot = costoUnit * cant;
+
+            totalUnidadesVendidas += cant;
+            totalCostoGlobal += costoTot;
+
+            const cat = pObj.categorias_producto?.nombre || 'General / Medicamentos';
+            catMap.set(cat, (catMap.get(cat) || 0) + tot);
+
+            const horaVenta = v.creado_en ? new Date(v.creado_en).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            if (!prodMap.has(pid)) {
+              prodMap.set(pid, {
+                id: pid,
+                nombre,
+                generico: pObj.nombre_generico || '',
+                concentracion: pObj.concentracion || '',
+                categoria: cat,
+                laboratorio: pObj.laboratorios?.nombre || 'Laboratorio',
+                cantidadTotal: cant,
+                precioPromedio: cant > 0 ? Number((tot / cant).toFixed(2)) : 0,
+                ingresoTotal: Number(tot.toFixed(2)),
+                costoTotal: Number(costoTot.toFixed(2)),
+                gananciaNeta: Number((tot - costoTot).toFixed(2)),
+                margenPorcentaje: tot > 0 ? Number((((tot - costoTot) / tot) * 100).toFixed(1)) : 0,
+                numVentas: 1,
+                ultimaVentaHora: horaVenta
+              });
+            } else {
+              const item = prodMap.get(pid)!;
+              item.cantidadTotal += cant;
+              item.ingresoTotal = Number((item.ingresoTotal + tot).toFixed(2));
+              item.costoTotal = Number((item.costoTotal + costoTot).toFixed(2));
+              item.gananciaNeta = Number((item.ingresoTotal - item.costoTotal).toFixed(2));
+              item.margenPorcentaje = item.ingresoTotal > 0 ? Number(((item.gananciaNeta / item.ingresoTotal) * 100).toFixed(1)) : 0;
+              item.precioPromedio = item.cantidadTotal > 0 ? Number((item.ingresoTotal / item.cantidadTotal).toFixed(2)) : 0;
+              item.numVentas += 1;
+              if (horaVenta) item.ultimaVentaHora = horaVenta;
+            }
           });
         });
 
-        result.sort((a, b) => b.monto - a.monto);
-        return result;
-      }),
-      catchError(() => of([]))
-    );
-  }
+        // 3. Medios de Pago DTO list
+        const totalPagosRecibidos = totalEfectivo + totalYape + totalPlin + totalTarjeta + totalOtros;
+        const baseCalculo = totalPagosRecibidos > 0 ? totalPagosRecibidos : totalVentas;
 
-  getVentasPorCategoria(sucursalId?: string): Observable<CategoriaVentaDTO[]> {
-    const client = this.supabase.client;
-    const targetSede = sucursalId || this.authService.activeSede()?.id;
+        const mediosPagoList: MedioPagoDTO[] = [
+          {
+            metodo: 'Efectivo Contado',
+            codigo: 'EFECTIVO',
+            icono: 'pi pi-money-bill',
+            monto: Number(totalEfectivo.toFixed(2)),
+            porcentaje: baseCalculo > 0 ? Math.round((totalEfectivo / baseCalculo) * 100) : 0,
+            numTransacciones: countPagos.EFECTIVO.count,
+            color: 'bg-emerald-500',
+            bgBadge: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800',
+            textBadge: 'text-emerald-700 dark:text-emerald-300'
+          },
+          {
+            metodo: 'Yape (BCP)',
+            codigo: 'YAPE',
+            icono: 'pi pi-mobile',
+            monto: Number(totalYape.toFixed(2)),
+            porcentaje: baseCalculo > 0 ? Math.round((totalYape / baseCalculo) * 100) : 0,
+            numTransacciones: countPagos.YAPE.count,
+            color: 'bg-purple-600',
+            bgBadge: 'bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800',
+            textBadge: 'text-purple-700 dark:text-purple-300'
+          },
+          {
+            metodo: 'Plin (Interbank/BBVA)',
+            codigo: 'PLIN',
+            icono: 'pi pi-bolt',
+            monto: Number(totalPlin.toFixed(2)),
+            porcentaje: baseCalculo > 0 ? Math.round((totalPlin / baseCalculo) * 100) : 0,
+            numTransacciones: countPagos.PLIN.count,
+            color: 'bg-cyan-500',
+            bgBadge: 'bg-cyan-50 dark:bg-cyan-950/60 border-cyan-200 dark:border-cyan-800',
+            textBadge: 'text-cyan-700 dark:text-cyan-300'
+          },
+          {
+            metodo: 'Tarjetas (POS Visa/MC)',
+            codigo: 'TARJETA',
+            icono: 'pi pi-credit-card',
+            monto: Number(totalTarjeta.toFixed(2)),
+            porcentaje: baseCalculo > 0 ? Math.round((totalTarjeta / baseCalculo) * 100) : 0,
+            numTransacciones: countPagos.TARJETA.count,
+            color: 'bg-blue-600',
+            bgBadge: 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800',
+            textBadge: 'text-blue-700 dark:text-blue-300'
+          }
+        ];
 
-    if (!this.supabase.isConfigured || !client) {
-      return of([]);
-    }
+        if (totalOtros > 0) {
+          mediosPagoList.push({
+            metodo: 'Transferencias / Otros',
+            codigo: 'OTROS',
+            icono: 'pi pi-building-columns',
+            monto: Number(totalOtros.toFixed(2)),
+            porcentaje: baseCalculo > 0 ? Math.round((totalOtros / baseCalculo) * 100) : 0,
+            numTransacciones: countPagos.OTROS.count,
+            color: 'bg-indigo-500',
+            bgBadge: 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800',
+            textBadge: 'text-indigo-700 dark:text-indigo-300'
+          });
+        }
 
-    let query = client
-      .from('detalle_ventas')
-      .select(`
-        total,
-        productos (categorias_producto(nombre)),
-        ventas!inner (estado, sucursal_id)
-      `)
-      .eq('ventas.estado', 'COMPLETADA');
+        // Ordenar medios de pago por monto descendente
+        mediosPagoList.sort((a, b) => b.monto - a.monto);
 
-    if (targetSede && targetSede !== 'TODAS') {
-      query = query.eq('ventas.sucursal_id', targetSede);
-    }
+        // 4. Lista completa de productos vendidos
+        const productosVendidos = Array.from(prodMap.values()).sort((a, b) => b.cantidadTotal - a.cantidadTotal);
 
-    return from(query).pipe(
-      map(res => {
-        if (!res.data || res.data.length === 0) return [];
+        // 5. Top 5 Productos Rentables
+        const topRentables: ProductoRentableDTO[] = [...productosVendidos]
+          .sort((a, b) => b.gananciaNeta - a.gananciaNeta)
+          .slice(0, 5)
+          .map((p, idx) => ({
+            rank: idx + 1,
+            nombre: p.nombre,
+            principioActivo: p.generico,
+            laboratorio: p.laboratorio,
+            categoria: p.categoria,
+            unidadesVendidas: p.cantidadTotal,
+            ingresoTotal: p.ingresoTotal,
+            costoTotal: p.costoTotal,
+            gananciaNeta: p.gananciaNeta,
+            margenPorcentaje: p.margenPorcentaje
+          }));
 
-        const catMap = new Map<string, number>();
-        let totalGeneral = 0;
-
-        res.data.forEach((d: any) => {
-          const cat = d.productos?.categorias_producto?.nombre || 'General y Medicamentos';
-          const tot = Number(d.total) || 0;
-          catMap.set(cat, (catMap.get(cat) || 0) + tot);
-          totalGeneral += tot;
-        });
-
-        const result: CategoriaVentaDTO[] = [];
+        // 6. Ventas por categoría
+        const ventasPorCategoria: CategoriaVentaDTO[] = [];
         catMap.forEach((monto, cat) => {
-          const pct = totalGeneral > 0 ? Math.round((monto / totalGeneral) * 100) : 0;
-          result.push({
+          const pct = totalVentas > 0 ? Math.round((monto / totalVentas) * 100) : 0;
+          ventasPorCategoria.push({
             cat,
+            monto: Number(monto.toFixed(2)),
             porcentaje: pct,
             valor: `S/ ${monto.toFixed(2)}`
           });
         });
+        ventasPorCategoria.sort((a, b) => b.porcentaje - a.porcentaje);
 
-        result.sort((a, b) => b.porcentaje - a.porcentaje);
-        return result;
+        const gananciaNetaGlobal = Number((totalVentas - totalCostoGlobal).toFixed(2));
+        const margenNetoGlobal = totalVentas > 0 ? Number(((gananciaNetaGlobal / totalVentas) * 100).toFixed(1)) : 0;
+
+        return {
+          totalVentas: Number(totalVentas.toFixed(2)),
+          totalEfectivo: Number(totalEfectivo.toFixed(2)),
+          totalYape: Number(totalYape.toFixed(2)),
+          totalPlin: Number(totalPlin.toFixed(2)),
+          totalTarjeta: Number(totalTarjeta.toFixed(2)),
+          totalOtros: Number(totalOtros.toFixed(2)),
+          totalGananciaNeta: gananciaNetaGlobal,
+          margenNetoGlobal,
+          ticketsEmitidos: rows.length,
+          ticketPromedio: rows.length > 0 ? Number((totalVentas / rows.length).toFixed(2)) : 0,
+          unidadesVendidasTotal: totalUnidadesVendidas,
+          mediosPago: mediosPagoList,
+          topRentables,
+          productosVendidos,
+          ventasPorCategoria
+        };
       }),
-      catchError(() => of([]))
+      catchError(err => {
+        console.error('[DashboardService] Error cargando dashboard completo:', err);
+        return of(baseResumen);
+      })
+    );
+  }
+
+  // Métodos de compatibilidad
+  getKpis(sucursalId?: string, fechaInicio?: string, fechaFin?: string): Observable<DashboardKpis> {
+    return this.getDashboardCompleto(fechaInicio, fechaFin, sucursalId).pipe(
+      map(res => ({
+        ventasHoy: res.totalVentas,
+        ticketsEmitidos: res.ticketsEmitidos,
+        lotesPorVencer: 0,
+        stockBajo: 2,
+        ticketPromedio: res.ticketPromedio,
+        mermaPorcentaje: 0.0,
+        totalEfectivo: res.totalEfectivo,
+        totalYape: res.totalYape,
+        totalPlin: res.totalPlin,
+        totalTarjeta: res.totalTarjeta,
+        totalOtros: res.totalOtros,
+        gananciaNeta: res.totalGananciaNeta,
+        margenPorcentaje: res.margenNetoGlobal
+      }))
+    );
+  }
+
+  getTopRentables(sucursalId?: string, fechaInicio?: string, fechaFin?: string): Observable<ProductoRentableDTO[]> {
+    return this.getDashboardCompleto(fechaInicio, fechaFin, sucursalId).pipe(
+      map(res => res.topRentables)
+    );
+  }
+
+  getMediosPago(sucursalId?: string, fechaInicio?: string, fechaFin?: string): Observable<MedioPagoDTO[]> {
+    return this.getDashboardCompleto(fechaInicio, fechaFin, sucursalId).pipe(
+      map(res => res.mediosPago)
+    );
+  }
+
+  getVentasPorCategoria(sucursalId?: string, fechaInicio?: string, fechaFin?: string): Observable<CategoriaVentaDTO[]> {
+    return this.getDashboardCompleto(fechaInicio, fechaFin, sucursalId).pipe(
+      map(res => res.ventasPorCategoria)
     );
   }
 }

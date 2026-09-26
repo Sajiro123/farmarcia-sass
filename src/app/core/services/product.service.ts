@@ -45,11 +45,22 @@ export interface ProductoCatalogoItem {
 export class ProductService {
   private supabase = inject(SupabaseService);
 
-  private readonly STORAGE_KEY = 'medicare_catalogo_maestro_v3';
-  private productosCatalogo: ProductoCatalogoItem[] = this.cargarCatalogoStorage();
+  productosCatalogo: ProductoCatalogoItem[] = [];
 
   constructor() {
+    this.limpiarStorageAntiguo();
     this.sincronizarConSupabase();
+  }
+
+  private limpiarStorageAntiguo(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('medicare_catalogo_maestro_v3');
+        localStorage.removeItem('medicare_catalogo_maestro_v2');
+      }
+    } catch {
+      // Ignorar errores en entornos sin localStorage
+    }
   }
 
   private mapSupabaseToProducto(p: any): ProductoCatalogoItem {
@@ -76,7 +87,7 @@ export class ProductService {
       precioUnidad: precioUnidad,
       unidadesPorCaja: unidadesCaja,
       unidadesPorBlister: esPerfume || esOtros ? 1 : Math.max(1, Math.round(unidadesCaja / 10)),
-      stockDisponible: 50,
+      stockDisponible: 0,
       ubicacionAlmacen: 'P1-E1-N1',
       descripcion: `${p.nombre_comercial} ${p.concentracion || ''} - ${p.nombre_generico || ''}`,
       estaActivo: p.esta_activo !== false,
@@ -87,35 +98,6 @@ export class ProductService {
       principioActivo: p.principios_activos?.nombre || p.nombre_generico || 'Genérico',
       concentracion: p.concentracion || ''
     };
-  }
-
-  private cargarCatalogoStorage(): ProductoCatalogoItem[] {
-    try {
-      // Limpiar cache viejo con data mockup
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('medicare_catalogo_maestro_v2');
-        const guardado = localStorage.getItem(this.STORAGE_KEY);
-        if (guardado) {
-          const parsed: ProductoCatalogoItem[] = JSON.parse(guardado);
-          // Filtrar items mockup que tengan id 'cat-001' etc.
-          const reales = (parsed || []).filter(p => !p.id.startsWith('cat-0'));
-          if (reales.length > 0) return reales;
-        }
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  private persistirCatalogo(): void {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.productosCatalogo));
-      }
-    } catch (e) {
-      console.error('Error persistiendo catálogo en storage:', e);
-    }
   }
 
   private sincronizarConSupabase(): void {
@@ -134,9 +116,10 @@ export class ProductService {
         `)
         .order('nombre_comercial', { ascending: true })
         .then(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data && Array.isArray(res.data)) {
             this.productosCatalogo = res.data.map(p => this.mapSupabaseToProducto(p));
-            this.persistirCatalogo();
+          } else {
+            this.productosCatalogo = [];
           }
         });
     }
@@ -167,15 +150,14 @@ export class ProductService {
           .order('nombre_comercial', { ascending: true })
       ).pipe(
         map(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data && Array.isArray(res.data)) {
             const mapped = res.data.map(p => this.mapSupabaseToProducto(p));
             this.productosCatalogo = mapped;
-            this.persistirCatalogo();
             return mapped;
           }
-          return this.productosCatalogo;
+          return [];
         }),
-        catchError(() => of(this.productosCatalogo))
+        catchError(() => of([]))
       );
     }
     return of(this.productosCatalogo);
@@ -203,15 +185,14 @@ export class ProductService {
           .order('nombre_comercial', { ascending: true })
       ).pipe(
         map(res => {
-          if (res.data && res.data.length > 0) {
+          if (res.data && Array.isArray(res.data)) {
             const mapped = res.data.map(p => this.mapSupabaseToProducto(p));
             this.productosCatalogo = mapped;
-            this.persistirCatalogo();
             return mapped;
           }
-          return this.productosCatalogo.filter(p => p.estaActivo);
+          return [];
         }),
-        catchError(() => of(this.productosCatalogo.filter(p => p.estaActivo)))
+        catchError(() => of([]))
       );
     }
     return of(this.productosCatalogo.filter(p => p.estaActivo));
@@ -270,7 +251,6 @@ export class ProductService {
         this.productosCatalogo.unshift({ ...item });
       }
     }
-    this.persistirCatalogo();
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
@@ -299,7 +279,6 @@ export class ProductService {
    */
   eliminarDelCatalogo(id: string): Observable<boolean> {
     this.productosCatalogo = this.productosCatalogo.filter(p => p.id !== id);
-    this.persistirCatalogo();
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {

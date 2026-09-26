@@ -139,59 +139,19 @@
           </span>
         </button>
       }
+
+      <button type="button" (click)="abrirModalVaciarInventario()"
+        title="Vaciar inventario para iniciar pruebas desde cero"
+        class="px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 border border-rose-200/80 font-bold transition-all cursor-pointer ml-auto">
+        <i class="fa-solid fa-trash-can text-rose-500"></i>
+        <span>Vaciar Inventario (Pruebas)</span>
+      </button>
     </div>
 
     <!-- ========================================== -->
     <!-- VISTA 1: LISTADO DE LOTES & STOCK          -->
     <!-- ========================================== -->
     @if (vistaActual === 'LISTADO') {
-
-    <!-- TARJETAS KPI RESUMEN DE INVENTARIO -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <!-- Total Lotes -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-boxes-stacked"></i>
-        </div>
-        <div>
-          <span class="text-[11px] font-bold uppercase text-slate-400 block tracking-wider">Total Lotes</span>
-          <p class="text-xl font-black text-slate-900 font-mono mt-0.5">{{ lotesFefo.length }}</p>
-        </div>
-      </div>
-
-      <!-- Stock Total Unidades -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-cubes"></i>
-        </div>
-        <div>
-          <span class="text-[11px] font-bold uppercase text-slate-400 block tracking-wider">Stock Físico Total</span>
-          <p class="text-xl font-black text-slate-900 font-mono mt-0.5">{{ totalStockGeneral | number }} <span class="text-xs font-normal text-slate-400">unid.</span></p>
-        </div>
-      </div>
-
-      <!-- Próximos a Vencer -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-bell"></i>
-        </div>
-        <div>
-          <span class="text-[11px] font-bold uppercase text-amber-600 block tracking-wider">Próximo Vencimiento (≤90d)</span>
-          <p class="text-xl font-black text-amber-600 font-mono mt-0.5">{{ totalProntoVencer }} <span class="text-xs font-normal text-slate-400">lotes</span></p>
-        </div>
-      </div>
-
-      <!-- Vencidos / Bloqueados -->
-      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex items-center gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg shrink-0">
-          <i class="fa-solid fa-ban"></i>
-        </div>
-        <div>
-          <span class="text-[11px] font-bold uppercase text-rose-600 block tracking-wider">Vencidos (Bloqueados)</span>
-          <p class="text-xl font-black text-rose-600 font-mono mt-0.5">{{ totalVencidos }} <span class="text-xs font-normal text-slate-400">lotes</span></p>
-        </div>
-      </div>
-    </div>
 
     <!-- FILTROS Y BUSCADORES INTEGRADOS -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
@@ -231,7 +191,7 @@
           [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-600 text-white font-bold shadow-xs shadow-purple-600/20' : 'bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium border border-purple-200/60'"
           class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="fa-solid fa-spray-can-sparkles text-[10px]"></i>
-          <span>Perfumes & Fragancias</span>
+          <span>Perfumes y Fragancias</span>
           <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
             [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-700 text-white' : 'bg-white text-purple-700'">
             {{ totalPerfumes }}
@@ -243,7 +203,7 @@
           [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-600 text-white font-bold shadow-xs shadow-sky-600/20' : 'bg-sky-50 hover:bg-sky-100 text-sky-800 font-medium border border-sky-200/60'"
           class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="fa-solid fa-box-open text-[10px]"></i>
-          <span>Otros / Aseo & Cuidado</span>
+          <span>Otros / Aseo / Pañales</span>
           <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
             [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-700 text-white' : 'bg-white text-sky-700'">
             {{ totalOtros }}
@@ -254,7 +214,7 @@
       <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         
         <!-- Buscador principal -->
-        <div class="md:col-span-4 relative">
+        <div class="md:col-span-5 relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
           <input type="text"
             [(ngModel)]="busqueda"
@@ -293,21 +253,8 @@
           </select>
         </div>
 
-        <!-- Filtro Condición de Conservación -->
-        <div class="md:col-span-2">
-          <select [(ngModel)]="filtroCondicion"
-            (ngModelChange)="paginaActual = 1"
-            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-            <option value="TODOS">🌡️ Toda Condición</option>
-            <option value="Ambiente">Ambiente (15-25°C)</option>
-            <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2-8°C)</option>
-            <option value="Lugar Fresco y Seco">Fresco y Seco</option>
-            <option value="Caja de Seguridad">Caja de Seguridad</option>
-          </select>
-        </div>
-
         <!-- Ordenar Por -->
-        <div class="md:col-span-2">
+        <div class="md:col-span-3">
           <select [(ngModel)]="ordenarPor"
             (ngModelChange)="paginaActual = 1"
             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -321,7 +268,7 @@
       </div>
 
       <!-- Barra de estado de filtros aplicados -->
-      @if (busqueda || filtroTipoProducto !== 'TODOS' || filtroEstado !== 'TODOS' || filtroCondicion !== 'TODOS' || ordenarPor !== 'FEFO_ASC') {
+      @if (busqueda || filtroTipoProducto !== 'TODOS' || filtroEstado !== 'TODOS' || ordenarPor !== 'FEFO_ASC') {
         <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">
           <div class="flex items-center gap-2 flex-wrap">
             <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
@@ -373,12 +320,6 @@
                   <span>UBICACIÓN</span>
                 </div>
               </th>
-              <th class="py-2.5 px-2.5 whitespace-nowrap">
-                <div class="flex items-center gap-1.5">
-                  <i class="fa-solid fa-temperature-half text-sky-300 text-[10px]"></i>
-                  <span>CONDICIÓN</span>
-                </div>
-              </th>
               <th (click)="alternarOrden('STOCK')" class="py-2.5 px-2.5 text-center cursor-pointer hover:bg-slate-700/80 transition-colors whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">
                   <i class="fa-solid fa-cubes text-emerald-300 text-[10px]"></i>
@@ -410,144 +351,152 @@
 
           <!-- CUERPO DE LA TABLA (COMPACTO) -->
           <tbody class="divide-y divide-slate-100/80 text-[11px]">
-            @for (item of lotesPaginados; track item.id; let i = $index) {
-              <tr class="hover:bg-slate-50/90 transition-colors group">
-
-                <!-- Lote & Reg. Sanitario -->
-                <td class="py-1.5 px-2.5 whitespace-nowrap">
-                  <div>
-                    <span class="font-mono font-bold text-slate-900 text-[11px]">{{ item.lote }}</span>
-                    @if (item.tipoProducto !== 'PERFUME' && item.registroSanitario) {
-                      <p class="text-[9px] text-slate-400 leading-tight">{{ item.registroSanitario }}</p>
-                    }
-                  </div>
-                </td>
-
-                <!-- Producto / Ficha -->
-                <td class="py-1.5 px-2.5">
-                  <div>
-                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-1 text-[11px] leading-tight">
-                      <span>{{ item.producto }}</span>
-                      @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                        <span class="text-[8px] bg-purple-50 text-purple-700 border border-purple-200/80 px-1 py-px rounded font-extrabold shrink-0">PERF</span>
-                      } @else if (item.tipoProducto === 'OTROS') {
-                        <span class="text-[8px] bg-sky-50 text-sky-700 border border-sky-200/80 px-1 py-px rounded font-extrabold shrink-0">OTROS</span>
-                      }
-                    </div>
-                    <div class="text-[10px] text-slate-500 leading-tight flex flex-wrap items-center gap-1">
-                      @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                        <span>{{ item.concentracionFragancia || 'Fragancia' }}</span>
-                        @if (item.volumenMl) {
-                          <span>•</span>
-                          <span class="text-purple-700 font-bold font-mono">{{ item.volumenMl }}ml</span>
-                        }
-                      } @else {
-                        <span>{{ item.principioActivo }}</span>
-                        @if (item.laboratorio) {
-                          <span>•</span>
-                          <span class="text-slate-600 font-medium">{{ item.laboratorio }}</span>
-                        }
-                      }
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Ubicación Física -->
-                <td class="py-1.5 px-2.5 whitespace-nowrap">
-                  @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold text-[9px]">
-                      <i class="fa-solid fa-store text-[8px] text-purple-400"></i>
-                      Vitrina
-                    </span>
-                  } @else {
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-bold text-[9px] max-w-[130px] truncate" [title]="item.ubicacion || item.pasillo || 'Sin asignar'">
-                      {{ item.ubicacion || (item.pasillo ? (item.pasillo + (item.estante ? '-' + item.estante : '') + (item.nivel ? '-' + item.nivel : '') + (item.gaveta ? '-' + item.gaveta : '')) : '—') }}
-                    </span>
-                  }
-                </td>
-
-                <!-- Condición / Temperatura -->
-                <td class="py-1.5 px-2.5 whitespace-nowrap">
-                  @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="text-slate-400 text-[10px]">—</span>
-                  } @else {
-                    <span class="text-[10px] text-slate-600 font-medium">
-                      {{ item.temperatura || 'Ambiente' }}
-                    </span>
-                  }
-                </td>
-
-                <!-- Stock Físico -->
-                <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
-                  <span class="font-mono font-bold text-[11px]" [ngClass]="item.stock === 0 ? 'text-rose-600' : 'text-slate-900'">
-                    {{ item.stock | number }}
-                  </span>
-                </td>
-
-                <!-- Fecha Vencimiento + Fecha Ingreso -->
-                <td class="py-1.5 px-2.5 whitespace-nowrap">
-                  @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
-                    <span class="inline-flex items-center gap-1 text-purple-700 font-bold text-[10px]">
-                      <i class="fa-solid fa-infinity text-[9px] text-purple-400"></i>
-                      No expira
-                    </span>
-                  } @else {
-                    <div>
-                      <span class="font-mono font-bold text-slate-800 text-[11px]">{{ item.vencimiento }}</span>
-                      @if (item.fechaIngreso) {
-                        <p class="text-[9px] text-slate-400 leading-tight">
-                          <i class="fa-solid fa-right-to-bracket text-[8px] mr-0.5"></i>Ing: {{ item.fechaIngreso }}
-                        </p>
-                      }
-                    </div>
-                  }
-                </td>
-
-                <!-- Estado FEFO -->
-                <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
-                  @let badge = getBadgeStatus(item.dias, item.tipoProducto);
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border {{ badge.class }}">
-                    <i class="{{ badge.icon }} text-[9px]"></i>
-                    {{ badge.text }}
-                  </span>
-                </td>
-
-                <!-- ACCIONES -->
-                <td class="py-1.5 px-2.5 text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-0.5">
-                    <button (click)="abrirModalEditarLote(item)"
-                      title="Editar datos del lote"
-                      class="p-1 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    </button>
-                    <button (click)="openBajaModal(item)"
-                      title="Generar Acta de Baja DIGEMID"
-                      class="p-1 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-file-excel text-xs"></i>
-                    </button>
-                    <button (click)="abrirModalEliminar(item)"
-                      title="Eliminar lote del inventario"
-                      class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
-                      <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            } @empty {
+            @if (cargando && lotesFefo.length === 0) {
               <tr>
-                <td colspan="8" class="py-10 text-center text-slate-400">
-                  <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
-                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                <td colspan="7" class="py-12 text-center text-slate-500">
+                  <div class="inline-flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-emerald-600 text-xl"></i>
+                    <span class="text-xs font-semibold text-slate-700">Cargando inventario y lotes FEFO...</span>
                   </div>
-                  <p class="font-medium text-slate-700 mb-1 text-xs">No se encontraron lotes en el inventario</p>
-                  <p class="text-[11px] text-slate-400 mb-3">Comienza registrando un ingreso de mercadería por lote.</p>
-                  <button (click)="abrirModalNuevoLote()"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
-                    <i class="fa-solid fa-circle-plus text-[10px]"></i>
-                    Ingresar Lote Ahora
-                  </button>
                 </td>
               </tr>
+            } @else {
+              @for (item of lotesPaginados; track item.id; let i = $index) {
+                <tr class="hover:bg-slate-50/90 transition-colors group">
+
+                  <!-- Lote & Reg. Sanitario -->
+                  <td class="py-1.5 px-2.5 whitespace-nowrap">
+                    <div>
+                      <span class="font-mono font-bold text-slate-900 text-[11px]">{{ item.lote }}</span>
+                      @if (item.tipoProducto !== 'PERFUME' && item.registroSanitario) {
+                        <p class="text-[9px] text-slate-400 leading-tight">{{ item.registroSanitario }}</p>
+                      }
+                    </div>
+                  </td>
+
+                  <!-- Producto / Ficha -->
+                  <td class="py-1.5 px-2.5">
+                    <div>
+                      <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-1 text-[11px] leading-tight">
+                        <span>{{ item.producto }}</span>
+                        @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
+                          <span class="text-[8px] bg-purple-50 text-purple-700 border border-purple-200/80 px-1 py-px rounded font-extrabold shrink-0">PERF</span>
+                        } @else if (item.tipoProducto === 'OTROS') {
+                          <span class="text-[8px] bg-sky-50 text-sky-700 border border-sky-200/80 px-1 py-px rounded font-extrabold shrink-0">OTROS</span>
+                        }
+                      </div>
+                      <div class="text-[10px] text-slate-500 leading-tight flex flex-wrap items-center gap-1">
+                        @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
+                          <span>{{ item.concentracionFragancia || 'Fragancia' }}</span>
+                          @if (item.volumenMl) {
+                            <span>•</span>
+                            <span class="text-purple-700 font-bold font-mono">{{ item.volumenMl }}ml</span>
+                          }
+                        } @else {
+                          <span>{{ item.principioActivo }}</span>
+                          @if (item.laboratorio) {
+                            <span>•</span>
+                            <span class="text-slate-600 font-medium">{{ item.laboratorio }}</span>
+                          }
+                        }
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Ubicación Física -->
+                  <td class="py-1.5 px-2.5 whitespace-nowrap">
+                    @if (item.sucursalNombre) {
+                      <div class="mb-0.5">
+                        <span class="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50/90 px-1.5 py-0.5 rounded border border-emerald-200/80">
+                          <i class="fa-solid fa-hospital text-[8px] text-emerald-600"></i>
+                          {{ item.sucursalNombre }}
+                        </span>
+                      </div>
+                    }
+                    @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold text-[9px]">
+                        <i class="fa-solid fa-store text-[8px] text-purple-400"></i>
+                        Vitrina
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-bold text-[9px] max-w-[130px] truncate" [title]="item.ubicacion || item.pasillo || 'Sin asignar'">
+                        {{ item.ubicacion || (item.pasillo ? (item.pasillo + (item.estante ? '-' + item.estante : '') + (item.nivel ? '-' + item.nivel : '') + (item.gaveta ? '-' + item.gaveta : '')) : '—') }}
+                      </span>
+                    }
+                  </td>
+
+                  <!-- Stock Físico -->
+                  <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
+                    <span class="font-mono font-bold text-[11px]" [ngClass]="item.stock === 0 ? 'text-rose-600' : 'text-slate-900'">
+                      {{ item.stock | number }}
+                    </span>
+                  </td>
+
+                  <!-- Fecha Vencimiento + Fecha Ingreso -->
+                  <td class="py-1.5 px-2.5 whitespace-nowrap">
+                    @if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') {
+                      <span class="inline-flex items-center gap-1 text-purple-700 font-bold text-[10px]">
+                        <i class="fa-solid fa-infinity text-[9px] text-purple-400"></i>
+                        No expira
+                      </span>
+                    } @else {
+                      <div>
+                        <span class="font-mono font-bold text-slate-800 text-[11px]">{{ item.vencimiento }}</span>
+                        @if (item.fechaIngreso) {
+                          <p class="text-[9px] text-slate-400 leading-tight">
+                            <i class="fa-solid fa-right-to-bracket text-[8px] mr-0.5"></i>Ing: {{ item.fechaIngreso }}
+                          </p>
+                        }
+                      </div>
+                    }
+                  </td>
+
+                  <!-- Estado FEFO -->
+                  <td class="py-1.5 px-2.5 text-center whitespace-nowrap">
+                    @let badge = getBadgeStatus(item.dias, item.tipoProducto);
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border {{ badge.class }}">
+                      <i class="{{ badge.icon }} text-[9px]"></i>
+                      {{ badge.text }}
+                    </span>
+                  </td>
+
+                  <!-- ACCIONES -->
+                  <td class="py-1.5 px-2.5 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-0.5">
+                      <button (click)="abrirModalEditarLote(item)"
+                        title="Editar datos del lote"
+                        class="p-1 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                      </button>
+                      <button (click)="openBajaModal(item)"
+                        title="Generar Acta de Baja DIGEMID"
+                        class="p-1 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-file-excel text-xs"></i>
+                      </button>
+                      <button (click)="abrirModalEliminar(item)"
+                        title="Eliminar lote del inventario"
+                        class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="py-10 text-center text-slate-400">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                      <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                    </div>
+                    <p class="font-medium text-slate-700 mb-1 text-xs">No se encontraron lotes en el inventario</p>
+                    <p class="text-[11px] text-slate-400 mb-3">Comienza registrando un ingreso de mercadería por lote.</p>
+                    <button (click)="abrirModalNuevoLote()"
+                      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-all shadow-sm cursor-pointer">
+                      <i class="fa-solid fa-circle-plus text-[10px]"></i>
+                      Ingresar Lote Ahora
+                    </button>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
 
@@ -555,7 +504,7 @@
           @if (lotesFiltrados.length > 0) {
             <tfoot>
               <tr class="border-t-2 border-slate-200 bg-slate-50/75 text-slate-900 font-bold text-[11px]">
-                <td colspan="4" class="py-2 px-2.5 uppercase tracking-wider font-extrabold text-slate-800">
+                <td colspan="3" class="py-2 px-2.5 uppercase tracking-wider font-extrabold text-slate-800">
                   TOTAL ({{ lotesFiltrados.length }} LOTES)
                 </td>
                 <td class="py-2 px-2.5 text-center font-mono font-black text-slate-900 text-xs whitespace-nowrap">
@@ -662,14 +611,61 @@
                 }
               </div>
 
-              <!-- Selector de Producto (Buscador con Autocompletado) -->
-              <div class="relative">
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Producto del Catálogo Maestro <span class="text-rose-500">*</span>
-                </label>
+              <!-- Selector de Producto (Buscador + Select Filtrado en Vivo) -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-bold text-slate-700">
+                    Producto del Catálogo Maestro <span class="text-rose-500">*</span>
+                  </label>
+                  @if (productosFiltradosParaLote.length > 0) {
+                    <span class="text-[10px] text-slate-500 font-medium">
+                      Mostrando {{ productosFiltradosParaLote.length }} de {{ productosCatalogo.length }} productos
+                    </span>
+                  }
+                </div>
 
-                @if (productoSeleccionado && !mostrarBuscadorProducto) {
-                  <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/70 transition-colors">
+                <!-- Input de Búsqueda / Filtro en Vivo -->
+                <div class="relative">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="text"
+                    [(ngModel)]="busquedaProductoCatalogo"
+                    (ngModelChange)="onBusquedaProductoChange()"
+                    placeholder="Escribe para filtrar por nombre, SKU, código de barras o principio activo..."
+                    class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs transition-all" />
+                  
+                  @if (busquedaProductoCatalogo) {
+                    <button type="button"
+                      (click)="limpiarBusquedaProducto(); onBusquedaProductoChange()"
+                      title="Limpiar filtro"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                      <i class="fa-solid fa-circle-xmark text-xs"></i>
+                    </button>
+                  }
+                </div>
+
+                <!-- Select con los productos filtrados en tiempo real -->
+                <div class="relative">
+                  <select
+                    [(ngModel)]="loteForm.productoId"
+                    (ngModelChange)="onSelectProductoDirecto($event)"
+                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs appearance-none cursor-pointer">
+                    @for (prod of productosFiltradosParaLote; track prod.id) {
+                      <option [value]="prod.id">
+                        [{{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}] {{ prod.nombreComercial }} {{ prod.concentracion || '' }} - SKU: {{ prod.sku }}{{ prod.codigoBarra ? ' | Barcode: ' + prod.codigoBarra : '' }}{{ prod.principioActivo ? ' (' + prod.principioActivo + ')' : '' }}
+                      </option>
+                    }
+                    @if (productosFiltradosParaLote.length === 0) {
+                      <option value="" disabled selected>⚠️ No hay productos que coincidan con "{{ busquedaProductoCatalogo }}"</option>
+                    }
+                  </select>
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                    <i class="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+
+                <!-- Ficha Informativa del Producto Seleccionado -->
+                @if (productoSeleccionado) {
+                  <div class="flex items-center justify-between p-3 bg-slate-50/90 border border-slate-200/80 rounded-xl transition-all">
                     <div class="flex items-center gap-2.5 min-w-0">
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0"
                         [ngClass]="{
@@ -680,86 +676,25 @@
                         {{ esProductoPerfume ? '✨ PERFUME' : (esProductoOtros ? '🧴 OTROS' : '💊 MEDICAMENTO') }}
                       </span>
                       <div class="truncate">
-                        <span class="font-bold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
+                        <span class="font-extrabold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
                         <span class="text-[10px] text-slate-500 ml-2 font-mono">SKU: {{ productoSeleccionado.sku }}</span>
+                        @if (productoSeleccionado.codigoBarra) {
+                          <span class="text-[10px] text-amber-700 ml-1.5 font-mono inline-flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            <i class="fa-solid fa-barcode text-[8px]"></i> {{ productoSeleccionado.codigoBarra }}
+                          </span>
+                        }
                         @if (productoSeleccionado.principioActivo) {
-                          <span class="text-[10px] text-slate-400 ml-1">• {{ productoSeleccionado.principioActivo }}</span>
+                          <span class="text-[10px] text-slate-500 ml-1.5">• P. Activo: {{ productoSeleccionado.principioActivo }}</span>
+                        }
+                        @if (productoSeleccionado.laboratorio) {
+                          <span class="text-[10px] text-slate-400 ml-1.5">• Lab: {{ productoSeleccionado.laboratorio }}</span>
                         }
                       </div>
                     </div>
-                    <button type="button"
-                      (click)="abrirBuscadorProducto()"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-amber-700 hover:text-amber-800 bg-white hover:bg-amber-50 border border-slate-200 rounded-lg shadow-2xs transition-colors shrink-0 ml-2 cursor-pointer">
-                      <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
-                      <span>Cambiar</span>
-                    </button>
+                    <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 shrink-0 ml-2">
+                      Seleccionado
+                    </span>
                   </div>
-                } @else {
-                  <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text"
-                      [(ngModel)]="busquedaProductoCatalogo"
-                      (focus)="mostrarDropdownProductos = true"
-                      (input)="mostrarDropdownProductos = true"
-                      placeholder="Escribe para buscar por nombre, SKU o principio activo..."
-                      class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs" />
-                    
-                    @if (busquedaProductoCatalogo) {
-                      <button type="button"
-                        (click)="limpiarBusquedaProducto()"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                        <i class="fa-solid fa-circle-xmark text-xs"></i>
-                      </button>
-                    }
-                  </div>
-
-                  @if (mostrarDropdownProductos) {
-                    <div class="absolute left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-slide-up max-h-60 overflow-y-auto divide-y divide-slate-100">
-                      <div class="p-2 bg-slate-50 text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-100">
-                        <span>{{ productosFiltradosParaLote.length }} productos encontrados</span>
-                        <button type="button" (click)="cerrarDropdownProductos()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
-                          <i class="fa-solid fa-xmark"></i> Cerrar
-                        </button>
-                      </div>
-
-                      @for (prod of productosFiltradosParaLote; track prod.id) {
-                        <div (click)="seleccionarProductoCatalogo(prod)"
-                          class="p-2.5 hover:bg-amber-50/80 cursor-pointer transition-colors flex items-center justify-between gap-3 text-xs"
-                          [class.bg-amber-50]="loteForm.productoId === prod.id">
-                          <div class="min-w-0">
-                            <div class="flex items-center gap-1.5">
-                              <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold border shrink-0"
-                                [ngClass]="{
-                                  'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
-                                  'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
-                                  'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto === 'MEDICAMENTO'
-                                }">
-                                {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
-                              </span>
-                              <span class="font-bold text-slate-900 truncate">
-                                {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
-                              </span>
-                            </div>
-                            <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
-                              <span class="font-mono text-slate-400">SKU: {{ prod.sku }}</span>
-                              @if (prod.principioActivo) {
-                                <span>• {{ prod.principioActivo }}</span>
-                              } @else if (prod.marca) {
-                                <span>• {{ prod.marca }}</span>
-                              }
-                            </div>
-                          </div>
-                          @if (loteForm.productoId === prod.id) {
-                            <i class="fa-solid fa-check text-amber-600 text-xs shrink-0"></i>
-                          }
-                        </div>
-                      } @empty {
-                        <div class="p-4 text-center text-xs text-slate-400">
-                          No se encontraron productos coincidentes.
-                        </div>
-                      }
-                    </div>
-                  }
                 }
               </div>
 
@@ -866,18 +801,6 @@
                       placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
                       class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"></textarea>
                   </div>
-
-                  <!-- Temperatura / Condición -->
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Condición de Conservación & Temperatura</label>
-                    <select [(ngModel)]="loteForm.temperatura"
-                      class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-medium text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
-                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
-                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
-                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco (&lt; 30°C)</option>
-                      <option value="Caja de Seguridad">Caja Fuerte / Seguridad</option>
-                    </select>
-                  </div>
                 </div>
               }
             </div>
@@ -944,10 +867,6 @@
                     {{ esProductoPerfume ? 'Vitrina' : (loteForm.pasillo + '-' + loteForm.estante + '-' + loteForm.nivel + '-' + loteForm.gaveta) }}
                   </span>
                 </div>
-                <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-slate-400">Conservación:</span>
-                  <span class="font-medium text-slate-800">{{ loteForm.temperatura }}</span>
-                </div>
               </div>
 
               <!-- BOTONES DE ACCIÓN -->
@@ -994,8 +913,29 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+              <!-- Sede / Sucursal Destino -->
+              <div class="sm:col-span-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <i class="fa-solid fa-hospital text-emerald-600"></i>
+                  <span>Sede / Sucursal Destino</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <select
+                    [(ngModel)]="loteCabecera.sucursalId"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 appearance-none cursor-pointer">
+                    @for (sede of sedesDisponibles; track sede.id) {
+                      <option [value]="sede.id">📍 {{ sede.nombre }}</option>
+                    }
+                  </select>
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                    <i class="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+              </div>
+
               <!-- N° Lote Compartido -->
-              <div class="sm:col-span-5">
+              <div class="sm:col-span-3">
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">
                   N° / Código de Lote <span class="text-rose-500">*</span>
                 </label>
@@ -1007,14 +947,14 @@
                   <button type="button"
                     (click)="generarCodigoLoteNuevo()"
                     title="Generar nuevo código correlativo aleatorio"
-                    class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0">
+                    class="px-2.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0">
                     <i class="fa-solid fa-arrows-rotate"></i>
                   </button>
                 </div>
               </div>
 
               <!-- Fecha de Ingreso -->
-              <div class="sm:col-span-3">
+              <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Fecha de Ingreso</label>
                 <input type="date"
                   [(ngModel)]="loteCabecera.fechaIngreso"
@@ -1022,7 +962,7 @@
               </div>
 
               <!-- Guía / Factura de Referencia -->
-              <div class="sm:col-span-4">
+              <div class="sm:col-span-3">
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Guía / Factura (Opcional)</label>
                 <input type="text"
                   [(ngModel)]="loteCabecera.guiaReferencia"
@@ -1056,14 +996,92 @@
               }
             </div>
 
-            <!-- Selector de Producto (Buscador con Autocompletado) -->
-            <div class="relative">
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                Seleccionar Producto del Catálogo <span class="text-rose-500">*</span>
-              </label>
+            <!-- Selector de Producto (Buscador + Select Filtrado en Vivo) -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold text-slate-700">
+                  Seleccionar Producto del Catálogo <span class="text-rose-500">*</span>
+                </label>
+                @if (productosFiltradosParaLote.length > 0) {
+                  <span class="text-[10px] text-slate-500 font-medium">
+                    Mostrando {{ productosFiltradosParaLote.length }} de {{ productosCatalogo.length }} productos
+                  </span>
+                }
+              </div>
 
-              @if (productoSeleccionado && !mostrarBuscadorProducto) {
-                <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/70 transition-colors">
+              <!-- Input de Búsqueda / Filtro en Vivo con Dropdown Flotante -->
+              <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text"
+                  [(ngModel)]="busquedaProductoCatalogo"
+                  (ngModelChange)="onBusquedaProductoChange()"
+                  placeholder="Escribe para filtrar productos por nombre, SKU, código de barras o principio activo..."
+                  class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition-all" />
+                
+                @if (busquedaProductoCatalogo) {
+                  <button type="button"
+                    (click)="limpiarBusquedaProducto(); onBusquedaProductoChange()"
+                    title="Limpiar filtro"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <i class="fa-solid fa-circle-xmark text-xs"></i>
+                  </button>
+                }
+
+                <!-- Sugerencias de Búsqueda Flotantes -->
+                @if (mostrarDropdownProductos && productosFiltradosParaLote.length > 0) {
+                  <div class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    @for (prod of productosFiltradosParaLote.slice(0, 8); track prod.id) {
+                      <div (click)="seleccionarProductoCatalogo(prod)"
+                        class="p-2.5 hover:bg-emerald-50/90 cursor-pointer flex items-center justify-between transition-colors">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0"
+                            [ngClass]="{
+                              'bg-purple-100 text-purple-700': prod.tipoProducto === 'PERFUME',
+                              'bg-sky-100 text-sky-700': prod.tipoProducto === 'OTROS',
+                              'bg-emerald-100 text-emerald-700': prod.tipoProducto !== 'PERFUME' && prod.tipoProducto !== 'OTROS'
+                            }">
+                            {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
+                          </span>
+                          <div>
+                            <p class="font-bold text-slate-900 text-xs">{{ prod.nombreComercial }} {{ prod.concentracion || '' }}</p>
+                            <p class="text-[10px] text-slate-400">
+                              SKU: {{ prod.sku }}{{ prod.principioActivo ? ' • ' + prod.principioActivo : '' }}{{ prod.laboratorio ? ' • Lab: ' + prod.laboratorio : '' }}
+                            </p>
+                          </div>
+                        </div>
+                        <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shrink-0">
+                          Elegir
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Select con los productos filtrados en tiempo real -->
+              <div class="relative">
+                <select
+                  [(ngModel)]="loteForm.productoId"
+                  (ngModelChange)="onSelectProductoDirecto($event)"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs appearance-none cursor-pointer">
+                  <option value="" disabled [selected]="!loteForm.productoId">-- Seleccionar producto del catálogo --</option>
+                  @for (prod of productosFiltradosParaLote; track prod.id) {
+                    <option [value]="prod.id">
+                      [{{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}] {{ prod.nombreComercial }} {{ prod.concentracion || '' }} - SKU: {{ prod.sku }}{{ prod.codigoBarra ? ' | Barcode: ' + prod.codigoBarra : '' }}{{ prod.principioActivo ? ' (' + prod.principioActivo + ')' : '' }}
+                    </option>
+                  }
+                  @if (productosFiltradosParaLote.length === 0) {
+                    <option value="" disabled selected>⚠️ No hay productos que coincidan con "{{ busquedaProductoCatalogo }}"</option>
+                  }
+                </select>
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                  <i class="fa-solid fa-chevron-down"></i>
+                </div>
+              </div>
+
+              <!-- Ficha Informativa del Producto Seleccionado -->
+              @if (productoSeleccionado) {
+                <div class="flex items-center justify-between p-3 bg-slate-50/90 border border-slate-200/80 rounded-xl transition-all">
                   <div class="flex items-center gap-2.5 min-w-0">
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0"
                       [ngClass]="{
@@ -1074,96 +1092,25 @@
                       {{ esProductoPerfume ? '✨ PERFUME' : (esProductoOtros ? '🧴 OTROS' : '💊 MEDICAMENTO') }}
                     </span>
                     <div class="truncate">
-                      <span class="font-bold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
+                      <span class="font-extrabold text-slate-900 text-xs">{{ productoSeleccionado.nombreComercial }} {{ productoSeleccionado.concentracion || '' }}</span>
                       <span class="text-[10px] text-slate-500 ml-2 font-mono">SKU: {{ productoSeleccionado.sku }}</span>
                       @if (productoSeleccionado.codigoBarra) {
-                        <span class="text-[10px] text-emerald-700 ml-1 font-mono inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
+                        <span class="text-[10px] text-emerald-700 ml-1.5 font-mono inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
                           <i class="fa-solid fa-barcode text-[8px]"></i> {{ productoSeleccionado.codigoBarra }}
                         </span>
                       }
                       @if (productoSeleccionado.principioActivo) {
-                        <span class="text-[10px] text-slate-400 ml-1">• {{ productoSeleccionado.principioActivo }}</span>
+                        <span class="text-[10px] text-slate-500 ml-1.5">• P. Activo: {{ productoSeleccionado.principioActivo }}</span>
+                      }
+                      @if (productoSeleccionado.laboratorio) {
+                        <span class="text-[10px] text-slate-400 ml-1.5">• Lab: {{ productoSeleccionado.laboratorio }}</span>
                       }
                     </div>
                   </div>
-                  <button type="button"
-                    (click)="abrirBuscadorProducto()"
-                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-white hover:bg-emerald-50 border border-slate-200 rounded-lg shadow-2xs transition-colors shrink-0 ml-2 cursor-pointer">
-                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
-                    <span>Cambiar</span>
-                  </button>
+                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 shrink-0 ml-2">
+                    Seleccionado
+                  </span>
                 </div>
-              } @else {
-                <div class="relative">
-                  <i class="fa-solid fa-barcode absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                  <input type="text"
-                    [(ngModel)]="busquedaProductoCatalogo"
-                    (focus)="mostrarDropdownProductos = true"
-                    (input)="mostrarDropdownProductos = true"
-                    placeholder="Escribe o escanea código de barras, SKU, nombre comercial..."
-                    class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs" />
-                  
-                  @if (busquedaProductoCatalogo) {
-                    <button type="button"
-                      (click)="limpiarBusquedaProducto()"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <i class="fa-solid fa-circle-xmark text-xs"></i>
-                    </button>
-                  }
-                </div>
-
-                @if (mostrarDropdownProductos) {
-                  <div class="absolute left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-slide-up max-h-60 overflow-y-auto divide-y divide-slate-100">
-                    <div class="p-2 bg-slate-50 text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between border-b border-slate-100">
-                      <span>{{ productosFiltradosParaLote.length }} productos encontrados</span>
-                      <button type="button" (click)="cerrarDropdownProductos()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
-                        <i class="fa-solid fa-xmark"></i> Cerrar
-                      </button>
-                    </div>
-
-                    @for (prod of productosFiltradosParaLote; track prod.id) {
-                      <div (click)="seleccionarProductoCatalogo(prod)"
-                        class="p-2.5 hover:bg-emerald-50/80 cursor-pointer transition-colors flex items-center justify-between gap-3 text-xs"
-                        [class.bg-emerald-50]="loteForm.productoId === prod.id">
-                        <div class="min-w-0">
-                          <div class="flex items-center gap-1.5">
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold border shrink-0"
-                              [ngClass]="{
-                                'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
-                                'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
-                                'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto === 'MEDICAMENTO'
-                              }">
-                              {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
-                            </span>
-                            <span class="font-bold text-slate-900 truncate">
-                              {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
-                            </span>
-                          </div>
-                          <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
-                            <span class="font-mono text-slate-400">SKU: {{ prod.sku }}</span>
-                            @if (prod.codigoBarra) {
-                              <span class="font-mono text-slate-400 flex items-center gap-0.5">
-                                <i class="fa-solid fa-barcode text-[8px]"></i>{{ prod.codigoBarra }}
-                              </span>
-                            }
-                            @if (prod.principioActivo) {
-                              <span>• {{ prod.principioActivo }}</span>
-                            } @else if (prod.marca) {
-                              <span>• {{ prod.marca }}</span>
-                            }
-                          </div>
-                        </div>
-                        @if (loteForm.productoId === prod.id) {
-                          <i class="fa-solid fa-check text-emerald-600 text-xs shrink-0"></i>
-                        }
-                      </div>
-                    } @empty {
-                      <div class="p-4 text-center text-xs text-slate-400">
-                        No se encontraron productos coincidentes.
-                      </div>
-                    }
-                  </div>
-                }
               }
             </div>
 
@@ -1237,25 +1184,14 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  <div class="sm:col-span-7">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">
-                      Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
-                    </label>
-                    <textarea [(ngModel)]="loteForm.ubicacion"
-                      rows="2"
-                      placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
-                      class="w-full bg-white border border-sky-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-none"></textarea>
-                  </div>
-                  <div class="sm:col-span-5">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Condición de Conservación</label>
-                    <select [(ngModel)]="loteForm.temperatura"
-                      class="w-full bg-white border border-sky-200 rounded-xl p-2 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500">
-                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
-                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco</option>
-                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
-                    </select>
-                  </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">
+                    Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                  </label>
+                  <textarea [(ngModel)]="loteForm.ubicacion"
+                    rows="2"
+                    placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
+                    class="w-full bg-white border border-sky-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-none"></textarea>
                 </div>
               </div>
             }
@@ -1294,26 +1230,14 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  <div class="sm:col-span-7">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">
-                      Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
-                    </label>
-                    <textarea [(ngModel)]="loteForm.ubicacion"
-                      rows="2"
-                      placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
-                      class="w-full bg-white border border-emerald-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"></textarea>
-                  </div>
-                  <div class="sm:col-span-5">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Condición & Temperatura</label>
-                    <select [(ngModel)]="loteForm.temperatura"
-                      class="w-full bg-white border border-emerald-200 rounded-xl p-2 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
-                      <option value="Ambiente">Temperatura Ambiente (15°C a 25°C)</option>
-                      <option value="2°C a 8°C (Cadena Frío)">Cadena de Frío (2°C a 8°C)</option>
-                      <option value="Lugar Fresco y Seco">Lugar Fresco y Seco (&lt; 30°C)</option>
-                      <option value="Caja de Seguridad">Caja Fuerte / Psicotrópicos</option>
-                    </select>
-                  </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">
+                    Ubicación Física en Almacén <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span>
+                  </label>
+                  <textarea [(ngModel)]="loteForm.ubicacion"
+                    rows="2"
+                    placeholder="Ej: Pasillo 2, Anaquel A, Nivel 3, Gaveta 1 (Opcional)..."
+                    class="w-full bg-white border border-emerald-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"></textarea>
                 </div>
               </div>
             }
@@ -1599,6 +1523,46 @@
         <button (click)="showActaImprimirModal = false"
           class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer">
           Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL: CONFIRMAR VACIAR INVENTARIO (PRUEBAS) -->
+@if (showVaciarModal) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-800 animate-slide-up border border-rose-200">
+      <div class="flex items-center gap-3 text-rose-600 pb-2 border-b border-rose-100">
+        <div class="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center border border-rose-200 shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-black text-rose-900 uppercase tracking-wider">Vaciar Inventario (Pruebas)</h3>
+          <p class="text-[11px] text-slate-500">Esta acción limpiará todos los lotes y el stock físico actual.</p>
+        </div>
+      </div>
+
+      <div class="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-2xl text-xs text-rose-800 space-y-2">
+        <p class="font-semibold">
+          ¿Estás seguro de que deseas vaciar las tablas de inventario en la nube y local?
+        </p>
+        <ul class="text-[11px] text-rose-700 list-disc list-inside space-y-1">
+          <li>Se eliminarán todos los registros de <strong>stock físico</strong>.</li>
+          <li>El catálogo de productos (medicamentos y perfumes) <strong>permanecerá intacto</strong>.</li>
+          <li>Podrás registrar nuevos lotes desde cero para tus pruebas.</li>
+        </ul>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-100">
+        <button type="button" (click)="showVaciarModal = false"
+          class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer transition-colors">
+          Cancelar
+        </button>
+        <button type="button" (click)="confirmarVaciarInventario()"
+          class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold text-xs cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-2">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+          <span>Sí, Vaciar Inventario</span>
         </button>
       </div>
     </div>

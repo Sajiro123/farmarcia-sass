@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { Observable, from, of, map, catchError } from 'rxjs';
+import { Observable, from, of, map, catchError, timeout } from 'rxjs';
 
 export interface VentaItemDTO {
   productoId: string | number;
@@ -330,6 +330,7 @@ export class VentaService {
     }
 
     return from(query).pipe(
+      timeout(12000),
       map(res => {
         if (res.error) {
           console.warn('Error al consultar ventas en Supabase:', res.error);
@@ -411,6 +412,7 @@ export class VentaService {
       return of(this.getHistorialTurnos());
     }
 
+    const conFiltroSede = sucursalId && sucursalId !== 'TODAS';
     let query = client
       .from('turnos_caja')
       .select(`
@@ -418,7 +420,7 @@ export class VentaService {
         saldo_apertura, saldo_cierre_estimado, saldo_cierre_real,
         diferencia, estado, observaciones,
         usuarios (id, nombre_completo, nombre_usuario),
-        cajas_pos (id, nombre, sucursal_id, sucursales (id, nombre))
+        cajas_pos${conFiltroSede ? '!inner' : ''} (id, nombre, sucursal_id, sucursales (id, nombre))
       `)
       .order('apertura_en', { ascending: false });
 
@@ -428,30 +430,33 @@ export class VentaService {
     if (fechaFin) {
       query = query.lte('apertura_en', `${fechaFin}T23:59:59.999Z`);
     }
-    if (sucursalId && sucursalId !== 'TODAS') {
+    if (conFiltroSede) {
       query = query.eq('cajas_pos.sucursal_id', sucursalId);
     }
 
     return from(query).pipe(
+      timeout(12000),
       map(res => {
         if (res.error) {
           console.warn('Error al consultar turnos_caja en Supabase:', res.error);
           return this.getHistorialTurnos();
         }
 
-        const turnos: TurnoCajaDTO[] = (res.data || []).map((t: any) => ({
-          id: t.id,
-          cajaAbierta: t.estado === 'ABIERTO',
-          fechaApertura: t.apertura_en,
-          fechaCierre: t.cierre_en || undefined,
-          cajeroActual: t.usuarios?.nombre_completo || t.usuarios?.nombre_usuario || 'Cajero Principal',
-          fondoInicial: Number(t.saldo_apertura) || 0,
-          sedeId: t.cajas_pos?.sucursales?.id,
-          sede: t.cajas_pos?.sucursales?.nombre || 'Sede Cajamarca Central',
-          totalVentas: Number(t.saldo_cierre_real || t.saldo_cierre_estimado) || 0,
-          reabierta: (t.observaciones || '').includes('REABIERTA'),
-          motivoReapertura: t.observaciones || undefined
-        }));
+        const turnos: TurnoCajaDTO[] = (res.data || [])
+          .filter((t: any) => !conFiltroSede || t.cajas_pos?.sucursal_id === sucursalId)
+          .map((t: any) => ({
+            id: t.id,
+            cajaAbierta: t.estado === 'ABIERTO',
+            fechaApertura: t.apertura_en,
+            fechaCierre: t.cierre_en || undefined,
+            cajeroActual: t.usuarios?.nombre_completo || t.usuarios?.nombre_usuario || 'Cajero Principal',
+            fondoInicial: Number(t.saldo_apertura) || 0,
+            sedeId: t.cajas_pos?.sucursales?.id,
+            sede: t.cajas_pos?.sucursales?.nombre || 'Sede Cajamarca Central',
+            totalVentas: Number(t.saldo_cierre_real || t.saldo_cierre_estimado) || 0,
+            reabierta: (t.observaciones || '').includes('REABIERTA'),
+            motivoReapertura: t.observaciones || undefined
+          }));
 
         if (turnos.length > 0) {
           localStorage.setItem('medicare_historial_turnos', JSON.stringify(turnos));

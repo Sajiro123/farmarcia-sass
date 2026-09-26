@@ -1,8 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { VentaService, TicketVentaDTO, TurnoCajaDTO } from '../../core/services/venta.service';
 import { AuthService } from '../../core/services/auth.service';
+
+import { DatePickerModule } from 'primeng/datepicker';
 
 export interface ResumenDiaReporte {
   fecha: string; // YYYY-MM-DD
@@ -25,12 +28,14 @@ export interface ResumenDiaReporte {
 @Component({
   selector: 'app-reportes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DatePickerModule],
   templateUrl: './reportes.html'
 })
 export class Reportes implements OnInit {
   public ventaService = inject(VentaService);
   public authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   // --- NAVEGACIÓN POR PESTAÑAS ---
   tabActiva: 'GENERAL' | 'DETALLADO' | 'APERTURAS' = 'GENERAL';
@@ -43,6 +48,7 @@ export class Reportes implements OnInit {
   // ================= 1. PESTAÑA: REPORTE GENERAL =================
   fechaInicioGeneral: string = '';
   fechaFinGeneral: string = '';
+  rangoFechasGeneral: (Date | null)[] = [];
   filtroSedeGeneral = 'TODAS';
   reportePorDias: ResumenDiaReporte[] = [];
 
@@ -61,6 +67,7 @@ export class Reportes implements OnInit {
   aperturasFiltradas: TurnoCajaDTO[] = [];
   fechaInicioApertura: string = '';
   fechaFinApertura: string = '';
+  rangoFechasApertura: (Date | null)[] = [];
   filtroCajeroApertura = 'TODOS';
   busquedaApertura = '';
   filtroEstadoApertura = 'TODOS';
@@ -117,13 +124,18 @@ export class Reportes implements OnInit {
     this.fechaInicioGeneral = ini.toISOString().split('T')[0];
     this.fechaFinApertura = fin.toISOString().split('T')[0];
     this.fechaInicioApertura = ini.toISOString().split('T')[0];
+    this.rangoFechasGeneral = [ini, fin];
+    this.rangoFechasApertura = [ini, fin];
 
-    // Cargar datos iniciales desde Supabase Cloud
+    // Cargar datos iniciales desde memoria local para renderizado instantáneo
     this.turnoActual = this.ventaService.getTurnoActual();
     this.historialTurnos = this.ventaService.getHistorialTurnos();
+    this.ventas = [...this.ventaService.ventas];
+    this.cargarAperturas();
+    this.calcularReporteGeneral();
 
+    // Sincronizar en vivo con Supabase Cloud PostgreSQL
     this.consultarSupabaseGeneral();
-    this.consultarSupabaseAperturas();
   }
 
   cargarDatos() {
@@ -142,71 +154,107 @@ export class Reportes implements OnInit {
 
   consultarSupabaseGeneral() {
     this.cargandoSupabase = true;
+    this.cdr.markForCheck();
     const sucursalId = this.obtenerSucursalIdPorNombre(this.filtroSedeGeneral);
-    this.ventaService.consultarVentasSupabase(this.fechaInicioGeneral, this.fechaFinGeneral, sucursalId)
-      .subscribe({
-        next: (ventasDb) => {
+
+    forkJoin({
+      ventas: this.ventaService.consultarVentasSupabase(this.fechaInicioGeneral, this.fechaFinGeneral, sucursalId),
+      turnos: this.ventaService.consultarTurnosSupabase(this.fechaInicioGeneral, this.fechaFinGeneral, sucursalId)
+    }).subscribe({
+      next: ({ ventas, turnos }) => {
+        this.ngZone.run(() => {
           this.cargandoSupabase = false;
           this.ultimaConsultaNube = new Date();
-          this.conteoVentasNube = ventasDb.length;
+          this.conteoVentasNube = ventas.length;
 
-          // Deduplicar por id
+          // Deduplicar ventas por id
           const mapa = new Map<string, TicketVentaDTO>();
-          ventasDb.forEach(v => {
+          ventas.forEach(v => {
             if (v && v.id) mapa.set(v.id, v);
           });
           this.ventas = Array.from(mapa.values());
 
+          if (turnos && turnos.length > 0) {
+            this.historialTurnos = turnos;
+          }
+          this.cargarAperturas();
           this.calcularReporteGeneral();
-        },
-        error: (err) => {
+
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        this.ngZone.run(() => {
           this.cargandoSupabase = false;
-          console.warn('Error al consultar Supabase ventas:', err);
+          console.warn('Error al consultar Supabase en Reporte General:', err);
           this.calcularReporteGeneral();
-        }
-      });
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   consultarSupabaseDetalle() {
     this.cargandoSupabase = true;
+    this.cdr.markForCheck();
     const sucursalId = this.obtenerSucursalIdPorNombre(this.filtroSedeDetalle);
     this.ventaService.consultarVentasSupabase(this.fechaDetallada, this.fechaDetallada, sucursalId)
       .subscribe({
         next: (ventasDb) => {
-          this.cargandoSupabase = false;
-          this.ultimaConsultaNube = new Date();
+          this.ngZone.run(() => {
+            this.cargandoSupabase = false;
+            this.ultimaConsultaNube = new Date();
 
-          const mapa = new Map<string, TicketVentaDTO>();
-          this.ventas.forEach(v => mapa.set(v.id, v));
-          ventasDb.forEach(v => mapa.set(v.id, v));
-          this.ventas = Array.from(mapa.values());
+            const mapa = new Map<string, TicketVentaDTO>();
+            this.ventas.forEach(v => mapa.set(v.id, v));
+            ventasDb.forEach(v => mapa.set(v.id, v));
+            this.ventas = Array.from(mapa.values());
 
-          this.aplicarFiltrosDetallados();
+            this.aplicarFiltrosDetallados();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
         },
         error: () => {
-          this.cargandoSupabase = false;
-          this.aplicarFiltrosDetallados();
+          this.ngZone.run(() => {
+            this.cargandoSupabase = false;
+            this.aplicarFiltrosDetallados();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
         }
       });
   }
 
   consultarSupabaseAperturas() {
     this.cargandoSupabase = true;
+    this.cdr.markForCheck();
     const sucursalId = this.obtenerSucursalIdPorNombre(this.filtroSedeApertura);
     this.ventaService.consultarTurnosSupabase(this.fechaInicioApertura, this.fechaFinApertura, sucursalId)
       .subscribe({
         next: (turnosDb) => {
-          this.cargandoSupabase = false;
-          this.ultimaConsultaNube = new Date();
+          this.ngZone.run(() => {
+            this.cargandoSupabase = false;
+            this.ultimaConsultaNube = new Date();
 
-          if (turnosDb && turnosDb.length > 0) {
-            this.historialTurnos = turnosDb;
-          }
-          this.cargarAperturas();
+            if (turnosDb && turnosDb.length > 0) {
+              this.historialTurnos = turnosDb;
+            }
+            this.cargarAperturas();
+            this.calcularReporteGeneral();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
         },
         error: () => {
-          this.cargandoSupabase = false;
-          this.cargarAperturas();
+          this.ngZone.run(() => {
+            this.cargandoSupabase = false;
+            this.cargarAperturas();
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
         }
       });
   }
@@ -271,6 +319,11 @@ export class Reportes implements OnInit {
       turnosDia.forEach(t => {
         if (t.cajeroActual) setCajeros.add(t.cajeroActual);
       });
+      if (setCajeros.size === 0) {
+        ventasDia.forEach(v => {
+          if (v.cajero) setCajeros.add(v.cajero);
+        });
+      }
       if (setCajeros.size === 0) {
         // Si no hay turno registrado explícito, inferir cajero o titular
         setCajeros.add(this.turnoActual?.cajeroActual || 'Carlos Mendoza (Cajero Principal)');
@@ -338,25 +391,64 @@ export class Reportes implements OnInit {
     });
   }
 
+  formatDateToYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  onRangoGeneralChange(fechas: (Date | null)[] | null) {
+    if (!fechas || fechas.length === 0) {
+      this.fechaInicioGeneral = '';
+      this.fechaFinGeneral = '';
+      this.consultarSupabaseGeneral();
+      return;
+    }
+    if (fechas[0] && fechas[1]) {
+      this.fechaInicioGeneral = this.formatDateToYmd(fechas[0]);
+      this.fechaFinGeneral = this.formatDateToYmd(fechas[1]);
+      this.consultarSupabaseGeneral();
+    }
+  }
+
+  onRangoAperturasChange(fechas: (Date | null)[] | null) {
+    if (!fechas || fechas.length === 0) {
+      this.fechaInicioApertura = '';
+      this.fechaFinApertura = '';
+      this.consultarSupabaseAperturas();
+      return;
+    }
+    if (fechas[0] && fechas[1]) {
+      this.fechaInicioApertura = this.formatDateToYmd(fechas[0]);
+      this.fechaFinApertura = this.formatDateToYmd(fechas[1]);
+      this.consultarSupabaseAperturas();
+    }
+  }
+
   setRangoGeneral(rango: 'HOY' | '7DIAS' | 'MES' | 'TODO') {
     const hoy = new Date();
-    const hoyStr = hoy.toISOString().split('T')[0];
+    const hoyStr = this.formatDateToYmd(hoy);
 
     if (rango === 'HOY') {
       this.fechaInicioGeneral = hoyStr;
       this.fechaFinGeneral = hoyStr;
+      this.rangoFechasGeneral = [hoy, hoy];
     } else if (rango === '7DIAS') {
       const d = new Date();
       d.setDate(d.getDate() - 6);
-      this.fechaInicioGeneral = d.toISOString().split('T')[0];
+      this.fechaInicioGeneral = this.formatDateToYmd(d);
       this.fechaFinGeneral = hoyStr;
+      this.rangoFechasGeneral = [d, hoy];
     } else if (rango === 'MES') {
       const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      this.fechaInicioGeneral = primerDia.toISOString().split('T')[0];
+      this.fechaInicioGeneral = this.formatDateToYmd(primerDia);
       this.fechaFinGeneral = hoyStr;
+      this.rangoFechasGeneral = [primerDia, hoy];
     } else if (rango === 'TODO') {
       this.fechaInicioGeneral = '';
       this.fechaFinGeneral = '';
+      this.rangoFechasGeneral = [];
     }
 
     this.consultarSupabaseGeneral();
@@ -431,6 +523,7 @@ export class Reportes implements OnInit {
 
     this.ventasDetalladas = list;
     this.paginaDetalle = 1;
+    this.cdr.markForCheck();
   }
 
   setFechaDetalle(tipo: 'HOY' | 'AYER') {
@@ -535,23 +628,27 @@ export class Reportes implements OnInit {
 
   setRangoAperturas(rango: 'HOY' | '7DIAS' | 'MES' | 'TODO') {
     const hoy = new Date();
-    const hoyStr = hoy.toISOString().split('T')[0];
+    const hoyStr = this.formatDateToYmd(hoy);
 
     if (rango === 'HOY') {
       this.fechaInicioApertura = hoyStr;
       this.fechaFinApertura = hoyStr;
+      this.rangoFechasApertura = [hoy, hoy];
     } else if (rango === '7DIAS') {
       const d = new Date();
       d.setDate(d.getDate() - 6);
-      this.fechaInicioApertura = d.toISOString().split('T')[0];
+      this.fechaInicioApertura = this.formatDateToYmd(d);
       this.fechaFinApertura = hoyStr;
+      this.rangoFechasApertura = [d, hoy];
     } else if (rango === 'MES') {
       const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      this.fechaInicioApertura = primerDia.toISOString().split('T')[0];
+      this.fechaInicioApertura = this.formatDateToYmd(primerDia);
       this.fechaFinApertura = hoyStr;
+      this.rangoFechasApertura = [primerDia, hoy];
     } else if (rango === 'TODO') {
       this.fechaInicioApertura = '';
       this.fechaFinApertura = '';
+      this.rangoFechasApertura = [];
     }
 
     this.consultarSupabaseAperturas();
@@ -595,6 +692,7 @@ export class Reportes implements OnInit {
     }
 
     this.aperturasFiltradas = list;
+    this.cdr.markForCheck();
   }
 
   get kpiTotalAperturas(): number {

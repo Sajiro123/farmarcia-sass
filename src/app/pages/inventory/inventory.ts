@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
@@ -40,6 +40,16 @@ export class Inventory implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
+
+  constructor() {
+    effect(() => {
+      const sede = this.authService.activeSede();
+      if (sede) {
+        this.cargarLotes();
+      }
+    });
+  }
 
   // Vista actual: 'LISTADO' o 'NUEVO_LOTE'
   vistaActual: 'LISTADO' | 'NUEVO_LOTE' = 'LISTADO';
@@ -69,8 +79,13 @@ export class Inventory implements OnInit {
   loteCabecera = {
     lote: '',
     guiaReferencia: '',
-    fechaIngreso: new Date().toISOString().split('T')[0]
+    fechaIngreso: new Date().toISOString().split('T')[0],
+    sucursalId: ''
   };
+
+  get sedesDisponibles() {
+    return this.authService.getSedes();
+  }
 
   // Lista de Productos en el Lote (Temporal antes de guardar todo en bloque)
   productosEnLoteTemporal: ItemLoteTemporal[] = [];
@@ -100,8 +115,8 @@ export class Inventory implements OnInit {
   mostrarBuscadorProducto = false;
 
   get productosFiltradosParaLote(): ProductoCatalogoItem[] {
-    if (!this.busquedaProductoCatalogo.trim()) {
-      return this.productosCatalogo.slice(0, 30);
+    if (!this.busquedaProductoCatalogo || !this.busquedaProductoCatalogo.trim()) {
+      return this.productosCatalogo;
     }
     const q = this.busquedaProductoCatalogo.toLowerCase().trim();
     return this.productosCatalogo.filter(p =>
@@ -110,34 +125,53 @@ export class Inventory implements OnInit {
       (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
       (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
       (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
-      (p.marca && p.marca.toLowerCase().includes(q))
-    ).slice(0, 30);
+      (p.marca && p.marca.toLowerCase().includes(q)) ||
+      (p.tipoProducto && p.tipoProducto.toLowerCase().includes(q))
+    );
+  }
+
+  onBusquedaProductoChange() {
+    this.mostrarDropdownProductos = !!(this.busquedaProductoCatalogo && this.busquedaProductoCatalogo.trim());
+    const filtrados = this.productosFiltradosParaLote;
+    if (filtrados.length > 0) {
+      const coincide = filtrados.some(p => p.id === this.loteForm.productoId);
+      if (!coincide) {
+        this.loteForm.productoId = filtrados[0].id;
+        this.onProductoChange();
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onSelectProductoDirecto(prodId: string) {
+    this.loteForm.productoId = prodId;
+    this.mostrarDropdownProductos = false;
+    this.onProductoChange();
+    this.cdr.markForCheck();
   }
 
   seleccionarProductoCatalogo(prod: ProductoCatalogoItem) {
     this.loteForm.productoId = prod.id;
-    this.busquedaProductoCatalogo = `${prod.nombreComercial}${prod.concentracion ? ' ' + prod.concentracion : ''}`;
+    this.busquedaProductoCatalogo = '';
     this.mostrarDropdownProductos = false;
     this.mostrarBuscadorProducto = false;
     this.onProductoChange();
+    this.cdr.markForCheck();
   }
 
   abrirBuscadorProducto() {
     this.mostrarBuscadorProducto = true;
     this.mostrarDropdownProductos = true;
-    this.busquedaProductoCatalogo = '';
   }
 
   cerrarDropdownProductos() {
     this.mostrarDropdownProductos = false;
-    if (this.loteForm.productoId) {
-      this.mostrarBuscadorProducto = false;
-    }
   }
 
   limpiarBusquedaProducto() {
     this.busquedaProductoCatalogo = '';
-    this.mostrarDropdownProductos = true;
+    this.mostrarDropdownProductos = false;
+    this.cdr.markForCheck();
   }
 
   get productoSeleccionado(): ProductoCatalogoItem | undefined {
@@ -189,6 +223,26 @@ export class Inventory implements OnInit {
   // ================= MODAL ELIMINAR LOTE =================
   showEliminarModal = false;
   loteAEliminar: LoteItem | null = null;
+
+  // ================= MODAL VACIAR INVENTARIO (PRUEBAS) =================
+  showVaciarModal = false;
+
+  abrirModalVaciarInventario() {
+    this.showVaciarModal = true;
+  }
+
+  confirmarVaciarInventario() {
+    this.inventoryService.vaciarInventario().subscribe(() => {
+      this.ngZone.run(() => {
+        this.lotesFefo = [];
+        this.showVaciarModal = false;
+        this.cargarLotes();
+        this.mostrarToast('info', 'El inventario físico ha sido vaciado por completo para pruebas.');
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
+    });
+  }
 
   // ================= MODAL ACTA DE BAJA (DIGEMID / SUNAT) =================
   showBajaModal = false;
@@ -285,8 +339,12 @@ export class Inventory implements OnInit {
       aplicarDatos();
     } else {
       this.inventoryService.listarLotesFefo().subscribe(lotes => {
-        this.lotesFefo = lotes;
-        aplicarDatos();
+        this.ngZone.run(() => {
+          this.lotesFefo = lotes || [];
+          aplicarDatos();
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       });
     }
   }
@@ -313,29 +371,65 @@ export class Inventory implements OnInit {
   cargarLotes() {
     this.cargando = true;
     const activeSedeId = this.authService.activeSede()?.id;
+
+    // Precarga inmediata si ya existen lotes en memoria para mostrar la data al instante y evitar parpadeo o 0 inicial
+    const locales = this.inventoryService.lotesInventario;
+    if (locales && locales.length > 0) {
+      if (activeSedeId && activeSedeId !== 'TODAS') {
+        this.lotesFefo = locales.filter(l => !l.sucursalId || l.sucursalId === activeSedeId);
+      } else {
+        this.lotesFefo = [...locales];
+      }
+      this.cdr.markForCheck();
+    }
+
     this.inventoryService.listarLotesFefo(activeSedeId).subscribe({
       next: (lotes) => {
-        this.lotesFefo = lotes;
-        this.cargando = false;
+        this.ngZone.run(() => {
+          this.lotesFefo = lotes || [];
+          this.cargando = false;
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.cargando = false;
+        this.ngZone.run(() => {
+          this.cargando = false;
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       }
     });
   }
 
   cargarProductosCatalogo() {
-    this.productService.listarCatalogoActivos().subscribe(prods => {
-      this.productosCatalogo = prods;
-      if (prods.length > 0 && !this.loteForm.productoId) {
-        this.loteForm.productoId = prods[0].id;
+    const enMemoria = this.productService.productosCatalogo;
+    if (enMemoria && enMemoria.length > 0 && this.productosCatalogo.length === 0) {
+      this.productosCatalogo = [...enMemoria];
+      if (!this.loteForm.productoId && this.productosCatalogo.length > 0) {
+        this.loteForm.productoId = this.productosCatalogo[0].id;
       }
+    }
+
+    this.productService.listarCatalogoActivos().subscribe(prods => {
+      this.ngZone.run(() => {
+        this.productosCatalogo = prods;
+        if (prods.length > 0 && !this.loteForm.productoId) {
+          this.loteForm.productoId = prods[0].id;
+        }
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
     });
   }
 
   cargarActas() {
     this.inventoryService.listarActas().subscribe(actas => {
-      this.actasRegistradas = actas;
+      this.ngZone.run(() => {
+        this.actasRegistradas = actas;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
     });
   }
 
@@ -508,6 +602,9 @@ export class Inventory implements OnInit {
     this.loteCabecera.guiaReferencia = this.loteCabecera.guiaReferencia || '';
     this.loteCabecera.fechaIngreso = this.loteCabecera.fechaIngreso || new Date().toISOString().split('T')[0];
 
+    const activeSede = this.authService.activeSede();
+    this.loteCabecera.sucursalId = this.loteCabecera.sucursalId || activeSede?.id || this.sedesDisponibles[0]?.id || '11111111-1111-1111-1111-111111111111';
+
     const fechaFutura = new Date();
     fechaFutura.setFullYear(fechaFutura.getFullYear() + 2);
 
@@ -530,20 +627,24 @@ export class Inventory implements OnInit {
         concentracionFragancia: 'Eau de Parfum (EDP)',
         volumenMl: 100
       };
-      this.busquedaProductoCatalogo = `${primerProd.nombreComercial}${primerProd.concentracion ? ' ' + primerProd.concentracion : ''}`;
       if (esPerf) {
         this.onProductoChange();
       }
     }
+    this.busquedaProductoCatalogo = '';
+    this.mostrarDropdownProductos = false;
   }
 
   limpiarLoteActual() {
     this.productosEnLoteTemporal = [];
     this.generarCodigoLoteNuevo();
     this.loteCabecera.guiaReferencia = '';
+    this.loteCabecera.sucursalId = this.authService.activeSede()?.id || this.sedesDisponibles[0]?.id || '11111111-1111-1111-1111-111111111111';
     this.errorModalLote = '';
     this.loteForm.ubicacion = '';
     this.loteForm.pasillo = '';
+    this.busquedaProductoCatalogo = '';
+    this.mostrarDropdownProductos = false;
     this.mostrarToast('info', 'Formulario del lote reiniciado.');
   }
 
@@ -638,6 +739,9 @@ export class Inventory implements OnInit {
 
     const codigoLote = this.loteCabecera.lote.trim();
     const fechaIng = this.loteCabecera.fechaIngreso || new Date().toISOString().split('T')[0];
+    const targetSede = this.loteCabecera.sucursalId || this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
+    const sedeObj = this.authService.getSedes().find(s => s.id === targetSede);
+    const nombreSede = sedeObj ? sedeObj.nombre : (targetSede === '11111111-1111-1111-1111-111111111111' ? 'Sede Cajamarca Central' : 'Sede Baños del Inca');
 
     const nuevosLotes: LoteItem[] = this.productosEnLoteTemporal.map((item, index) => {
       const esPerf = item.tipoProducto === 'PERFUME';
@@ -661,18 +765,23 @@ export class Inventory implements OnInit {
         registroSanitario: item.registroSanitario,
         temperatura: item.temperatura,
         concentracionFragancia: item.concentracionFragancia,
-        volumenMl: item.volumenMl
+        volumenMl: item.volumenMl,
+        sucursalId: targetSede,
+        sucursalNombre: nombreSede
       };
     });
 
     this.inventoryService.agregarLotesBatch(nuevosLotes).subscribe(() => {
-      this.showLoteModal = false;
-      this.cargarLotes();
-      this.mostrarToast('success', `Lote ${codigoLote} registrado con éxito con ${nuevosLotes.length} productos (${this.totalUnidadesEnLoteTemporal} unidades en total).`);
-      this.productosEnLoteTemporal = [];
-      this.loteCabecera.lote = '';
-      this.loteCabecera.guiaReferencia = '';
-      this.volverAListado();
+      this.ngZone.run(() => {
+        this.showLoteModal = false;
+        this.cargarLotes();
+        this.mostrarToast('success', `Lote ${codigoLote} registrado con éxito en ${nombreSede} (${nuevosLotes.length} productos, ${this.totalUnidadesEnLoteTemporal} unidades).`);
+        this.productosEnLoteTemporal = [];
+        this.loteCabecera.lote = '';
+        this.loteCabecera.guiaReferencia = '';
+        this.volverAListado();
+        this.cdr.detectChanges();
+      });
     });
   }
 
@@ -701,10 +810,7 @@ export class Inventory implements OnInit {
       volumenMl: item.volumenMl || 100
     };
 
-    const prod = this.productosCatalogo.find(p => p.id === item.productoId);
-    if (prod) {
-      this.busquedaProductoCatalogo = `${prod.nombreComercial}${prod.concentracion ? ' ' + prod.concentracion : ''}`;
-    }
+    this.busquedaProductoCatalogo = '';
     this.mostrarBuscadorProducto = false;
     this.mostrarDropdownProductos = false;
 
@@ -772,12 +878,15 @@ export class Inventory implements OnInit {
     };
 
     this.inventoryService.actualizarLote(loteEditado).subscribe(() => {
-      this.showLoteModal = false;
-      this.cargarLotes();
-      this.mostrarToast('success', `Lote ${loteEditado.lote} actualizado correctamente.`);
-      this.modoModalLote = 'NUEVO';
-      this.loteEnEdicionId = null;
-      this.volverAListado();
+      this.ngZone.run(() => {
+        this.showLoteModal = false;
+        this.cargarLotes();
+        this.mostrarToast('success', `Lote ${loteEditado.lote} actualizado correctamente.`);
+        this.modoModalLote = 'NUEVO';
+        this.loteEnEdicionId = null;
+        this.volverAListado();
+        this.cdr.detectChanges();
+      });
     });
   }
 
@@ -791,10 +900,13 @@ export class Inventory implements OnInit {
     if (!this.loteAEliminar) return;
     const codigo = this.loteAEliminar.lote;
     this.inventoryService.eliminarLote(this.loteAEliminar.id).subscribe(() => {
-      this.showEliminarModal = false;
-      this.loteAEliminar = null;
-      this.cargarLotes();
-      this.mostrarToast('info', `Lote ${codigo} eliminado del inventario.`);
+      this.ngZone.run(() => {
+        this.showEliminarModal = false;
+        this.loteAEliminar = null;
+        this.cargarLotes();
+        this.mostrarToast('info', `Lote ${codigo} eliminado del inventario.`);
+        this.cdr.detectChanges();
+      });
     });
   }
 
@@ -830,9 +942,12 @@ export class Inventory implements OnInit {
     };
 
     this.inventoryService.registrarBajaLote(nuevaActa).subscribe(() => {
-      this.cargarActas();
-      this.cargarLotes();
-      this.mostrarToast('success', `Acta ${nuevaActa.id} registrada exitosamente.`);
+      this.ngZone.run(() => {
+        this.cargarActas();
+        this.cargarLotes();
+        this.mostrarToast('success', `Acta ${nuevaActa.id} registrada exitosamente.`);
+        this.cdr.detectChanges();
+      });
     });
 
     this.showBajaModal = false;
