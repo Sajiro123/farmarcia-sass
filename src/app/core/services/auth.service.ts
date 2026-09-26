@@ -69,7 +69,7 @@ export class AuthService {
    * 4. Mapea rol a 'ADMIN' | 'QUIMICO' | 'CAJERO'.
    * 5. Almacena tokens y datos de sesión en localStorage.
    */
-  async loginAsync(usernameOrEmail: string, password: string): Promise<{ success: boolean; message?: string; user?: AuthResponse }> {
+  async loginAsync(usernameOrEmail: string, password: string, selectedSedeId?: string): Promise<{ success: boolean; message?: string; user?: AuthResponse }> {
     try {
       const res = await this.saasMasterService.login(usernameOrEmail, password);
 
@@ -100,6 +100,11 @@ export class AuthService {
         assignedRole = 'CAJERO';
       }
 
+      // Determinar la sede (priorizando la que el usuario seleccionó en el login)
+      const allSedes = this.getSedes();
+      let targetSedeId = selectedSedeId || authData.sedeId || (allSedes.length > 0 ? allSedes[0].id : '11111111-1111-1111-1111-111111111111');
+      let matchedSede = allSedes.find(s => s.id === targetSedeId) || allSedes[0];
+
       const userResponse: AuthResponse = {
         token: authData.token,
         tipoToken: authData.tipoToken,
@@ -118,19 +123,12 @@ export class AuthService {
         nroColegiatura: authData.nroColegiatura,
         pinSeguridad: authData.pinSeguridad,
         acciones: authData.acciones,
-        sedeId: authData.sedeId,
-        sedeNombre: authData.sedeNombre
+        sedeId: matchedSede ? matchedSede.id : targetSedeId,
+        sedeNombre: matchedSede ? matchedSede.nombre : (authData.sedeNombre || 'Medicare Farmacia')
       };
 
-      // Si el usuario tiene sede asignada en la Master, se le asigna como activa
-      if (authData.sedeId) {
-        const sedeUser: Sede = {
-          id: authData.sedeId,
-          nombre: authData.sedeNombre || 'Sede Cajamarca Central',
-          direccion: 'Av. Central 123, Cajamarca',
-          activa: true
-        };
-        this.setSedeActiva(sedeUser, true);
+      if (matchedSede) {
+        this.setSedeActiva(matchedSede, true);
       }
 
       // Guardar en localStorage
@@ -207,14 +205,14 @@ export class AuthService {
   sedesDisponibles = signal<Sede[]>([
     {
       id: '11111111-1111-1111-1111-111111111111',
-      nombre: 'Sede Cajamarca Central',
+      nombre: 'Medicare Farmacia',
       direccion: 'Av. Central 123, Cajamarca',
       activa: true
     },
     {
       id: '45fca103-2669-48b8-8a1c-7e5380da5e1f',
-      nombre: 'Sede Baños del Inca (Cajamarca 2)',
-      direccion: 'Av. Manco Cápac 450, Baños del Inca, Cajamarca',
+      nombre: 'D Kelly Store',
+      direccion: 'Av.Jiron Apurimac 1168',
       activa: true
     }
   ]);
@@ -225,12 +223,19 @@ export class AuthService {
       try {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          parsed = parsed.filter(s => 
-            !s.nombre?.toLowerCase().includes('olivos') &&
-            !s.nombre?.toLowerCase().includes('miraflores') &&
-            !s.nombre?.toLowerCase().includes('lima centro')
+          const hasStale = parsed.some(s => 
+            !s.nombre ||
+            s.nombre.toLowerCase().includes('olivos') ||
+            s.nombre.toLowerCase().includes('miraflores') ||
+            s.nombre.toLowerCase().includes('lima centro') ||
+            s.nombre.toLowerCase().includes('baños del inca') ||
+            s.nombre.toLowerCase().includes('cajamarca central')
           );
-          if (parsed.length > 0) return parsed;
+          if (hasStale) {
+            localStorage.removeItem('medicare_sedes_sucursales');
+          } else {
+            return parsed;
+          }
         }
       } catch (e) {}
     }
@@ -313,11 +318,15 @@ export class AuthService {
     if (sedeData) {
       try {
         const parsedSede = JSON.parse(sedeData);
-        const esMockup = parsedSede.nombre?.toLowerCase().includes('lima') || 
-                         parsedSede.nombre?.toLowerCase().includes('miraflores') ||
-                         parsedSede.nombre?.toLowerCase().includes('olivos');
+        const esMockup = !parsedSede.nombre ||
+                         parsedSede.nombre.toLowerCase().includes('lima') || 
+                         parsedSede.nombre.toLowerCase().includes('miraflores') ||
+                         parsedSede.nombre.toLowerCase().includes('olivos') ||
+                         parsedSede.nombre.toLowerCase().includes('baños del inca') ||
+                         parsedSede.nombre.toLowerCase().includes('cajamarca central');
         if (!esMockup && sedesList.some(s => s.id === parsedSede.id)) {
-          this.activeSede.set(parsedSede);
+          const fresh = sedesList.find(s => s.id === parsedSede.id);
+          this.activeSede.set(fresh || parsedSede);
         } else if (sedesList.length > 0) {
           this.setSedeActiva(sedesList[0], true);
         }

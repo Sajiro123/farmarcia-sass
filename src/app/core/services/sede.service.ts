@@ -22,15 +22,15 @@ export class SedeService {
     return [
       {
         id: '11111111-1111-1111-1111-111111111111',
-        nombre: 'Sede Cajamarca Central',
+        nombre: 'Medicare Farmacia',
         direccion: 'Av. Central 123, Cajamarca',
         telefono: '076-361234',
         activa: true
       },
       {
         id: '45fca103-2669-48b8-8a1c-7e5380da5e1f',
-        nombre: 'Sede Baños del Inca (Cajamarca 2)',
-        direccion: 'Av. Manco Cápac 450, Baños del Inca, Cajamarca',
+        nombre: 'D Kelly Store',
+        direccion: 'Av.Jiron Apurimac 1168',
         telefono: '076-348899',
         activa: true
       }

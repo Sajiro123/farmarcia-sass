@@ -48,12 +48,16 @@ export class SaasMasterService {
    * Ej: 'admin' -> 'admin@medicare.com'
    */
   public resolveEmail(identifier: string): string {
-    const trimmed = (identifier || '').trim();
+    const trimmed = (identifier || '').trim().toLowerCase();
     if (!trimmed) return '';
     if (trimmed.includes('@')) {
-      return trimmed.toLowerCase();
+      return trimmed;
     }
-    return `${trimmed}${this.defaultDomain}`.toLowerCase();
+    if (trimmed === 'admin' || trimmed === 'administrador') return 'admin@medicare.com';
+    if (trimmed === 'quimico' || trimmed === 'admin_medicare' || trimmed === 'rosa') return 'quimico@medicare.com';
+    if (trimmed === 'caja01' || trimmed === 'caja1' || trimmed === 'cajero1' || trimmed === 'caja01_medicare') return 'caja01@medicare.com';
+    if (trimmed === 'caja02' || trimmed === 'caja2' || trimmed === 'cajero2' || trimmed === 'caja02_banos') return 'caja02@medicare.com';
+    return `${trimmed}${this.defaultDomain}`;
   }
 
   /**

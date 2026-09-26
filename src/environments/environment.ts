@@ -1,8 +1,11 @@
+const isBrowser = typeof window !== 'undefined';
+const isLocal = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 export const environment = {
-  production: true,
-  saasMasterApiUrl: 'https://saas-master-api.onrender.com/api/v1',
-  masterApiUrl: 'https://saas-master-api.onrender.com/api/v1',
-  farmaciaApiUrl: 'http://localhost:8082/api/v1',
+  production: false,
+  saasMasterApiUrl: isLocal ? 'http://localhost:8081/api/v1' : 'https://saas-master-api.onrender.com/api/v1',
+  masterApiUrl: isLocal ? 'http://localhost:8081/api/v1' : 'https://saas-master-api.onrender.com/api/v1',
+  farmaciaApiUrl: isLocal ? 'http://localhost:8082/api/v1' : 'https://saas-farmacia-api.onrender.com/api/v1',
   defaultTenantId: 'a0000000-0000-0000-0000-000000000001',
   defaultSubdomain: 'farmacia-medicare',
   defaultEmailDomain: '@medicare.com',

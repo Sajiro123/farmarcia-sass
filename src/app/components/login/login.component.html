@@ -1,47 +1,33 @@
 <div class="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
   
-  <!-- Left Side: Login Form & Quick Roles -->
+  <!-- Left Side: Login Form -->
   <div class="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8">
-    <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 space-y-6">
+    <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 sm:p-10 space-y-6">
       
       <!-- Top Header -->
       <div class="flex justify-between items-center">
-        <div class="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400">
-          <div class="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center">
+        <div class="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+          <div class="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center shadow-xs">
             <i class="fa-solid fa-staff-snake text-2xl"></i>
           </div>
           <div>
-            <span class="font-black text-xl tracking-tight text-slate-900 dark:text-white">Medicare<span class="text-emerald-600 dark:text-emerald-400">POS</span></span>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sistema de Farmacia</p>
+            <span class="font-black text-2xl tracking-tight text-slate-900 dark:text-white">Medicare<span class="text-emerald-600 dark:text-emerald-400">POS</span></span>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sistema de Farmacia & POS</p>
           </div>
         </div>
         
         <!-- Theme Toggle -->
-        <button (click)="toggleTheme()" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+        <button (click)="toggleTheme()" type="button" aria-label="Cambiar tema" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer">
           <i class="fa-solid" [class.fa-sun]="themeService.isDarkMode()" [class.fa-moon]="!themeService.isDarkMode()"></i>
         </button>
       </div>
 
-      <!-- Quick Roles Selection Banner -->
-      <div class="space-y-2">
-        <label class="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-          ⚡ Accesos Rápidos (SaaS Master):
-        </label>
-        <div class="grid grid-cols-2 gap-2">
-          @for (perfil of perfilesPrueba; track perfil.titulo) {
-            <button 
-              type="button"
-              (click)="seleccionarPerfil(perfil)"
-              [ngClass]="perfilSeleccionado.titulo === perfil.titulo ? 'ring-2 ring-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/60 border-emerald-400 dark:border-emerald-600' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-slate-300'"
-              class="p-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-between">
-              <div class="w-7 h-7 rounded-xl flex items-center justify-center text-xs mb-1 {{ perfil.colorClass }}">
-                <i [class]="perfil.icon"></i>
-              </div>
-              <span class="text-[10px] font-bold text-slate-800 dark:text-white leading-tight">{{ perfil.titulo }}</span>
-              <span class="text-[8px] text-slate-400 mt-0.5 truncate max-w-full">{{ perfil.badge }}</span>
-            </button>
-          }
-        </div>
+      <!-- Welcome Message -->
+      <div>
+        <h1 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Iniciar Sesión</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Selecciona tu sede e ingresa tus credenciales de acceso al sistema.
+        </p>
       </div>
 
       <!-- Login Form -->
@@ -49,64 +35,81 @@
         
         <!-- Sede Selector -->
         <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">Sede / Sucursal</label>
-            @if (perfilSeleccionado.rol !== 'ADMIN') {
-              <span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
-                <i class="fa-solid fa-lock text-[9px]"></i> Sede fija de turno
-              </span>
-            } @else {
-              <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                <i class="fa-solid fa-check text-[9px]"></i> Seleccionable (Admin)
-              </span>
-            }
-          </div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            Sede / Sucursal <span class="text-rose-500">*</span>
+          </label>
           <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <i class="fa-solid fa-store text-xs"></i>
             </div>
             <select formControlName="sede" 
-              [attr.disabled]="perfilSeleccionado.rol !== 'ADMIN' ? '' : null"
-              class="block w-full pl-9 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 appearance-none disabled:bg-slate-100 disabled:dark:bg-slate-800/80 disabled:text-slate-500 disabled:cursor-not-allowed">
+              class="block w-full pl-10 pr-8 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 appearance-none cursor-pointer transition-colors shadow-2xs">
               @for (sede of sedes; track sede.id) {
                 <option [value]="sede.id">{{ sede.nombre }}</option>
               }
             </select>
+            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-chevron-down text-[10px]"></i>
+            </div>
           </div>
+          @if (loginForm.get('sede')?.touched && loginForm.get('sede')?.invalid) {
+            <p class="text-[11px] text-rose-500 mt-1">Debes seleccionar una sede.</p>
+          }
         </div>
 
         <!-- Usuario / Email -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Usuario o Correo Electrónico</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            Usuario o Correo Electrónico <span class="text-rose-500">*</span>
+          </label>
           <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-regular fa-envelope text-xs"></i>
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-regular fa-user text-xs"></i>
             </div>
-            <input type="text" formControlName="email" placeholder="admin o admin@medicare.com" class="block w-full pl-9 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-slate-100">
+            <input 
+              type="text" 
+              formControlName="email" 
+              placeholder="Ej: admin, quimico, caja01 o email" 
+              autocomplete="username"
+              class="block w-full pl-10 pr-3.5 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-colors shadow-2xs">
           </div>
+          @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
+            <p class="text-[11px] text-rose-500 mt-1">Ingresa tu usuario o correo.</p>
+          }
         </div>
 
         <!-- Password -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Contraseña</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            Contraseña <span class="text-rose-500">*</span>
+          </label>
           <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <i class="fa-solid fa-lock text-xs"></i>
             </div>
-            <input type="password" formControlName="password" class="block w-full pl-9 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-mono font-medium text-slate-900 dark:text-slate-100">
+            <input 
+              [type]="showPassword ? 'text' : 'password'" 
+              formControlName="password" 
+              placeholder="••••••••"
+              autocomplete="current-password"
+              class="block w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-mono font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-colors shadow-2xs">
+            <button 
+              type="button" 
+              (click)="togglePasswordVisibility()" 
+              class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+              <i class="fa-solid" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+            </button>
           </div>
-        </div>
-
-        <!-- Role Summary Alert -->
-        <div class="p-2.5 rounded-xl border text-[11px] font-semibold flex items-center gap-2 {{ perfilSeleccionado.colorClass }} {{ perfilSeleccionado.borderClass }}">
-          <i [class]="perfilSeleccionado.icon"></i>
-          <span>Ingresarás como <strong>{{ perfilSeleccionado.nombre }}</strong> ({{ perfilSeleccionado.titulo }}).</span>
+          @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
+            <p class="text-[11px] text-rose-500 mt-1">Ingresa tu contraseña.</p>
+          }
         </div>
 
         <!-- Error Msg -->
         @if (errorMessage) {
-          <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs flex items-center gap-2">
-            <i class="fa-solid fa-circle-exclamation"></i> {{ errorMessage }}
+          <div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-center gap-2.5 animate-fade-in">
+            <i class="fa-solid fa-circle-exclamation text-sm shrink-0"></i>
+            <span>{{ errorMessage }}</span>
           </div>
         }
 
@@ -114,42 +117,51 @@
         <button 
           type="submit" 
           [disabled]="isSubmitting" 
-          class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md shadow-emerald-600/20 transition-all flex justify-center items-center gap-2 cursor-pointer">
+          class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md shadow-emerald-600/25 transition-all flex justify-center items-center gap-2 cursor-pointer mt-2">
           @if (isSubmitting) {
-            <span><i class="fa-solid fa-circle-notch fa-spin"></i> Conectando...</span>
+            <span><i class="fa-solid fa-circle-notch fa-spin"></i> Validando credenciales...</span>
           } @else {
-            <span>Ingresar como {{ perfilSeleccionado.titulo }} <i class="fa-solid fa-arrow-right ml-1"></i></span>
+            <span>Iniciar Sesión <i class="fa-solid fa-arrow-right-to-bracket ml-1"></i></span>
           }
         </button>
 
       </form>
+
+      <!-- Footer Info -->
+      <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 text-center">
+        <p class="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-shield-halved text-emerald-500 text-xs"></i>
+          <span>Autenticación centralizada & multi-sede SaaS</span>
+        </p>
+      </div>
+
     </div>
   </div>
 
   <!-- Right Side: Feature Presentation -->
   <div class="hidden lg:flex lg:w-1/2 bg-emerald-700 items-center justify-center relative overflow-hidden">
     <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-multiply"></div>
-    <div class="relative z-10 p-12 text-white max-w-lg text-center space-y-4">
-      <div class="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4 border border-white/20">
-        <i class="fa-solid fa-prescription-bottle-medical text-4xl"></i>
+    <div class="relative z-10 p-12 text-white max-w-lg text-center space-y-5">
+      <div class="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg">
+        <i class="fa-solid fa-prescription-bottle-medical text-4xl text-emerald-200"></i>
       </div>
       <h2 class="text-3xl font-black tracking-tight">Gestión Inteligente de Farmacias</h2>
       <p class="text-emerald-100 text-sm leading-relaxed">
-        Punto de Venta con Arqueo Ciego, recetas para psicotrópicos, control FEFO estricto de inventario y compras por cajas con punto de reorden.
+        Punto de Venta con Arqueo Ciego, recetas para psicotrópicos, control FEFO estricto de inventario y compras con cálculo de stock y punto de reorden.
       </p>
 
       <div class="grid grid-cols-3 gap-3 pt-4 text-left">
-        <div class="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-xs">
+        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
           <p class="font-bold text-xs">👑 Admin</p>
-          <p class="text-[10px] text-emerald-200">KPIs & Finanzas</p>
+          <p class="text-[10px] text-emerald-200 mt-0.5">KPIs, Reportes & Finanzas</p>
         </div>
-        <div class="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-xs">
+        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
           <p class="font-bold text-xs">💊 Q.F.</p>
-          <p class="text-[10px] text-emerald-200">DIGEMID & FEFO</p>
+          <p class="text-[10px] text-emerald-200 mt-0.5">Control Sanitario & FEFO</p>
         </div>
-        <div class="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-xs">
-          <p class="font-bold text-xs">🛒 Cajero</p>
-          <p class="text-[10px] text-emerald-200">POS & Arqueo</p>
+        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
+          <p class="font-bold text-xs">🛒 POS</p>
+          <p class="text-[10px] text-emerald-200 mt-0.5">Caja, Turnos & Ventas</p>
         </div>
       </div>
     </div>
