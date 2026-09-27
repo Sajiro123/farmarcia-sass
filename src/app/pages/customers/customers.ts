@@ -29,7 +29,7 @@ export class Customers implements OnInit {
   // Paginación
   paginaActual = 1;
   itemsPorPagina = 10;
-  
+
   // KPI
   totalClientes = 0;
   totalPuntosEmitidos = 0;
@@ -81,9 +81,6 @@ export class Customers implements OnInit {
       if (s.nombre) set.add(s.nombre);
     });
     this.listaSedes = Array.from(set);
-    if (this.listaSedes.length === 0) {
-      this.listaSedes = ['Sede Cajamarca Central', 'Sede Baños del Inca (Cajamarca 2)'];
-    }
   }
 
   cargarDatos() {
@@ -93,10 +90,10 @@ export class Customers implements OnInit {
 
   aplicarFiltros() {
     let result = [...this.clientes];
-    
+
     // Filtro por Sede (Sedes independientes)
     if (this.filtroSede !== 'TODAS') {
-      result = result.filter(c => 
+      result = result.filter(c =>
         c.sedeNombre === this.filtroSede ||
         c.ultimaSede === this.filtroSede ||
         c.sedesCompradas?.includes(this.filtroSede)
@@ -105,8 +102,8 @@ export class Customers implements OnInit {
 
     if (this.busqueda.trim()) {
       const q = this.busqueda.toLowerCase();
-      result = result.filter(c => 
-        c.nombre.toLowerCase().includes(q) || 
+      result = result.filter(c =>
+        c.nombre.toLowerCase().includes(q) ||
         c.id.includes(q) ||
         (c.celular && c.celular.includes(q)) ||
         (c.email && c.email.toLowerCase().includes(q)) ||

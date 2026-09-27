@@ -201,7 +201,7 @@ export class AuthService {
   get token(): string | null {
     return localStorage.getItem('auth_token');
   }
-  
+
   get tenantId(): string {
     return localStorage.getItem('tenant_id') || environment.defaultTenantId;
   }
@@ -227,13 +227,8 @@ export class AuthService {
       try {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasStale = parsed.some(s => 
-            !s.nombre ||
-            s.nombre.toLowerCase().includes('olivos') ||
-            s.nombre.toLowerCase().includes('miraflores') ||
-            s.nombre.toLowerCase().includes('lima centro') ||
-            s.nombre.toLowerCase().includes('baños del inca') ||
-            s.nombre.toLowerCase().includes('cajamarca central')
+          const hasStale = parsed.some(s =>
+            !s.nombre
           );
           if (hasStale) {
             localStorage.removeItem('medicare_sedes_sucursales');
@@ -241,7 +236,7 @@ export class AuthService {
             return parsed;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return this.sedesDisponibles();
   }
@@ -322,13 +317,10 @@ export class AuthService {
     if (sedeData) {
       try {
         const parsedSede = JSON.parse(sedeData);
-        const esMockup = !parsedSede.nombre ||
-                         parsedSede.nombre.toLowerCase().includes('lima') || 
-                         parsedSede.nombre.toLowerCase().includes('miraflores') ||
-                         parsedSede.nombre.toLowerCase().includes('olivos') ||
-                         parsedSede.nombre.toLowerCase().includes('baños del inca') ||
-                         parsedSede.nombre.toLowerCase().includes('cajamarca central');
-        if (!esMockup && sedesList.some(s => s.id === parsedSede.id)) {
+        if (!parsedSede.nombre) {
+          const fresh = sedesList.find(s => s.id === parsedSede.id);
+          this.activeSede.set(fresh || parsedSede);
+        } else if (sedesList.some(s => s.id === parsedSede.id)) {
           const fresh = sedesList.find(s => s.id === parsedSede.id);
           this.activeSede.set(fresh || parsedSede);
         } else if (sedesList.length > 0) {
