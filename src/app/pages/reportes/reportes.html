@@ -886,20 +886,28 @@
                       }
                     </td>
 
-                    <!-- Acción: Reabrir Caja -->
+                    <!-- Acción: Reabrir Caja y Eliminar -->
                     <td class="py-2 px-3 text-center whitespace-nowrap">
-                      @if (!t.cajaAbierta) {
-                        <button (click)="abrirModalReapertura(t)"
-                          title="Reabrir esta caja para permitir cobros en POS"
-                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer">
-                          <i class="fa-solid fa-lock-open text-[10px] text-amber-600"></i>
-                          <span>Reabrir</span>
+                      <div class="flex items-center justify-center gap-2">
+                        @if (!t.cajaAbierta) {
+                          <button (click)="abrirModalReapertura(t)"
+                            title="Reabrir esta caja para permitir cobros en POS"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer">
+                            <i class="fa-solid fa-lock-open text-[10px] text-amber-600"></i>
+                            <span>Reabrir</span>
+                          </button>
+                        } @else {
+                          <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-circle-check text-xs"></i> En Operación
+                          </span>
+                        }
+                        
+                        <button (click)="eliminarApertura(t)"
+                          title="Eliminar este turno del historial"
+                          class="inline-flex items-center gap-1 px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer">
+                          <i class="fa-solid fa-trash-can text-[10px]"></i>
                         </button>
-                      } @else {
-                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          <i class="fa-solid fa-circle-check text-xs"></i> En Operación
-                        </span>
-                      }
+                      </div>
                     </td>
                   </tr>
                 } @empty {

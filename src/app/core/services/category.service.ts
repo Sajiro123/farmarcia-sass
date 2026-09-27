@@ -72,7 +72,7 @@ export class CategoryService {
       descripcion: c.descripcion || `Categoría: ${c.nombre}`,
       colorBadge: badge,
       estaActiva: true,
-      creadoEn: new Date().toISOString().split('T')[0]
+      creadoEn: new Date().toLocaleDateString('en-CA')
     };
   }
 
@@ -146,7 +146,7 @@ export class CategoryService {
       tipoAsociado: tipoAsociado,
       descripcion: (cat.descripcion || '').trim(),
       colorBadge: idTipo === 2 ? 'purple' : (idTipo === 3 ? 'sky' : 'emerald'),
-      creadoEn: cat.creadoEn || new Date().toISOString().split('T')[0],
+      creadoEn: cat.creadoEn || new Date().toLocaleDateString('en-CA'),
       estaActiva: cat.estaActiva !== undefined ? cat.estaActiva : true
     };
 

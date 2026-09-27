@@ -1,170 +1,189 @@
-<div class="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
+<div [class.dark]="themeService.isDarkMode()" class="login-page">
   
-  <!-- Left Side: Login Form -->
-  <div class="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8">
-    <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 sm:p-10 space-y-6">
-      
-      <!-- Top Header -->
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
-          <div class="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center shadow-xs">
-            <i class="fa-solid fa-staff-snake text-2xl"></i>
-          </div>
-          <div>
-            <span class="font-black text-2xl tracking-tight text-slate-900 dark:text-white">Medicare<span class="text-emerald-600 dark:text-emerald-400">POS</span></span>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sistema de Farmacia & POS</p>
-          </div>
-        </div>
-        
-        <!-- Theme Toggle -->
-        <button (click)="toggleTheme()" type="button" aria-label="Cambiar tema" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PANEL IZQUIERDO — Formulario                       -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="login-panel">
+    <div class="login-card animate-fade-slide">
+
+      <!-- ── Cabecera: Toggle de tema ── -->
+      <div class="flex justify-end">
+        <button (click)="toggleTheme()" type="button" aria-label="Cambiar tema" class="theme-btn">
           <i class="fa-solid" [class.fa-sun]="themeService.isDarkMode()" [class.fa-moon]="!themeService.isDarkMode()"></i>
         </button>
       </div>
 
-      <!-- Welcome Message -->
+      <!-- ── Título de bienvenida (Sin Logo) ── -->
       <div>
-        <h1 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Iniciar Sesión</h1>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Selecciona tu sede e ingresa tus credenciales de acceso al sistema.
+        <h1 class="login-title">
+          Acceso <span class="accent">Farmacia</span>
+        </h1>
+        <p class="login-subtitle">
+          Selecciona tu sede e ingresa tus credenciales para acceder al sistema de {{ businessName }}.
         </p>
       </div>
 
-      <!-- Login Form -->
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
-        
-        <!-- Sede Selector -->
+      <!-- ── Formulario ── -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-3">
+
+        <!-- Sede -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-            Sede / Sucursal <span class="text-rose-500">*</span>
+          <label class="field-label">
+            Sede / Sucursal <span class="req">*</span>
           </label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-solid fa-store text-xs"></i>
-            </div>
-            <select formControlName="sede" 
-              class="block w-full pl-10 pr-8 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 appearance-none cursor-pointer transition-colors shadow-2xs">
+          <div class="field-wrap">
+            <i class="fa-solid fa-store field-icon"></i>
+            <select formControlName="sede" class="field-input">
               @for (sede of sedes; track sede.id) {
                 <option [value]="sede.id">{{ sede.nombre }}</option>
               }
             </select>
-            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-solid fa-chevron-down text-[10px]"></i>
-            </div>
+            <i class="fa-solid fa-chevron-down field-chevron"></i>
           </div>
           @if (loginForm.get('sede')?.touched && loginForm.get('sede')?.invalid) {
-            <p class="text-[11px] text-rose-500 mt-1">Debes seleccionar una sede.</p>
+            <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Debes seleccionar una sede.</p>
           }
         </div>
 
-        <!-- Usuario / Email -->
+        <!-- Usuario -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-            Usuario o Correo Electrónico <span class="text-rose-500">*</span>
+          <label class="field-label">
+            Usuario o Correo <span class="req">*</span>
           </label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-regular fa-user text-xs"></i>
-            </div>
-            <input 
-              type="text" 
-              formControlName="email" 
-              placeholder="Ej: admin, quimico, caja01 o email" 
+          <div class="field-wrap">
+            <i class="fa-regular fa-user field-icon"></i>
+            <input
+              type="text"
+              formControlName="email"
+              placeholder="admin, quimico, o correo"
               autocomplete="username"
-              class="block w-full pl-10 pr-3.5 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-colors shadow-2xs">
+              class="field-input">
           </div>
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
-            <p class="text-[11px] text-rose-500 mt-1">Ingresa tu usuario o correo.</p>
+            <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Ingresa tu usuario o correo.</p>
           }
         </div>
 
-        <!-- Password -->
+        <!-- Contraseña -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-            Contraseña <span class="text-rose-500">*</span>
+          <label class="field-label">
+            Contraseña <span class="req">*</span>
           </label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-solid fa-lock text-xs"></i>
-            </div>
-            <input 
-              [type]="showPassword ? 'text' : 'password'" 
-              formControlName="password" 
+          <div class="field-wrap">
+            <i class="fa-solid fa-lock field-icon"></i>
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
               placeholder="••••••••"
               autocomplete="current-password"
-              class="block w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-xs font-mono font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-colors shadow-2xs">
-            <button 
-              type="button" 
-              (click)="togglePasswordVisibility()" 
-              class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+              class="field-input field-input-pass font-mono">
+            <button type="button" (click)="togglePasswordVisibility()" class="field-eye-btn">
               <i class="fa-solid" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
             </button>
           </div>
           @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-            <p class="text-[11px] text-rose-500 mt-1">Ingresa tu contraseña.</p>
+            <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Ingresa tu contraseña.</p>
           }
         </div>
 
-        <!-- Error Msg -->
+        <!-- Error de autenticación -->
         @if (errorMessage) {
-          <div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-center gap-2.5 animate-fade-in">
-            <i class="fa-solid fa-circle-exclamation text-sm shrink-0"></i>
+          <div class="error-alert animate-fade-in">
+            <i class="fa-solid fa-triangle-exclamation"></i>
             <span>{{ errorMessage }}</span>
           </div>
         }
 
-        <!-- Submit Button -->
-        <button 
-          type="submit" 
-          [disabled]="isSubmitting" 
-          class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md shadow-emerald-600/25 transition-all flex justify-center items-center gap-2 cursor-pointer mt-2">
+        <!-- Separador decorativo -->
+        <div class="form-divider"><span>Plataforma Segura</span></div>
+
+        <!-- Botón de ingreso -->
+        <button type="submit" [disabled]="isSubmitting" class="btn-login">
           @if (isSubmitting) {
-            <span><i class="fa-solid fa-circle-notch fa-spin"></i> Validando credenciales...</span>
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span>Verificando...</span>
           } @else {
-            <span>Iniciar Sesión <i class="fa-solid fa-arrow-right-to-bracket ml-1"></i></span>
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>Ingresar al Sistema</span>
           }
         </button>
 
       </form>
 
-      <!-- Footer Info -->
-      <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 text-center">
-        <p class="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-shield-halved text-emerald-500 text-xs"></i>
-          <span>Autenticación centralizada & multi-sede SaaS</span>
-        </p>
+      <!-- ── Pie ── -->
+      <div class="login-footer">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Autenticación centralizada SaaS</span>
       </div>
 
     </div>
   </div>
 
-  <!-- Right Side: Feature Presentation -->
-  <div class="hidden lg:flex lg:w-1/2 bg-emerald-700 items-center justify-center relative overflow-hidden">
-    <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-multiply"></div>
-    <div class="relative z-10 p-12 text-white max-w-lg text-center space-y-5">
-      <div class="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg">
-        <i class="fa-solid fa-prescription-bottle-medical text-4xl text-emerald-200"></i>
-      </div>
-      <h2 class="text-3xl font-black tracking-tight">Gestión Inteligente de Farmacias</h2>
-      <p class="text-emerald-100 text-sm leading-relaxed">
-        Punto de Venta con Arqueo Ciego, recetas para psicotrópicos, control FEFO estricto de inventario y compras con cálculo de stock y punto de reorden.
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PANEL DERECHO — Hero Farmacéutico Moderno          -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="hero-panel">
+
+    <!-- Fondo -->
+    <div class="hero-bg-pattern"></div>
+    <div class="hero-glow-top"></div>
+    <div class="hero-glow-bottom"></div>
+
+    <!-- Contenido central -->
+    <div class="hero-content">
+
+      <!-- Logo dinámico de la base de datos con estilo glassmorphism detallado -->
+      @if (logoUrl && !logoError) {
+        <div class="hero-logo-card animate-fade-in">
+          <img [src]="logoUrl" [alt]="businessName" fetchpriority="high" class="hero-logo-img" (error)="handleLogoError()">
+        </div>
+      } @else {
+        <div class="hero-icon-fallback animate-fade-in">
+          <i class="fa-solid fa-prescription-bottle-medical"></i>
+        </div>
+      }
+
+      <!-- Título y descripción -->
+      <h2 class="hero-title">Gestión Inteligente<br>de <span>Farmacias</span></h2>
+
+      <p class="hero-desc">
+        Punto de Venta con Arqueo Ciego, control de lotes y vencimientos (FEFO) y compras con cálculo predictivo de stock.
       </p>
 
-      <div class="grid grid-cols-3 gap-3 pt-4 text-left">
-        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
-          <p class="font-bold text-xs">👑 Admin</p>
-          <p class="text-[10px] text-emerald-200 mt-0.5">KPIs, Reportes & Finanzas</p>
+      <!-- Estadísticas / pills -->
+      <div class="hero-stats">
+        <span class="hero-stat-pill">
+          <i class="fa-solid fa-box-open"></i> Control FEFO
+        </span>
+        <span class="hero-stat-pill">
+          <i class="fa-solid fa-cash-register"></i> Arqueo Ciego
+        </span>
+        <span class="hero-stat-pill">
+          <i class="fa-solid fa-chart-pie"></i> Analítica Real-Time
+        </span>
+      </div>
+
+      <!-- Cards de roles (Sin emojis de texto, con iconos fa) -->
+      <div class="hero-roles">
+        <div class="hero-role-card">
+          <div class="role-icon"><i class="fa-solid fa-crown"></i></div>
+          <div class="role-name">Admin</div>
+          <div class="role-desc">KPIs, Finanzas & Auditoría</div>
         </div>
-        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
-          <p class="font-bold text-xs">💊 Q.F.</p>
-          <p class="text-[10px] text-emerald-200 mt-0.5">Control Sanitario & FEFO</p>
+        <div class="hero-role-card">
+          <div class="role-icon"><i class="fa-solid fa-flask"></i></div>
+          <div class="role-name">Químico</div>
+          <div class="role-desc">Control Sanitario estricto</div>
         </div>
-        <div class="p-3.5 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-xs">
-          <p class="font-bold text-xs">🛒 POS</p>
-          <p class="text-[10px] text-emerald-200 mt-0.5">Caja, Turnos & Ventas</p>
+        <div class="hero-role-card">
+          <div class="role-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+          <div class="role-name">Ventas</div>
+          <div class="role-desc">POS, Caja y Turnos</div>
         </div>
       </div>
+
     </div>
+
   </div>
 
 </div>

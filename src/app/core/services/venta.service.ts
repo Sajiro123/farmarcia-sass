@@ -112,7 +112,7 @@ export class VentaService {
     if (!dStr) return '';
     try {
       const dt = typeof dStr === 'string' ? new Date(dStr) : dStr;
-      return dt.toISOString().split('T')[0];
+      return dt.toLocaleDateString('en-CA');
     } catch (e) {
       return '';
     }
@@ -122,15 +122,21 @@ export class VentaService {
     const saved = localStorage.getItem('medicare_turno_caja_activo');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            ...parsed,
+            cajaAbierta: Boolean(parsed.cajaAbierta)
+          };
+        }
       } catch (e) {}
     }
     return {
-      cajaAbierta: true,
-      fechaApertura: new Date(Date.now() - 4 * 3600000).toISOString(),
-      cajeroActual: 'Carlos Mendoza (Cajero Principal)',
-      fondoInicial: 100.00,
-      sede: 'Sede Cajamarca Central'
+      cajaAbierta: false,
+      fechaApertura: '',
+      cajeroActual: '',
+      fondoInicial: 0,
+      sede: ''
     };
   }
 
@@ -138,13 +144,13 @@ export class VentaService {
    * Obtiene la apertura registrada para una fecha (regla: solo 1 apertura por día)
    */
   getAperturaDelDia(fechaIso?: string): TurnoCajaDTO | null {
-    const fecha = fechaIso || new Date().toISOString().split('T')[0];
+    const fecha = fechaIso || new Date().toLocaleDateString('en-CA');
     const actual = this.getTurnoActual();
-    if (actual && this.toIsoDate(actual.fechaApertura) === fecha) {
+    if (actual && actual.fechaApertura && this.toIsoDate(actual.fechaApertura) === fecha) {
       return actual;
     }
     const historial = this.getHistorialTurnos();
-    const encontrado = historial.find(t => this.toIsoDate(t.fechaApertura) === fecha);
+    const encontrado = historial.find(t => t.fechaApertura && this.toIsoDate(t.fechaApertura) === fecha);
     return encontrado || null;
   }
 
@@ -185,6 +191,50 @@ export class VentaService {
   }
 
   /**
+   * Elimina un turno específico por ID o fecha (desde el módulo de Reportes)
+   */
+  async eliminarTurno(idOFecha: string): Promise<boolean> {
+    const fechaBuscada = idOFecha.includes('T') ? idOFecha.split('T')[0] : (idOFecha.includes('-') && idOFecha.length === 10 ? idOFecha : '');
+    
+    // 1. Eliminar de Supabase si es un UUID válido (no una fecha)
+    const client = this.supabase.client;
+    let eliminadoDB = false;
+    if (this.supabase.isConfigured && client && idOFecha.includes('-') && idOFecha.length > 10) {
+      const { error } = await client.from('turnos_caja').delete().eq('id', idOFecha);
+      if (!error) eliminadoDB = true;
+    }
+
+    // 2. Limpiar de la sesión actual
+    let turnoActual = this.getTurnoActual();
+    if (turnoActual && turnoActual.fechaApertura) {
+      const coincideActual = (turnoActual.id && turnoActual.id === idOFecha) ||
+                             (fechaBuscada && this.toIsoDate(turnoActual.fechaApertura) === fechaBuscada) ||
+                             turnoActual.fechaApertura === idOFecha;
+                             
+      if (coincideActual) {
+        localStorage.removeItem('medicare_turno_caja_activo');
+        this.turnoActivo = null;
+      }
+    }
+
+    // 3. Limpiar del historial local
+    const historial = this.getHistorialTurnos();
+    const lenAntes = historial.length;
+    const nuevoHistorial = historial.filter(t => 
+      !((t.id && t.id === idOFecha) ||
+      (fechaBuscada && this.toIsoDate(t.fechaApertura) === fechaBuscada) ||
+      t.fechaApertura === idOFecha)
+    );
+
+    if (nuevoHistorial.length !== lenAntes || eliminadoDB) {
+      localStorage.setItem('medicare_historial_turnos', JSON.stringify(nuevoHistorial));
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
    * Reabre un turno específico por ID o fecha (desde el módulo de Reportes)
    */
   reabrirTurnoPorIdOFecha(idOFecha: string, motivo: string = 'Reapertura autorizada', autorizadoPor: string = 'Supervisor'): TurnoCajaDTO | null {
@@ -218,7 +268,7 @@ export class VentaService {
       delete turno.fechaCierre;
 
       // Si corresponde al día de hoy, hacerlo además el turno activo
-      const hoyIso = new Date().toISOString().split('T')[0];
+      const hoyIso = new Date().toLocaleDateString('en-CA');
       if (this.toIsoDate(turno.fechaApertura) === hoyIso) {
         this.guardarTurnoActual(turno);
       } else {

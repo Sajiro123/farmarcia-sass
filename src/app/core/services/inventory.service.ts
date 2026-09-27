@@ -22,6 +22,7 @@ export interface LoteItem {
   registroSanitario?: string;
   temperatura?: string;
   costoUnitario?: number;
+  costoTotalProveedor?: number;
   fechaIngreso?: string;
   almacenId?: string;
   sucursalId?: string;
@@ -106,7 +107,7 @@ export class InventoryService {
       ubicacion: s.almacenes?.nombre || 'Almacén Principal',
       registroSanitario: s.lotes_producto?.registro_sanitario || p?.registro_sanitario || 'EN-04512',
       costoUnitario: Number(p?.precio_costo) || 0.20,
-      fechaIngreso: s.actualizado_en ? s.actualizado_en.split('T')[0] : new Date().toISOString().split('T')[0],
+      fechaIngreso: s.actualizado_en ? s.actualizado_en.split('T')[0] : new Date().toLocaleDateString('en-CA'),
       almacenId: s.almacen_id,
       sucursalId: s.almacenes?.sucursal_id,
       sucursalNombre: s.almacenes?.sucursales?.nombre
@@ -251,7 +252,7 @@ export class InventoryService {
       lote.id = crypto.randomUUID();
     }
     if (!lote.fechaIngreso) {
-      lote.fechaIngreso = new Date().toISOString().split('T')[0];
+      lote.fechaIngreso = new Date().toLocaleDateString('en-CA');
     }
     const targetSede = lote.sucursalId || this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
     lote.sucursalId = targetSede;

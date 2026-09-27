@@ -139,13 +139,13 @@ export class Compras implements OnInit {
 
   recalcularTotalesItem() {
     if (!this.requiereLote && !this.loteInput) {
-      this.loteInput = 'ING-AUTO-' + new Date().toISOString().slice(0, 7).replace('-', '');
+      this.loteInput = 'ING-AUTO-' + new Date().toLocaleDateString('en-CA').slice(0, 7).replace('-', '');
     }
   }
 
   onToggleRequiereLote() {
     if (!this.requiereLote) {
-      this.loteInput = 'ING-AUTO-' + new Date().toISOString().slice(0, 7).replace('-', '');
+      this.loteInput = 'ING-AUTO-' + new Date().toLocaleDateString('en-CA').slice(0, 7).replace('-', '');
       this.vencimientoInput = 'Sin Venc.';
     } else {
       this.loteInput = '';

@@ -55,9 +55,9 @@ export class Dashboard implements OnInit {
 
   // Filtro de Fechas
   filtroFechaModo: 'HOY' | 'AYER' | 'SEMANA' | 'MES' | 'PERSONALIZADO' | 'TODOS' = 'HOY';
-  fechaSeleccionada: string = new Date().toISOString().split('T')[0];
-  fechaInicio: string = new Date().toISOString().split('T')[0];
-  fechaFin: string = new Date().toISOString().split('T')[0];
+  fechaSeleccionada: string = new Date().toLocaleDateString('en-CA');
+  fechaInicio: string = new Date().toLocaleDateString('en-CA');
+  fechaFin: string = new Date().toLocaleDateString('en-CA');
 
   // Filtros de búsqueda en la tabla de productos vendidos
   busquedaProductoVendido = '';
@@ -89,7 +89,7 @@ export class Dashboard implements OnInit {
   setModoFecha(modo: 'HOY' | 'AYER' | 'SEMANA' | 'MES' | 'PERSONALIZADO' | 'TODOS') {
     this.filtroFechaModo = modo;
     const hoy = new Date();
-    const hoyStr = hoy.toISOString().split('T')[0];
+    const hoyStr = hoy.toLocaleDateString('en-CA');
 
     if (modo === 'HOY') {
       this.fechaInicio = hoyStr;
@@ -98,18 +98,18 @@ export class Dashboard implements OnInit {
     } else if (modo === 'AYER') {
       const ayer = new Date();
       ayer.setDate(ayer.getDate() - 1);
-      const ayerStr = ayer.toISOString().split('T')[0];
+      const ayerStr = ayer.toLocaleDateString('en-CA');
       this.fechaInicio = ayerStr;
       this.fechaFin = ayerStr;
       this.fechaSeleccionada = ayerStr;
     } else if (modo === 'SEMANA') {
       const hace7Dias = new Date();
       hace7Dias.setDate(hace7Dias.getDate() - 6);
-      this.fechaInicio = hace7Dias.toISOString().split('T')[0];
+      this.fechaInicio = hace7Dias.toLocaleDateString('en-CA');
       this.fechaFin = hoyStr;
     } else if (modo === 'MES') {
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      this.fechaInicio = inicioMes.toISOString().split('T')[0];
+      this.fechaInicio = inicioMes.toLocaleDateString('en-CA');
       this.fechaFin = hoyStr;
     } else if (modo === 'TODOS') {
       this.fechaInicio = 'TODOS';

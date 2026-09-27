@@ -1,8 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef, inject, NgZone, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject, NgZone, effect, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { InventoryService, LoteItem, ActaBaja } from '../../core/services/inventory.service';
 import { ProductService, ProductoCatalogoItem } from '../../core/services/product.service';
@@ -15,6 +15,8 @@ export interface ItemLoteTemporal {
   principioActivo?: string;
   laboratorio?: string;
   stock: number;
+  costoProveedor?: number | null;
+  costoUnitario?: number | null;
   vencimiento: string;
   pasillo?: string;
   estante?: string;
@@ -33,7 +35,7 @@ export interface ItemLoteTemporal {
   imports: [CommonModule, FormsModule],
   templateUrl: './inventory.html'
 })
-export class Inventory implements OnInit {
+export class Inventory implements OnInit, OnDestroy {
   public authService = inject(AuthService);
   private inventoryService = inject(InventoryService);
   private productService = inject(ProductService);
@@ -41,6 +43,7 @@ export class Inventory implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
+  private routerSub?: Subscription;
 
   constructor() {
     effect(() => {
@@ -79,7 +82,7 @@ export class Inventory implements OnInit {
   loteCabecera = {
     lote: '',
     guiaReferencia: '',
-    fechaIngreso: new Date().toISOString().split('T')[0],
+    fechaIngreso: new Date().toLocaleDateString('en-CA'),
     sucursalId: ''
   };
 
@@ -96,6 +99,7 @@ export class Inventory implements OnInit {
     lote: '',
     vencimiento: '',
     stock: 50,
+    costoProveedor: null as number | null,
     ubicacion: '',
     pasillo: '',
     estante: '',
@@ -109,10 +113,20 @@ export class Inventory implements OnInit {
   };
   errorModalLote = '';
 
-  // Buscador de autocompletado para seleccionar producto
+  // Buscador y Selector unificado (Combobox de Productos)
   busquedaProductoCatalogo = '';
   mostrarDropdownProductos = false;
-  mostrarBuscadorProducto = false;
+
+  get textoSelectProducto(): string {
+    if (this.mostrarDropdownProductos && this.busquedaProductoCatalogo !== '') {
+      return this.busquedaProductoCatalogo;
+    }
+    const prod = this.productoSeleccionado;
+    if (prod) {
+      return `[${prod.tipoProducto}] ${prod.nombreComercial}${prod.concentracion ? ' ' + prod.concentracion : ''} (SKU: ${prod.sku})`;
+    }
+    return this.busquedaProductoCatalogo || '';
+  }
 
   get productosFiltradosParaLote(): ProductoCatalogoItem[] {
     if (!this.busquedaProductoCatalogo || !this.busquedaProductoCatalogo.trim()) {
@@ -130,23 +144,38 @@ export class Inventory implements OnInit {
     );
   }
 
-  onBusquedaProductoChange() {
-    this.mostrarDropdownProductos = !!(this.busquedaProductoCatalogo && this.busquedaProductoCatalogo.trim());
-    const filtrados = this.productosFiltradosParaLote;
-    if (filtrados.length > 0) {
-      const coincide = filtrados.some(p => p.id === this.loteForm.productoId);
-      if (!coincide) {
-        this.loteForm.productoId = filtrados[0].id;
-        this.onProductoChange();
-      }
+  onFocusBusqueda(event: FocusEvent) {
+    this.mostrarDropdownProductos = true;
+    (event.target as HTMLInputElement)?.select();
+    this.cdr.markForCheck();
+  }
+
+  onInputBusquedaProducto(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.busquedaProductoCatalogo = input.value;
+    this.mostrarDropdownProductos = true;
+    this.cdr.markForCheck();
+  }
+
+  abrirDropdownProductos() {
+    this.mostrarDropdownProductos = true;
+    this.cdr.markForCheck();
+  }
+
+  toggleDropdownProductos(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.mostrarDropdownProductos = !this.mostrarDropdownProductos;
+    if (!this.mostrarDropdownProductos) {
+      this.busquedaProductoCatalogo = '';
     }
     this.cdr.markForCheck();
   }
 
-  onSelectProductoDirecto(prodId: string) {
-    this.loteForm.productoId = prodId;
+  cerrarDropdownProductos() {
     this.mostrarDropdownProductos = false;
-    this.onProductoChange();
+    this.busquedaProductoCatalogo = '';
     this.cdr.markForCheck();
   }
 
@@ -154,24 +183,29 @@ export class Inventory implements OnInit {
     this.loteForm.productoId = prod.id;
     this.busquedaProductoCatalogo = '';
     this.mostrarDropdownProductos = false;
-    this.mostrarBuscadorProducto = false;
     this.onProductoChange();
     this.cdr.markForCheck();
   }
 
-  abrirBuscadorProducto() {
-    this.mostrarBuscadorProducto = true;
-    this.mostrarDropdownProductos = true;
-  }
-
-  cerrarDropdownProductos() {
-    this.mostrarDropdownProductos = false;
-  }
-
-  limpiarBusquedaProducto() {
+  limpiarSeleccionProducto(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
     this.busquedaProductoCatalogo = '';
-    this.mostrarDropdownProductos = false;
+    this.loteForm.productoId = '';
+    this.mostrarDropdownProductos = true;
+    this.onProductoChange();
     this.cdr.markForCheck();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.searchable-product-select')) {
+      this.mostrarDropdownProductos = false;
+      this.busquedaProductoCatalogo = '';
+      this.cdr.markForCheck();
+    }
   }
 
   get productoSeleccionado(): ProductoCatalogoItem | undefined {
@@ -200,13 +234,13 @@ export class Inventory implements OnInit {
       if (!this.loteForm.vencimiento) {
         const f = new Date();
         f.setFullYear(f.getFullYear() + 2);
-        this.loteForm.vencimiento = f.toISOString().split('T')[0];
+        this.loteForm.vencimiento = f.toLocaleDateString('en-CA');
       }
     } else if (prod && prod.tipoProducto === 'MEDICAMENTO') {
       if (!this.loteForm.vencimiento) {
         const f = new Date();
         f.setFullYear(f.getFullYear() + 2);
-        this.loteForm.vencimiento = f.toISOString().split('T')[0];
+        this.loteForm.vencimiento = f.toLocaleDateString('en-CA');
       }
       if (!this.loteForm.registroSanitario) {
         this.loteForm.registroSanitario = 'EE-' + Math.floor(10000 + Math.random() * 90000);
@@ -270,16 +304,27 @@ export class Inventory implements OnInit {
   ngOnInit() {
     this.cargarDatos();
     this.detectarRuta();
-    this.router.events
+    this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
         this.detectarRuta();
       });
   }
 
+  ngOnDestroy() {
+    if (this.routerSub) {
+      this.routerSub.unsubscribe();
+    }
+  }
+
   detectarRuta() {
     const url = this.router.url;
-    if (url.includes('/editar/')) {
+    // CRUCIAL: Solo reaccionar si la URL pertenece efectivamente al módulo de inventario
+    if (!url.startsWith('/inventario') && !url.startsWith('/inventory')) {
+      return;
+    }
+
+    if (url.includes('/inventario/editar/') || url.includes('/inventory/editar/')) {
       this.vistaActual = 'NUEVO_LOTE';
       this.modoModalLote = 'EDITAR';
       const parts = url.split('/editar/');
@@ -300,6 +345,11 @@ export class Inventory implements OnInit {
   }
 
   cargarLoteParaEdicion(id: string | number) {
+    const currentUrl = this.router.url;
+    if (!currentUrl.startsWith('/inventario/editar/') && !currentUrl.startsWith('/inventory/editar/')) {
+      return;
+    }
+
     this.cargarProductosCatalogo();
     this.modoModalLote = 'EDITAR';
     this.loteEnEdicionId = id;
@@ -315,6 +365,7 @@ export class Inventory implements OnInit {
           lote: item.lote,
           vencimiento: esPerf ? '' : item.vencimiento,
           stock: item.stock,
+          costoProveedor: item.costoTotalProveedor || (item.costoUnitario && item.stock ? Number((item.costoUnitario * item.stock).toFixed(2)) : null),
           ubicacion: u,
           pasillo: u,
           estante: '',
@@ -329,7 +380,6 @@ export class Inventory implements OnInit {
         if (prod) {
           this.busquedaProductoCatalogo = `${prod.nombreComercial}${prod.concentracion ? ' ' + prod.concentracion : ''}`;
         }
-        this.mostrarBuscadorProducto = false;
         this.mostrarDropdownProductos = false;
         this.cdr.markForCheck();
       }
@@ -600,7 +650,7 @@ export class Inventory implements OnInit {
       this.generarCodigoLoteNuevo();
     }
     this.loteCabecera.guiaReferencia = this.loteCabecera.guiaReferencia || '';
-    this.loteCabecera.fechaIngreso = this.loteCabecera.fechaIngreso || new Date().toISOString().split('T')[0];
+    this.loteCabecera.fechaIngreso = this.loteCabecera.fechaIngreso || new Date().toLocaleDateString('en-CA');
 
     const activeSede = this.authService.activeSede();
     this.loteCabecera.sucursalId = this.loteCabecera.sucursalId || activeSede?.id || this.sedesDisponibles[0]?.id || '11111111-1111-1111-1111-111111111111';
@@ -615,8 +665,9 @@ export class Inventory implements OnInit {
       this.loteForm = {
         productoId: primerProd.id,
         lote: this.loteCabecera.lote,
-        vencimiento: esPerf ? '' : fechaFutura.toISOString().split('T')[0],
+        vencimiento: esPerf ? '' : fechaFutura.toLocaleDateString('en-CA'),
         stock: 50,
+        costoProveedor: null,
         ubicacion: '',
         pasillo: '',
         estante: '',
@@ -685,6 +736,10 @@ export class Inventory implements OnInit {
 
     const ubicacionTexto = (this.loteForm.ubicacion || '').trim();
 
+    const costoProv = Number(this.loteForm.costoProveedor) || 0;
+    const stockNum = Number(this.loteForm.stock) || 1;
+    const costoUnit = costoProv > 0 && stockNum > 0 ? Number((costoProv / stockNum).toFixed(2)) : undefined;
+
     const nuevoItem: ItemLoteTemporal = {
       productoId: prod.id,
       productoNombre: nombreCompleto,
@@ -693,6 +748,8 @@ export class Inventory implements OnInit {
       principioActivo: principioAct,
       laboratorio: lab,
       stock: Number(this.loteForm.stock),
+      costoProveedor: costoProv > 0 ? costoProv : undefined,
+      costoUnitario: costoUnit,
       vencimiento: esPerf ? 'No expira' : (this.loteForm.vencimiento || 'No expira'),
       ubicacion: esPerf ? '' : ubicacionTexto,
       pasillo: esPerf ? '' : ubicacionTexto,
@@ -709,10 +766,11 @@ export class Inventory implements OnInit {
 
     // Resetear formulario para facilitar el ingreso del siguiente producto
     this.loteForm.stock = 50;
+    this.loteForm.costoProveedor = null;
     this.loteForm.ubicacion = '';
     const fechaFutura = new Date();
     fechaFutura.setFullYear(fechaFutura.getFullYear() + 2);
-    this.loteForm.vencimiento = fechaFutura.toISOString().split('T')[0];
+    this.loteForm.vencimiento = fechaFutura.toLocaleDateString('en-CA');
     this.loteForm.registroSanitario = 'EE-' + Math.floor(10000 + Math.random() * 90000);
 
     this.mostrarToast('info', `"${prod.nombreComercial}" agregado a la lista del lote.`);
@@ -738,7 +796,7 @@ export class Inventory implements OnInit {
     }
 
     const codigoLote = this.loteCabecera.lote.trim();
-    const fechaIng = this.loteCabecera.fechaIngreso || new Date().toISOString().split('T')[0];
+    const fechaIng = this.loteCabecera.fechaIngreso || new Date().toLocaleDateString('en-CA');
     const targetSede = this.loteCabecera.sucursalId || this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
     const sedeObj = this.authService.getSedes().find(s => s.id === targetSede);
     const nombreSede = sedeObj ? sedeObj.nombre : (targetSede === '11111111-1111-1111-1111-111111111111' ? 'Sede Cajamarca Central' : 'Sede Baños del Inca');
@@ -754,6 +812,8 @@ export class Inventory implements OnInit {
         principioActivo: item.principioActivo || '',
         laboratorio: item.laboratorio || '',
         stock: item.stock,
+        costoUnitario: item.costoUnitario ?? undefined,
+        costoTotalProveedor: item.costoProveedor || undefined,
         vencimiento: item.vencimiento,
         dias: esPerf ? 99999 : 0,
         fechaIngreso: fechaIng,
@@ -799,6 +859,7 @@ export class Inventory implements OnInit {
       lote: item.lote,
       vencimiento: esPerf ? '' : item.vencimiento,
       stock: item.stock,
+      costoProveedor: item.costoTotalProveedor || (item.costoUnitario && item.stock ? Number((item.costoUnitario * item.stock).toFixed(2)) : null),
       ubicacion: u,
       pasillo: u,
       estante: '',
@@ -811,7 +872,6 @@ export class Inventory implements OnInit {
     };
 
     this.busquedaProductoCatalogo = '';
-    this.mostrarBuscadorProducto = false;
     this.mostrarDropdownProductos = false;
 
     // Navegar a la vista completa en modo edición
@@ -864,6 +924,10 @@ export class Inventory implements OnInit {
       principioActivo: principioAct,
       laboratorio: lab,
       stock: Number(this.loteForm.stock),
+      costoUnitario: (this.loteForm.costoProveedor && Number(this.loteForm.stock) > 0)
+        ? Number((Number(this.loteForm.costoProveedor) / Number(this.loteForm.stock)).toFixed(2))
+        : undefined,
+      costoTotalProveedor: this.loteForm.costoProveedor ? Number(this.loteForm.costoProveedor) : undefined,
       vencimiento: esPerf ? 'No expira' : (this.loteForm.vencimiento || '2027-12-31'),
       dias: esPerf ? 99999 : 0,
       ubicacion: esPerf ? '' : ubicacionStr,

@@ -68,11 +68,13 @@ export class ProductService {
     const esOtros = p.codigo_interno?.startsWith('OTR') || p.categorias_producto?.nombre?.toLowerCase().includes('higiene');
     const tipo: TipoProducto = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
 
-    const precioVenta = Number(p.precio_venta) || 0;
+    const precioCaja = Number(p.precio_venta) || 0;
+    const precioUnidad = Number(p.precio_venta_fraccion) || 0;
+    const precioBlister = Number(p.precio_costo) || 0;
+    
+    // El precio de referencia siempre será el de la caja si existe, sino la unidad
+    const precioVenta = precioCaja > 0 ? precioCaja : precioUnidad;
     const unidadesCaja = Number(p.unidades_por_caja) || (esPerfume || esOtros ? 1 : 100);
-    const precioCaja = Number(precioVenta * (esPerfume || esOtros ? 1 : (unidadesCaja > 10 ? 1 : unidadesCaja))) || precioVenta;
-    const precioBlister = esPerfume || esOtros ? 0 : Number((precioCaja / 5).toFixed(2));
-    const precioUnidad = Number(p.precio_venta_fraccion) || (unidadesCaja > 0 ? Number((precioCaja / unidadesCaja).toFixed(2)) : precioVenta);
 
     return {
       id: p.id,
@@ -91,7 +93,7 @@ export class ProductService {
       ubicacionAlmacen: 'P1-E1-N1',
       descripcion: `${p.nombre_comercial} ${p.concentracion || ''} - ${p.nombre_generico || ''}`,
       estaActivo: p.esta_activo !== false,
-      creadoEn: p.creado_en ? p.creado_en.split('T')[0] : new Date().toISOString().split('T')[0],
+      creadoEn: p.creado_en ? p.creado_en.split('T')[0] : new Date().toLocaleDateString('en-CA'),
       requiereReceta: p.tipo_receta === 'RECETA_MEDICA' || p.tipo_receta === 'RECETA_RETENIDA',
       esControlado: p.tipo_receta === 'RECETA_RETENIDA',
       laboratorio: p.laboratorios?.nombre || 'Genfar',
@@ -241,7 +243,7 @@ export class ProductService {
   guardarEnCatalogo(item: ProductoCatalogoItem): Observable<ProductoCatalogoItem> {
     if (!item.id || item.id.startsWith('cat-')) {
       item.id = crypto.randomUUID();
-      item.creadoEn = new Date().toISOString().split('T')[0];
+      item.creadoEn = new Date().toLocaleDateString('en-CA');
       this.productosCatalogo.unshift({ ...item });
     } else {
       const idx = this.productosCatalogo.findIndex(p => p.id === item.id);
@@ -260,9 +262,9 @@ export class ProductService {
         nombre_generico: item.principioActivo || item.nombreComercial,
         codigo_interno: item.sku || ('MED-' + item.id.slice(0, 6)),
         codigo_barras: item.codigoBarra || null,
-        precio_venta: Number(item.precioVenta || item.precioCaja) || 1.0,
-        precio_costo: Number(item.precioUnidad) || 0.5,
-        precio_venta_fraccion: Number(item.precioUnidad || item.precioVenta) || 1.0,
+        precio_venta: Number(item.precioCaja) || Number(item.precioVenta) || 0,
+        precio_costo: Number(item.precioBlister) || 0, // Lo usamos temporalmente para el precio del blister
+        precio_venta_fraccion: Number(item.precioUnidad) || 0,
         unidades_por_caja: Number(item.unidadesPorCaja) || 100,
         concentracion: item.concentracion || null,
         tipo_receta: item.requiereReceta ? 'RECETA_MEDICA' : 'VENTA_LIBRE',

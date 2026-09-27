@@ -18,6 +18,7 @@ export interface AuthResponse {
   acciones?: string[];
   sedeId?: string;
   sedeNombre?: string;
+  logoUrl?: string;
 }
 
 export interface Sede {

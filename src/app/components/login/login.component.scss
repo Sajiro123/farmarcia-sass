@@ -1,0 +1,512 @@
+// ============================================================
+// LOGIN COMPONENT — MEDICARE FARMACIA (MODERN DESIGN)
+// ============================================================
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// Brand Colors (from requested palette)
+$primary-purple: #8E44AD;
+$primary-light: #9B59B6;
+$primary-dark: #76448A;
+$accent-blue: #3498DB;
+$pure-white: #FFFFFF;
+$off-white: #FDFDFD;
+$text-main: #2C3E50;
+$text-muted: #7F8C8D;
+$border-color: #ECF0F1;
+$bg-glass: rgba(255, 255, 255, 0.85);
+$bg-glass-dark: rgba(26, 37, 47, 0.85);
+
+.login-page {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: $off-white;
+  color: $text-main;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+
+  &.dark {
+    background-color: #1A252F;
+    color: $pure-white;
+    $border-color: #34495E;
+    $text-muted: #BDC3C7;
+
+    .login-panel {
+      background-color: #1A252F;
+    }
+    
+    .login-card {
+      background: $bg-glass-dark;
+      border: 1px solid #34495E;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .field-input {
+      background: #2C3E50;
+      border-color: #34495E;
+      color: $pure-white;
+      
+      &:focus {
+        border-color: $primary-light;
+        box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.2);
+      }
+    }
+
+    .field-icon {
+      color: #95A5A6;
+    }
+  }
+}
+
+// ============================================================
+// LEFT PANEL (Form)
+// ============================================================
+.login-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: $off-white;
+  position: relative;
+  z-index: 10;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: $pure-white;
+  border-radius: 24px;
+  padding: 2rem;
+  border: 1px solid $border-color;
+  box-shadow: 0 20px 40px -15px rgba(142, 68, 173, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  backdrop-filter: blur(16px);
+}
+
+.theme-btn {
+  background: transparent;
+  border: none;
+  color: $text-muted;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 50%;
+  
+  &:hover {
+    color: $primary-purple;
+    background: rgba(142, 68, 173, 0.1);
+  }
+}
+
+.login-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.03em;
+  color: inherit;
+  
+  .accent {
+    color: $primary-purple;
+  }
+}
+
+.login-subtitle {
+  font-size: 0.85rem;
+  color: $text-muted;
+  line-height: 1.4;
+}
+
+// ============================================================
+// FORM ELEMENTS
+// ============================================================
+.field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: inherit;
+  
+  .req {
+    color: #E74C3C;
+  }
+}
+
+.field-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon {
+  position: absolute;
+  left: 1rem;
+  color: #BDC3C7;
+  font-size: 1.1rem;
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: 2px solid $border-color;
+  border-radius: 12px;
+  background: $off-white;
+  color: $text-main;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  outline: none;
+  appearance: none;
+  
+  &::placeholder {
+    color: #BDC3C7;
+    font-weight: 400;
+  }
+  
+  &:focus {
+    border-color: $primary-purple;
+    box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.15);
+    background: $pure-white;
+    
+    & + .field-icon,
+    ~ .field-icon {
+      color: $primary-purple;
+    }
+  }
+}
+
+.field-chevron {
+  position: absolute;
+  right: 1.25rem;
+  color: #BDC3C7;
+  pointer-events: none;
+}
+
+.field-eye-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #BDC3C7;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: $primary-purple;
+    background: rgba(142, 68, 173, 0.1);
+  }
+}
+
+.field-error {
+  font-size: 0.8rem;
+  color: #E74C3C;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+// ============================================================
+// BUTTONS & ALERTS
+// ============================================================
+.btn-login {
+  width: 100%;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, $primary-light, $primary-purple);
+  color: $pure-white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 16px rgba(142, 68, 173, 0.25);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(142, 68, 173, 0.35);
+    background: linear-gradient(135deg, $primary-purple, $primary-dark);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.error-alert {
+  background: rgba(231, 76, 60, 0.1);
+  color: #E74C3C;
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: $text-muted;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid $border-color;
+  }
+  
+  &::before { margin-right: 1rem; }
+  &::after { margin-left: 1rem; }
+}
+
+.login-footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: $text-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+// ============================================================
+// RIGHT PANEL (Hero Moderno)
+// ============================================================
+.hero-panel {
+  flex: 1.2;
+  display: none; // Hidden on mobile
+  background: linear-gradient(135deg, #1A252F, #2C3E50);
+  position: relative;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.hero-bg-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: radial-gradient($pure-white 2px, transparent 2px);
+  background-size: 32px 32px;
+}
+
+.hero-glow-top,
+.hero-glow-bottom {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 1;
+}
+
+.hero-glow-top {
+  top: -20%;
+  right: -10%;
+  width: 600px;
+  height: 600px;
+  background: rgba(142, 68, 173, 0.4);
+}
+
+.hero-glow-bottom {
+  bottom: -20%;
+  left: -10%;
+  width: 500px;
+  height: 500px;
+  background: rgba(52, 152, 219, 0.4); // Azul acento
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 560px;
+  padding: 3rem;
+  color: $pure-white;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.hero-logo-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.5rem;
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  width: max-content;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  margin-bottom: 0.5rem;
+  
+  .hero-logo-img {
+    max-width: 180px;
+    max-height: 80px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+  }
+}
+
+.hero-icon-fallback {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: $pure-white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  margin-bottom: 0.5rem;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  background: linear-gradient(to right, $pure-white, #BDC3C7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  span {
+    color: $accent-blue;
+    -webkit-text-fill-color: $accent-blue;
+  }
+}
+
+.hero-desc {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+}
+
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.hero-stat-pill {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.25rem;
+  border-radius: 99px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(8px);
+  color: $pure-white;
+  
+  i {
+    color: $accent-blue;
+  }
+}
+
+.hero-roles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.hero-role-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.25rem;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(142, 68, 173, 0.4);
+  }
+  
+  .role-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(142, 68, 173, 0.2);
+    color: $primary-light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .role-name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .role-desc {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.4;
+  }
+}
+
+// ============================================================
+// ANIMATIONS
+// ============================================================
+.animate-fade-slide {
+  animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -1,8 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 import { ProductService, ProductoCatalogoItem, TipoProducto } from '../../core/services/product.service';
 import { CategoryService, CategoriaItem, mapIdTipoToTipoProducto, mapTipoProductoToIdTipo } from '../../core/services/category.service';
 import { StorageService } from '../../core/services/storage.service';
@@ -14,13 +14,14 @@ import { StorageService } from '../../core/services/storage.service';
   templateUrl: './products.html',
   styleUrls: ['./products.css']
 })
-export class Products implements OnInit {
+export class Products implements OnInit, OnDestroy {
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   public storageService = inject(StorageService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
+  private routerSub?: Subscription;
 
   // Subida de Imágenes en Supabase Storage
   subiendoImagen = false;
@@ -82,11 +83,17 @@ export class Products implements OnInit {
     this.cargarProductos();
 
     // Escuchar cambios de ruta para alternar entre /productos, /productos/nuevo y /productos/editar/:id
-    this.router.events
+    this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
         this.detectarRutaActual();
       });
+  }
+
+  ngOnDestroy(): void {
+    if (this.routerSub) {
+      this.routerSub.unsubscribe();
+    }
   }
 
   cargarCategorias(): void {
@@ -138,13 +145,18 @@ export class Products implements OnInit {
 
   detectarRutaActual(): void {
     const url = this.router.url;
-    if (url.includes('/editar/')) {
+    // CRUCIAL: Solo reaccionar si la URL pertenece efectivamente al módulo de productos
+    if (!url.startsWith('/productos') && !url.startsWith('/products')) {
+      return;
+    }
+
+    if (url.includes('/productos/editar/') || url.includes('/products/editar/')) {
       this.vistaActual = 'EDITAR';
       const parts = url.split('/editar/');
       const id = parts[1]?.split('?')[0];
       if (id) {
         this.productoIdEnEdicion = id;
-        if (!this.productoForm || this.productoForm.id !== id) {
+        if (!this.productoForm || String(this.productoForm.id) !== String(id)) {
           this.cargarProductoParaEdicion(id);
         }
       }
@@ -162,6 +174,12 @@ export class Products implements OnInit {
   }
 
   cargarProductoParaEdicion(id: string): void {
+    // Si no estamos en la ruta de editar productos, abortar
+    const currentUrl = this.router.url;
+    if (!currentUrl.startsWith('/productos/editar/') && !currentUrl.startsWith('/products/editar/')) {
+      return;
+    }
+
     this.cargando = true;
     this.cdr.markForCheck();
     this.productService.obtenerProductoCatalogo(id).subscribe({
@@ -180,7 +198,7 @@ export class Products implements OnInit {
           this.cdr.markForCheck();
         } else {
           this.productService.listarCatalogo().subscribe(items => {
-            const encontrado = items.find(p => p.id === id);
+            const encontrado = items.find(p => String(p.id) === String(id));
             if (encontrado) {
               this.productoForm = { ...encontrado };
               this.tipoSeleccionado = encontrado.tipoProducto;
@@ -192,8 +210,11 @@ export class Products implements OnInit {
                 this.productoForm.precioBlister = 0;
               }
             } else {
-              this.mostrarAlerta('error', 'El producto a editar no existe o fue eliminado.');
-              this.volverAGrilla();
+              // Solo mostrar alerta y volver si efectivamente seguimos en la ruta de editar productos
+              if (this.router.url.startsWith('/productos/editar/') || this.router.url.startsWith('/products/editar/')) {
+                this.mostrarAlerta('error', 'El producto a editar no existe o fue eliminado.');
+                this.volverAGrilla();
+              }
             }
             this.cargando = false;
             this.cdr.markForCheck();
@@ -202,8 +223,10 @@ export class Products implements OnInit {
       },
       error: () => {
         this.cargando = false;
-        this.mostrarAlerta('error', 'Error al cargar el producto.');
-        this.volverAGrilla();
+        if (this.router.url.startsWith('/productos/editar/') || this.router.url.startsWith('/products/editar/')) {
+          this.mostrarAlerta('error', 'Error al cargar el producto.');
+          this.volverAGrilla();
+        }
       }
     });
   }

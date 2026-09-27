@@ -6,15 +6,19 @@
     <!-- Left: Brand Logo, Collapse Button & Breadcrumbs -->
     <div class="flex items-center gap-4">
       <a routerLink="/dashboard" class="flex items-center gap-2.5 select-none">
-        <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
-          <i class="pi pi-plus text-base font-black"></i>
-        </div>
-        <div class="hidden sm:block">
-          <span class="font-black text-lg tracking-tight text-slate-800 dark:text-white leading-none block">
-            MEDICARE<span class="text-emerald-600 font-extrabold text-xs ml-1 px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 rounded border border-emerald-200 dark:border-emerald-800">POS</span>
-          </span>
-          <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mt-0.5">Farmacia SaaS</span>
-        </div>
+        @if (logoUrl) {
+          <img [src]="logoUrl" alt="Medicare" class="h-9 max-w-[145px] object-contain rounded-lg filter drop-shadow-xs">
+        } @else {
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
+            <i class="pi pi-plus text-base font-black"></i>
+          </div>
+          <div class="hidden sm:block">
+            <span class="font-black text-lg tracking-tight text-slate-800 dark:text-white leading-none block">
+              MEDICARE<span class="text-emerald-600 font-extrabold text-xs ml-1 px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 rounded border border-emerald-200 dark:border-emerald-800">POS</span>
+            </span>
+            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mt-0.5">Farmacia SaaS</span>
+          </div>
+        }
       </a>
 
       <div class="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
@@ -66,27 +70,7 @@
         </div>
       }
 
-      <!-- Role Selector / Matriz de Roles (Cambio de Rol en Vivo) -->
-      <div class="flex items-center gap-1 p-0.5 bg-surface-container dark:bg-slate-800 border border-outline-variant dark:border-slate-700 rounded-full text-[10px] font-bold">
-        <button 
-          (click)="authService.setRole('ADMIN')" 
-          [ngClass]="authService.activeRole() === 'ADMIN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'" 
-          class="px-2.5 py-0.5 rounded-full transition-all cursor-pointer">
-          👑 Admin
-        </button>
-        <button 
-          (click)="authService.setRole('QUIMICO')" 
-          [ngClass]="authService.activeRole() === 'QUIMICO' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'" 
-          class="px-2.5 py-0.5 rounded-full transition-all cursor-pointer">
-          💊 Q.F.
-        </button>
-        <button 
-          (click)="authService.setRole('CAJERO')" 
-          [ngClass]="authService.activeRole() === 'CAJERO' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'" 
-          class="px-2.5 py-0.5 rounded-full transition-all cursor-pointer">
-          🛒 Cajero
-        </button>
-      </div>
+
 
       <!-- Theme Toggle Button -->
       <button 
@@ -102,7 +86,7 @@
           [ngClass]="{
             'bg-emerald-700': authService.activeRole() === 'ADMIN',
             'bg-purple-700': authService.activeRole() === 'QUIMICO',
-            'bg-blue-700': authService.activeRole() === 'CAJERO'
+            'bg-white': authService.activeRole() === 'CAJERO'
           }"
           class="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-white dark:ring-slate-700 overflow-hidden">
           <i class="pi" [ngClass]="authService.activeRole() === 'ADMIN' ? 'pi-crown' : authService.activeRole() === 'QUIMICO' ? 'pi-shield' : 'pi-user'"></i>
@@ -200,10 +184,6 @@
                 <i class="pi pi-database"></i>
                 <span>Inventario & FEFO</span>
               </a>
-              <a routerLink="/compras" routerLinkActive="active" class="poseidon-menu-item">
-                <i class="pi pi-truck"></i>
-                <span>Gestión de Compras (PPR)</span>
-              </a>
             </div>
           </div>
 
@@ -245,10 +225,6 @@
                 <i class="pi pi-database"></i>
                 <span>Inventario FEFO & Bajas</span>
               </a>
-              <a routerLink="/compras" routerLinkActive="active" class="poseidon-menu-item">
-                <i class="pi pi-sync"></i>
-                <span>Punto de Reorden (PPR)</span>
-              </a>
             </div>
           </div>
         }
@@ -276,7 +252,11 @@
             <div class="space-y-1">
               <a routerLink="/productos" routerLinkActive="active" class="poseidon-menu-item">
                 <i class="pi pi-search"></i>
-                <span>Consulta de Catálogo & Stock</span>
+                <span>Consulta de Catálogos</span>
+              </a>
+              <a routerLink="/inventario" routerLinkActive="active" class="poseidon-menu-item">
+                <i class="pi pi-database"></i>
+                <span>Gestión de Stock Físico</span>
               </a>
             </div>
           </div>

@@ -24,6 +24,7 @@ export interface SaasAuthData {
   acciones: string[];
   sedeId?: string;
   sedeNombre?: string;
+  logoUrl?: string;
 }
 
 export interface SaasApiResponse<T> {
@@ -94,5 +95,46 @@ export class SaasMasterService {
       console.warn('[SaasMasterService] No se pudo verificar estado del tenant en SaaS Master:', error);
       return null;
     }
+  }
+
+  /**
+   * Consulta el negocio de tipo FARMACIA para la aplicación.
+   * Prioriza 'farmacia-medicare' por defecto y verifica que pertenezca a la vertical FARMACIA.
+   */
+  async getFarmaciaTenant(): Promise<any | null> {
+    const defaultSub = environment.defaultSubdomain || 'farmacia-medicare';
+    try {
+      const res = await firstValueFrom(
+        this.http.get<SaasApiResponse<any>>(`${this.apiUrl}/tenants/subdomain/${defaultSub}`)
+      );
+      if (res && res.data) {
+        return res.data;
+      }
+    } catch (err) {
+      console.warn('[SaasMasterService] Consulta por subdominio directo:', err);
+    }
+
+    try {
+      const resList = await firstValueFrom(
+        this.http.get<SaasApiResponse<any[]>>(`${this.apiUrl}/tenants`)
+      );
+      if (resList && resList.data && Array.isArray(resList.data)) {
+        // Buscar de tipo FARMACIA priorizando medicare
+        const medicareTenant = resList.data.find((t: any) =>
+          (t.verticalId === 'FARMACIA' || t.verticalId === 'farmacia') &&
+          (t.subdominio?.toLowerCase().includes('medicare') || t.nombreComercial?.toLowerCase().includes('medicare'))
+        );
+        if (medicareTenant) return medicareTenant;
+
+        const anyFarmacia = resList.data.find((t: any) =>
+          t.verticalId === 'FARMACIA' || t.verticalId === 'farmacia'
+        );
+        if (anyFarmacia) return anyFarmacia;
+      }
+    } catch (error) {
+      console.warn('[SaasMasterService] Error al consultar catálogo de negocios:', error);
+    }
+
+    return null;
   }
 }

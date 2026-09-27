@@ -53,7 +53,7 @@ export class Reportes implements OnInit {
   reportePorDias: ResumenDiaReporte[] = [];
 
   // ================= 2. PESTAÑA: REPORTE DETALLADO =================
-  fechaDetallada: string = new Date().toISOString().split('T')[0];
+  fechaDetallada: string = new Date().toLocaleDateString('en-CA');
   busquedaDetalle = '';
   filtroMetodoDetalle = 'TODOS';
   filtroEstadoDetalle = 'TODOS';
@@ -120,12 +120,22 @@ export class Reportes implements OnInit {
     const fin = new Date();
     const ini = new Date();
     ini.setDate(ini.getDate() - 13);
-    this.fechaFinGeneral = fin.toISOString().split('T')[0];
-    this.fechaInicioGeneral = ini.toISOString().split('T')[0];
-    this.fechaFinApertura = fin.toISOString().split('T')[0];
-    this.fechaInicioApertura = ini.toISOString().split('T')[0];
+    this.fechaFinGeneral = fin.toLocaleDateString('en-CA');
+    this.fechaInicioGeneral = ini.toLocaleDateString('en-CA');
+    this.fechaFinApertura = fin.toLocaleDateString('en-CA');
+    this.fechaInicioApertura = ini.toLocaleDateString('en-CA');
     this.rangoFechasGeneral = [ini, fin];
     this.rangoFechasApertura = [ini, fin];
+
+    // Limpiar caché residual una sola vez si se solicita reset de pruebas
+    const wipeKey = 'medicare_wipe_ventas_caja_v3';
+    if (!localStorage.getItem(wipeKey)) {
+      localStorage.removeItem('historial_ventas_turno');
+      localStorage.removeItem('medicare_turno_caja_activo');
+      localStorage.removeItem('medicare_historial_turnos');
+      localStorage.removeItem('medicare_ultimo_cierre_z');
+      localStorage.setItem(wipeKey, 'true');
+    }
 
     // Cargar datos iniciales desde memoria local para renderizado instantáneo
     this.turnoActual = this.ventaService.getTurnoActual();
@@ -296,7 +306,7 @@ export class Reportes implements OnInit {
 
     // Si el rango es válido y no hay datos, incluir al menos la fecha de hoy
     if (fechasSet.size === 0 && inicioStr && finStr) {
-      fechasSet.add(new Date().toISOString().split('T')[0]);
+      fechasSet.add(new Date().toLocaleDateString('en-CA'));
     }
 
     const fechasOrdenadas = Array.from(fechasSet).sort().reverse();
@@ -529,7 +539,7 @@ export class Reportes implements OnInit {
   setFechaDetalle(tipo: 'HOY' | 'AYER') {
     const d = new Date();
     if (tipo === 'AYER') d.setDate(d.getDate() - 1);
-    this.fechaDetallada = d.toISOString().split('T')[0];
+    this.fechaDetallada = d.toLocaleDateString('en-CA');
     this.consultarSupabaseDetalle();
   }
 
@@ -537,7 +547,7 @@ export class Reportes implements OnInit {
     const [y, m, d] = this.fechaDetallada.split('-').map(Number);
     const dt = new Date(y, m - 1, d);
     dt.setDate(dt.getDate() + dias);
-    this.fechaDetallada = dt.toISOString().split('T')[0];
+    this.fechaDetallada = dt.toLocaleDateString('en-CA');
     this.consultarSupabaseDetalle();
   }
 
@@ -739,7 +749,28 @@ export class Reportes implements OnInit {
     return this.aperturasFiltradas.reduce((sum, t) => sum + (t.totalVentas || 0), 0);
   }
 
-  // ================= REAPERTURA DE CAJA (DESDE REPORTES) =================
+  // ================= REAPERTURA Y ELIMINACION DE CAJA (DESDE REPORTES) =================
+  async eliminarApertura(turno: TurnoCajaDTO) {
+    if (confirm(`¿Estás seguro de eliminar el historial de caja del ${this.formatFechaLegible(this.toIsoDate(turno.fechaApertura))}? Esta acción no se puede deshacer.`)) {
+      const idOFecha = turno.id || turno.fechaApertura;
+      const exito = await this.ventaService.eliminarTurno(idOFecha);
+      
+      if (exito) {
+        this.mensajeToast = {
+          tipo: 'success',
+          texto: 'Historial de caja eliminado exitosamente.'
+        };
+        this.cargarDatos();
+      } else {
+        this.mensajeToast = {
+          tipo: 'error',
+          texto: 'No se pudo eliminar el historial de caja.'
+        };
+      }
+      setTimeout(() => this.mensajeToast = null, 3000);
+    }
+  }
+
   abrirModalReapertura(turno?: TurnoCajaDTO) {
     this.turnoAReabrir = turno || this.turnoActual;
     this.motivoReapertura = 'Reanudación de ventas de la jornada';
@@ -813,7 +844,7 @@ export class Reportes implements OnInit {
   toIsoDate(d: Date | string): string {
     try {
       const dt = new Date(d);
-      return dt.toISOString().split('T')[0];
+      return dt.toLocaleDateString('en-CA');
     } catch {
       return '';
     }

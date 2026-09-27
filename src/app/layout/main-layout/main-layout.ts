@@ -26,6 +26,10 @@ export class MainLayout {
   // Modal Selector de Sucursales (Multi-Sede)
   showSedesModal = false;
 
+  get logoUrl(): string | null {
+    return localStorage.getItem('medicare_tenant_logo') || this.authService.currentUser()?.logoUrl || null;
+  }
+
   constructor() {
     this.currentRoute = this.router.url;
     this.router.events.pipe(
@@ -41,9 +45,6 @@ export class MainLayout {
     if (url.includes('/pos')) {
       return { section: 'Operaciones', title: 'Punto de Venta POS' };
     }
-    if (url.includes('/productos')) {
-      return { section: 'Inventario', title: 'Catálogo DIGEMID' };
-    }
     if (url.includes('/inventario/editar') || url.includes('/inventory/editar')) {
       return { section: 'Inventario', title: 'Edición de Ficha de Lote' };
     }
@@ -52,6 +53,15 @@ export class MainLayout {
     }
     if (url.includes('/inventario') || url.includes('/inventory')) {
       return { section: 'Inventario', title: 'Control de Lotes & FEFO' };
+    }
+    if (url.includes('/productos/editar') || url.includes('/products/editar')) {
+      return { section: 'Catálogo', title: 'Edición de Ficha de Producto' };
+    }
+    if (url.includes('/productos/nuevo') || url.includes('/products/nuevo')) {
+      return { section: 'Catálogo', title: 'Nuevo Producto' };
+    }
+    if (url.includes('/productos') || url.includes('/products')) {
+      return { section: 'Catálogo', title: 'Catálogo de Productos' };
     }
     if (url.includes('/reportes')) {
       return { section: 'Auditoría', title: 'Reportes de Ventas & Caja' };

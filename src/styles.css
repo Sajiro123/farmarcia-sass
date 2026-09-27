@@ -3,59 +3,95 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-surface: #f4fbf4;
-  --color-surface-dim: #d4dcd5;
-  --color-surface-bright: #f4fbf4;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eef6ee;
-  --color-surface-container: #e8f0e9;
-  --color-surface-container-high: #e3eae3;
-  --color-surface-container-highest: #dde4dd;
-  --color-on-surface: #161d19;
-  --color-on-surface-variant: #3c4a42;
-  --color-inverse-surface: #2b322d;
-  --color-inverse-on-surface: #ebf3eb;
-  --color-outline: #6c7a71;
-  --color-outline-variant: #bbcabf;
-  --color-primary: #006c49;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #10b981;
-  --color-on-primary-container: #00422b;
-  --color-inverse-primary: #4edea3;
-  --color-secondary: #565e74;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #dae2fd;
-  --color-on-secondary-container: #5c647a;
-  --color-tertiary: #a43a3a;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #fc7c78;
-  --color-error-critical: #ef4444;
-  --color-warning-soon: #f59e0b;
-  --color-success-stable: #10b981;
+  /* Púrpura Principal (#8E44AD) */
+  --color-primary: #8E44AD;
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #9B59B6;
+  --color-on-primary-container: #FFFFFF;
+  --color-inverse-primary: #AF7AC5;
 
-  --color-medicare-50: #f4fbf4;
-  --color-medicare-100: #e8f0e9;
-  --color-medicare-200: #bbcabf;
-  --color-medicare-300: #4edea3;
-  --color-medicare-400: #10b981;
-  --color-medicare-500: #006c49;
-  --color-medicare-600: #005236;
-  --color-medicare-700: #00422b;
-  --color-medicare-800: #002113;
-  --color-medicare-900: #042f2e;
-  --color-medicare-950: #021a10;
+  /* Azul Acento (#3498DB) */
+  --color-secondary: #3498DB;
+  --color-on-secondary: #FFFFFF;
+  --color-secondary-container: #5DADE2;
+  --color-on-secondary-container: #FFFFFF;
 
-  --color-pharmacy-50: #f0fdf4;
-  --color-pharmacy-100: #dcfce7;
-  --color-pharmacy-200: #bbf7d0;
-  --color-pharmacy-300: #86efac;
-  --color-pharmacy-400: #4ade80;
-  --color-pharmacy-500: #22c55e;
-  --color-pharmacy-600: #16a34a;
-  --color-pharmacy-700: #15803d;
-  --color-pharmacy-800: #166534;
-  --color-pharmacy-900: #14532d;
-  --color-pharmacy-950: #052e16;
+  /* Blanco Hueso (#FDFDFD) para fondos generales */
+  --color-surface: #FDFDFD;
+  --color-surface-dim: #F5F5F5;
+  --color-surface-bright: #FFFFFF;
+  
+  /* Blanco Puro (#FFFFFF) para contenedores */
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #FBFBFB;
+  --color-surface-container: #FFFFFF;
+  --color-surface-container-high: #F4F4F4;
+  --color-surface-container-highest: #EAEAEA;
+
+  /* Gris Profundo de Texto (#2C3E50) */
+  --color-on-surface: #2C3E50;
+  --color-on-surface-variant: #34495E;
+  --color-inverse-surface: #1A252F;
+  --color-inverse-on-surface: #FDFDFD;
+  
+  --color-outline: #BDC3C7;
+  --color-outline-variant: #ECF0F1;
+  
+  --color-error-critical: #E74C3C;
+  --color-warning-soon: #F39C12;
+  --color-success-stable: #2ECC71;
+
+  /* Tonos derivados (Purpura) */
+  --color-medicare-50: #F4ECF7;
+  --color-medicare-100: #E8DAEF;
+  --color-medicare-200: #D2B4DE;
+  --color-medicare-300: #BB8FCE;
+  --color-medicare-400: #A569BD;
+  --color-medicare-500: #8E44AD;
+  --color-medicare-600: #7D3C98;
+  --color-medicare-700: #6C3483;
+  --color-medicare-800: #5B2C6F;
+  --color-medicare-900: #4A235A;
+  --color-medicare-950: #341240;
+  
+  /* Sobreescribir el VERDE (emerald) del template original para que use nuestro MORADO (#8E44AD) */
+  --color-emerald-50: #F4ECF7;
+  --color-emerald-100: #E8DAEF;
+  --color-emerald-200: #D2B4DE;
+  --color-emerald-300: #BB8FCE;
+  --color-emerald-400: #A569BD;
+  --color-emerald-500: #8E44AD;
+  --color-emerald-600: #7D3C98;
+  --color-emerald-700: #6C3483;
+  --color-emerald-800: #5B2C6F;
+  --color-emerald-900: #4A235A;
+  --color-emerald-950: #341240;
+
+  /* Sobreescribir el VERDE AZULADO (teal) del template original para que use nuestro AZUL ACENTO (#3498DB) */
+  --color-teal-50: #EBF5FB;
+  --color-teal-100: #D6EAF8;
+  --color-teal-200: #AED6F1;
+  --color-teal-300: #85C1E9;
+  --color-teal-400: #5DADE2;
+  --color-teal-500: #3498DB;
+  --color-teal-600: #2E86C1;
+  --color-teal-700: #2874A6;
+  --color-teal-800: #21618C;
+  --color-teal-900: #1B4F72;
+  --color-teal-950: #12334A;
+
+  /* Tonos derivados (Azul Acento) */
+  --color-pharmacy-50: #EBF5FB;
+  --color-pharmacy-100: #D6EAF8;
+  --color-pharmacy-200: #AED6F1;
+  --color-pharmacy-300: #85C1E9;
+  --color-pharmacy-400: #5DADE2;
+  --color-pharmacy-500: #3498DB;
+  --color-pharmacy-600: #2E86C1;
+  --color-pharmacy-700: #2874A6;
+  --color-pharmacy-800: #21618C;
+  --color-pharmacy-900: #1B4F72;
+  --color-pharmacy-950: #12334A;
 }
 
 :root {
@@ -63,27 +99,28 @@
   --p-border-radius-md: 10px;
   --p-border-radius-lg: 14px;
   --p-border-radius-xl: 18px;
-  --p-primary-color: #006c49;
-  --p-primary-hover-color: #005236;
-  --p-primary-active-color: #00422b;
+  
+  --p-primary-color: #8E44AD;
+  --p-primary-hover-color: #7D3C98;
+  --p-primary-active-color: #6C3483;
 
-  --layout-bg: #f4fbf4;
-  --layout-header-bg: rgba(244, 251, 244, 0.9);
-  --layout-sidebar-bg: #ffffff;
-  --layout-border: #dde4dd;
-  --layout-text-main: #161d19;
-  --layout-text-muted: #3c4a42;
+  --layout-bg: #FDFDFD;
+  --layout-header-bg: rgba(253, 253, 253, 0.95);
+  --layout-sidebar-bg: #FFFFFF;
+  --layout-border: #ECF0F1;
+  --layout-text-main: #2C3E50;
+  --layout-text-muted: #7F8C8D;
 }
 
 .dark,
 .dark-mode,
 :root.dark {
-  --layout-bg: #0b1410;
-  --layout-header-bg: rgba(11, 20, 16, 0.9);
-  --layout-sidebar-bg: #111a15;
-  --layout-border: #233129;
-  --layout-text-main: #ebf3eb;
-  --layout-text-muted: #94a3b8;
+  --layout-bg: #1A252F;
+  --layout-header-bg: rgba(26, 37, 47, 0.95);
+  --layout-sidebar-bg: #2C3E50;
+  --layout-border: #34495E;
+  --layout-text-main: #FDFDFD;
+  --layout-text-muted: #BDC3C7;
 }
 
 .layout-wrapper {
@@ -108,8 +145,8 @@
 
 @layer base {
   body {
-    background-color: #f4fbf4;
-    color: #161d19;
+    background-color: #FDFDFD;
+    color: #2C3E50;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 }
@@ -117,8 +154,8 @@
 .dark body,
 .dark-mode body,
 :root.dark body {
-  background-color: #0b1410 !important;
-  color: #ebf3eb !important;
+  background-color: #1A252F !important;
+  color: #FDFDFD !important;
 }
 
 @keyframes fadeIn {
@@ -141,10 +178,10 @@
 
 /* Medicare Clinical Precision Card */
 .medicare-card {
-  background-color: #ffffff;
-  border-radius: 0.75rem; /* 12px */
-  border: 1px solid #dde4dd;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background-color: #FFFFFF;
+  border-radius: 0.75rem;
+  border: 1px solid #ECF0F1;
+  box-shadow: 0 1px 3px rgba(44, 62, 80, 0.04);
   padding: 1.25rem;
   transition: all 0.2s ease;
 }
@@ -152,17 +189,17 @@
 .dark .medicare-card,
 .dark-mode .medicare-card,
 :root.dark .medicare-card {
-  background-color: #111a15 !important;
-  border-color: #233129 !important;
+  background-color: #2C3E50 !important;
+  border-color: #34495E !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Poseidon Card Aesthetic (Clinical Precision) */
 .poseidon-card {
-  background-color: #ffffff;
-  border-radius: 1.25rem; /* 20px */
-  border: 1px solid #dde4dd;
-  box-shadow: 0 4px 20px -2px rgba(0, 108, 73, 0.03);
+  background-color: #FFFFFF;
+  border-radius: 1.25rem;
+  border: 1px solid #ECF0F1;
+  box-shadow: 0 4px 20px -2px rgba(142, 68, 173, 0.05);
   padding: 1.5rem;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -170,8 +207,8 @@
 .dark .poseidon-card,
 .dark-mode .poseidon-card,
 :root.dark .poseidon-card {
-  background-color: #111a15 !important;
-  border-color: #233129 !important;
+  background-color: #2C3E50 !important;
+  border-color: #34495E !important;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -184,21 +221,21 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #bbcabf;
+  background: #BDC3C7;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6c7a71;
+  background: #3498DB;
 }
 .dark ::-webkit-scrollbar-thumb,
 .dark-mode ::-webkit-scrollbar-thumb,
 :root.dark ::-webkit-scrollbar-thumb {
-  background: #233129;
+  background: #34495E;
 }
 .dark ::-webkit-scrollbar-thumb:hover,
 .dark-mode ::-webkit-scrollbar-thumb:hover,
 :root.dark ::-webkit-scrollbar-thumb:hover {
-  background: #3c4a42;
+  background: #3498DB;
 }
 
 /* ================= Medicare Sidebar & Navigation Menu Styling ================= */
@@ -208,14 +245,14 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.5rem 0.875rem 0.375rem;
-  color: #6c7a71;
+  color: #7F8C8D;
   transition: color 0.2s ease;
 }
 
 .dark .poseidon-group-title,
 .dark-mode .poseidon-group-title,
 :root.dark .poseidon-group-title {
-  color: #8da194;
+  color: #BDC3C7;
 }
 
 .poseidon-menu-item {
@@ -223,10 +260,10 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.875rem;
-  border-radius: 0.75rem; /* 12px */
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #3c4a42;
+  color: #2C3E50;
   text-decoration: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -234,70 +271,98 @@
 
 .poseidon-menu-item i {
   font-size: 1.05rem;
-  color: #6c7a71;
+  color: #7F8C8D;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .poseidon-menu-item:hover {
-  background-color: #e8f0e9;
-  color: #006c49;
+  background-color: #F4ECF7;
+  color: #8E44AD;
 }
 
 .poseidon-menu-item:hover i {
-  color: #006c49;
+  color: #8E44AD;
   transform: translateX(2px);
 }
 
 .poseidon-menu-item.active {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+  background-color: #FFFFFF !important;
+  color: #8E44AD !important;
+  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.15) !important;
   font-weight: 700 !important;
 }
 
 .poseidon-menu-item.active i {
-  color: #ffffff !important;
+  color: #8E44AD !important;
 }
 
 /* Dark Mode Sidebar Menu */
 .dark .poseidon-menu-item,
 .dark-mode .poseidon-menu-item,
 :root.dark .poseidon-menu-item {
-  color: #a3b8ab;
+  color: #ECF0F1;
 }
 
 .dark .poseidon-menu-item i,
 .dark-mode .poseidon-menu-item i,
 :root.dark .poseidon-menu-item i {
-  color: #7b9183;
+  color: #BDC3C7;
 }
 
 .dark .poseidon-menu-item:hover,
 .dark-mode .poseidon-menu-item:hover,
 :root.dark .poseidon-menu-item:hover {
-  background-color: #1a2720;
-  color: #4edea3;
+  background-color: #34495E;
+  color: #9B59B6;
 }
 
 .dark .poseidon-menu-item:hover i,
 .dark-mode .poseidon-menu-item:hover i,
 :root.dark .poseidon-menu-item:hover i {
-  color: #4edea3;
+  color: #9B59B6;
 }
 
 .dark .poseidon-menu-item.active,
 .dark-mode .poseidon-menu-item.active,
 :root.dark .poseidon-menu-item.active {
-  background-color: #006c49 !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(0, 108, 73, 0.4) !important;
+  background-color: #FFFFFF !important;
+  color: #8E44AD !important;
+  box-shadow: 0 4px 14px rgba(142, 68, 173, 0.4) !important;
   font-weight: 700 !important;
 }
 
 .dark .poseidon-menu-item.active i,
 .dark-mode .poseidon-menu-item.active i,
 :root.dark .poseidon-menu-item.active i {
-  color: #ffffff !important;
+  color: #8E44AD !important;
 }
 
-
+/* ================= Ticket Printing Styles ================= */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+    color: #000 !important;
+  }
+  
+  #printable-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 76mm;
+    margin: 0;
+    padding: 2mm;
+    border: none !important;
+    background: transparent !important;
+    font-size: 11px !important;
+    page-break-inside: avoid;
+  }
+}

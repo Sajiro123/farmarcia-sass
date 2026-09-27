@@ -124,7 +124,8 @@ export class AuthService {
         pinSeguridad: authData.pinSeguridad,
         acciones: authData.acciones,
         sedeId: matchedSede ? matchedSede.id : targetSedeId,
-        sedeNombre: matchedSede ? matchedSede.nombre : (authData.sedeNombre || 'Medicare Farmacia')
+        sedeNombre: matchedSede ? matchedSede.nombre : (authData.sedeNombre || 'Medicare Farmacia'),
+        logoUrl: authData.logoUrl || localStorage.getItem('medicare_tenant_logo') || undefined
       };
 
       if (matchedSede) {
@@ -138,6 +139,9 @@ export class AuthService {
       localStorage.setItem('saas_master_token', authData.token);
       localStorage.setItem('tenant_id', authData.tenantId);
       localStorage.setItem('subdominio', authData.subdominio);
+      if (authData.logoUrl) {
+        localStorage.setItem('medicare_tenant_logo', authData.logoUrl);
+      }
       localStorage.setItem('active_role', assignedRole);
 
       // Actualizar señales reactivas

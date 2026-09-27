@@ -140,12 +140,6 @@
         </button>
       }
 
-      <button type="button" (click)="abrirModalVaciarInventario()"
-        title="Vaciar inventario para iniciar pruebas desde cero"
-        class="px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 border border-rose-200/80 font-bold transition-all cursor-pointer ml-auto">
-        <i class="fa-solid fa-trash-can text-rose-500"></i>
-        <span>Vaciar Inventario (Pruebas)</span>
-      </button>
     </div>
 
     <!-- ========================================== -->
@@ -155,61 +149,6 @@
 
     <!-- FILTROS Y BUSCADORES INTEGRADOS -->
     <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
-
-      <!-- Selector Rápido de Tipo de Producto (Chips / Pills) -->
-      <div class="flex flex-wrap items-center gap-2 mb-3.5 pb-3 border-b border-slate-100">
-        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1.5">
-          <i class="fa-solid fa-shapes text-emerald-600"></i> Tipo de Producto:
-        </span>
-
-        <button type="button"
-          (click)="filtroTipoProducto = 'TODOS'; paginaActual = 1"
-          [ngClass]="filtroTipoProducto === 'TODOS' ? 'bg-slate-900 text-white font-bold shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium'"
-          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-layer-group text-[10px]"></i>
-          <span>Todos</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
-            [ngClass]="filtroTipoProducto === 'TODOS' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600'">
-            {{ lotesFefo.length }}
-          </span>
-        </button>
-
-        <button type="button"
-          (click)="filtroTipoProducto = 'MEDICAMENTO'; paginaActual = 1"
-          [ngClass]="filtroTipoProducto === 'MEDICAMENTO' ? 'bg-emerald-600 text-white font-bold shadow-xs shadow-emerald-600/20' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium border border-emerald-200/60'"
-          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-pills text-[10px]"></i>
-          <span>Medicamentos</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
-            [ngClass]="filtroTipoProducto === 'MEDICAMENTO' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-700'">
-            {{ totalMedicamentos }}
-          </span>
-        </button>
-
-        <button type="button"
-          (click)="filtroTipoProducto = 'PERFUME'; paginaActual = 1"
-          [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-600 text-white font-bold shadow-xs shadow-purple-600/20' : 'bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium border border-purple-200/60'"
-          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-spray-can-sparkles text-[10px]"></i>
-          <span>Perfumes y Fragancias</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
-            [ngClass]="filtroTipoProducto === 'PERFUME' ? 'bg-purple-700 text-white' : 'bg-white text-purple-700'">
-            {{ totalPerfumes }}
-          </span>
-        </button>
-
-        <button type="button"
-          (click)="filtroTipoProducto = 'OTROS'; paginaActual = 1"
-          [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-600 text-white font-bold shadow-xs shadow-sky-600/20' : 'bg-sky-50 hover:bg-sky-100 text-sky-800 font-medium border border-sky-200/60'"
-          class="px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-box-open text-[10px]"></i>
-          <span>Otros / Aseo / Pañales</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
-            [ngClass]="filtroTipoProducto === 'OTROS' ? 'bg-sky-700 text-white' : 'bg-white text-sky-700'">
-            {{ totalOtros }}
-          </span>
-        </button>
-      </div>
 
       <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         
@@ -611,56 +550,101 @@
                 }
               </div>
 
-              <!-- Selector de Producto (Buscador + Select Filtrado en Vivo) -->
+              <!-- Selector de Producto (Combobox Buscable Unificado) -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
                   <label class="block text-xs font-bold text-slate-700">
                     Producto del Catálogo Maestro <span class="text-rose-500">*</span>
                   </label>
-                  @if (productosFiltradosParaLote.length > 0) {
-                    <span class="text-[10px] text-slate-500 font-medium">
-                      Mostrando {{ productosFiltradosParaLote.length }} de {{ productosCatalogo.length }} productos
-                    </span>
-                  }
+                  <span class="text-[10px] text-slate-400 font-medium">
+                    {{ productosCatalogo.length }} productos disponibles
+                  </span>
                 </div>
 
-                <!-- Input de Búsqueda / Filtro en Vivo -->
-                <div class="relative">
-                  <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                  <input type="text"
-                    [(ngModel)]="busquedaProductoCatalogo"
-                    (ngModelChange)="onBusquedaProductoChange()"
-                    placeholder="Escribe para filtrar por nombre, SKU, código de barras o principio activo..."
-                    class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs transition-all" />
-                  
-                  @if (busquedaProductoCatalogo) {
-                    <button type="button"
-                      (click)="limpiarBusquedaProducto(); onBusquedaProductoChange()"
-                      title="Limpiar filtro"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <i class="fa-solid fa-circle-xmark text-xs"></i>
-                    </button>
-                  }
-                </div>
-
-                <!-- Select con los productos filtrados en tiempo real -->
-                <div class="relative">
-                  <select
-                    [(ngModel)]="loteForm.productoId"
-                    (ngModelChange)="onSelectProductoDirecto($event)"
-                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs appearance-none cursor-pointer">
-                    @for (prod of productosFiltradosParaLote; track prod.id) {
-                      <option [value]="prod.id">
-                        [{{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}] {{ prod.nombreComercial }} {{ prod.concentracion || '' }} - SKU: {{ prod.sku }}{{ prod.codigoBarra ? ' | Barcode: ' + prod.codigoBarra : '' }}{{ prod.principioActivo ? ' (' + prod.principioActivo + ')' : '' }}
-                      </option>
-                    }
-                    @if (productosFiltradosParaLote.length === 0) {
-                      <option value="" disabled selected>⚠️ No hay productos que coincidan con "{{ busquedaProductoCatalogo }}"</option>
-                    }
-                  </select>
-                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                    <i class="fa-solid fa-chevron-down"></i>
+                <!-- SELECTOR BUSCABLE UNIFICADO -->
+                <div class="relative searchable-product-select">
+                  <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">
+                    <i class="fa-solid fa-magnifying-glass"></i>
                   </div>
+
+                  <input
+                    type="text"
+                    [value]="textoSelectProducto"
+                    (focus)="onFocusBusqueda($event)"
+                    (input)="onInputBusquedaProducto($event)"
+                    (click)="abrirDropdownProductos()"
+                    placeholder="Escribe para buscar o haz clic para seleccionar un producto..."
+                    class="w-full bg-white hover:bg-slate-50/50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-16 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs cursor-pointer placeholder:font-normal placeholder:text-slate-400 transition-all" />
+
+                  <div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    @if (loteForm.productoId || busquedaProductoCatalogo) {
+                      <button
+                        type="button"
+                        (click)="limpiarSeleccionProducto($event)"
+                        title="Limpiar selección"
+                        class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="toggleDropdownProductos($event)"
+                      title="Mostrar catálogo"
+                      class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors">
+                      <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" [class.rotate-180]="mostrarDropdownProductos"></i>
+                    </button>
+                  </div>
+
+                  <!-- Dropdown flotante con opciones filtradas -->
+                  @if (mostrarDropdownProductos) {
+                    <div class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100">
+                      @for (prod of productosFiltradosParaLote; track prod.id) {
+                        <div
+                          (click)="seleccionarProductoCatalogo(prod)"
+                          class="p-2.5 sm:p-3 hover:bg-amber-50/90 cursor-pointer flex items-center justify-between transition-colors group"
+                          [class.bg-amber-50]="prod.id === loteForm.productoId">
+                          <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0 border uppercase tracking-wider"
+                              [ngClass]="{
+                                'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
+                                'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
+                                'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto !== 'PERFUME' && prod.tipoProducto !== 'OTROS'
+                              }">
+                              {{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}
+                            </span>
+                            <div class="truncate">
+                              <p class="font-bold text-slate-900 text-xs truncate group-hover:text-amber-900">
+                                {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
+                              </p>
+                              <p class="text-[10px] text-slate-400 truncate mt-0.5">
+                                SKU: <span class="font-mono text-slate-600 font-semibold">{{ prod.sku }}</span>
+                                @if (prod.codigoBarra) {
+                                  <span class="text-slate-300 mx-1">|</span> Barcode: <span class="font-mono text-slate-600 font-semibold">{{ prod.codigoBarra }}</span>
+                                }
+                                @if (prod.principioActivo) {
+                                  <span class="text-slate-300 mx-1">•</span> P. Activo: {{ prod.principioActivo }}
+                                }
+                                @if (prod.laboratorio) {
+                                  <span class="text-slate-300 mx-1">•</span> Lab: {{ prod.laboratorio }}
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          @if (prod.id === loteForm.productoId) {
+                            <span class="text-[10px] font-extrabold text-amber-700 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                              <i class="fa-solid fa-check text-[9px] mr-1"></i> Seleccionado
+                            </span>
+                          }
+                        </div>
+                      } @empty {
+                        <div class="p-6 text-center text-slate-400">
+                          <i class="fa-solid fa-box-open text-2xl text-slate-300 mb-1.5 block"></i>
+                          <p class="text-xs font-bold text-slate-700">No hay productos que coincidan</p>
+                          <p class="text-[11px] text-slate-400 mt-0.5">Prueba buscando con otro nombre, SKU o código de barras.</p>
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
 
                 <!-- Ficha Informativa del Producto Seleccionado -->
@@ -791,6 +775,23 @@
                     </div>
                   </div>
 
+                  <!-- Costo Proveedor -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Costo Total Proveedor (S/) <span class="text-slate-400 font-normal text-[11px]">(Opcional)</span></label>
+                    <div class="relative">
+                      <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">S/</span>
+                      <input type="number" min="0" step="0.01"
+                        [(ngModel)]="loteForm.costoProveedor"
+                        placeholder="0.00"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 font-mono font-bold text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                    </div>
+                    @if (loteForm.costoProveedor && loteForm.stock > 0) {
+                      <span class="text-[10px] text-emerald-700 font-semibold mt-0.5 block">
+                        Costo unitario: S/ {{ (loteForm.costoProveedor / loteForm.stock) | number:'1.2-2' }} c/u
+                      </span>
+                    }
+                  </div>
+
                   <!-- Ubicación Textarea (Opcional) -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">
@@ -802,6 +803,7 @@
                       class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"></textarea>
                   </div>
                 </div>
+
               }
             </div>
 
@@ -912,9 +914,9 @@
               </span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <!-- Sede / Sucursal Destino -->
-              <div class="sm:col-span-4">
+              <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <i class="fa-solid fa-hospital text-emerald-600"></i>
                   <span>Sede / Sucursal Destino</span>
@@ -923,7 +925,8 @@
                 <div class="relative">
                   <select
                     [(ngModel)]="loteCabecera.sucursalId"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 appearance-none cursor-pointer">
+                    [disabled]="!authService.puedeCambiarSede()"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 appearance-none cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-slate-100">
                     @for (sede of sedesDisponibles; track sede.id) {
                       <option [value]="sede.id">📍 {{ sede.nombre }}</option>
                     }
@@ -935,7 +938,7 @@
               </div>
 
               <!-- N° Lote Compartido -->
-              <div class="sm:col-span-3">
+              <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">
                   N° / Código de Lote <span class="text-rose-500">*</span>
                 </label>
@@ -954,7 +957,7 @@
               </div>
 
               <!-- Fecha de Ingreso -->
-              <div class="sm:col-span-2">
+              <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Fecha de Ingreso</label>
                 <input type="date"
                   [(ngModel)]="loteCabecera.fechaIngreso"
@@ -962,7 +965,7 @@
               </div>
 
               <!-- Guía / Factura de Referencia -->
-              <div class="sm:col-span-3">
+              <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Guía / Factura (Opcional)</label>
                 <input type="text"
                   [(ngModel)]="loteCabecera.guiaReferencia"
@@ -996,87 +999,101 @@
               }
             </div>
 
-            <!-- Selector de Producto (Buscador + Select Filtrado en Vivo) -->
+            <!-- Selector de Producto (Combobox Buscable Unificado) -->
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="block text-xs font-bold text-slate-700">
                   Seleccionar Producto del Catálogo <span class="text-rose-500">*</span>
                 </label>
-                @if (productosFiltradosParaLote.length > 0) {
-                  <span class="text-[10px] text-slate-500 font-medium">
-                    Mostrando {{ productosFiltradosParaLote.length }} de {{ productosCatalogo.length }} productos
-                  </span>
-                }
+                <span class="text-[10px] text-slate-400 font-medium">
+                  {{ productosCatalogo.length }} productos disponibles
+                </span>
               </div>
 
-              <!-- Input de Búsqueda / Filtro en Vivo con Dropdown Flotante -->
-              <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <input type="text"
-                  [(ngModel)]="busquedaProductoCatalogo"
-                  (ngModelChange)="onBusquedaProductoChange()"
-                  placeholder="Escribe para filtrar productos por nombre, SKU, código de barras o principio activo..."
-                  class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition-all" />
-                
-                @if (busquedaProductoCatalogo) {
-                  <button type="button"
-                    (click)="limpiarBusquedaProducto(); onBusquedaProductoChange()"
-                    title="Limpiar filtro"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                    <i class="fa-solid fa-circle-xmark text-xs"></i>
-                  </button>
-                }
+              <!-- SELECTOR BUSCABLE UNIFICADO -->
+              <div class="relative searchable-product-select">
+                <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
 
-                <!-- Sugerencias de Búsqueda Flotantes -->
-                @if (mostrarDropdownProductos && productosFiltradosParaLote.length > 0) {
-                  <div class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
-                    @for (prod of productosFiltradosParaLote.slice(0, 8); track prod.id) {
-                      <div (click)="seleccionarProductoCatalogo(prod)"
-                        class="p-2.5 hover:bg-emerald-50/90 cursor-pointer flex items-center justify-between transition-colors">
-                        <div class="flex items-center gap-2">
-                          <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded shrink-0"
+                <input
+                  type="text"
+                  [value]="textoSelectProducto"
+                  (focus)="onFocusBusqueda($event)"
+                  (input)="onInputBusquedaProducto($event)"
+                  (click)="abrirDropdownProductos()"
+                  placeholder="Escribe para buscar o haz clic para seleccionar un producto..."
+                  class="w-full bg-white hover:bg-slate-50/50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-16 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs cursor-pointer placeholder:font-normal placeholder:text-slate-400 transition-all" />
+
+                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  @if (loteForm.productoId || busquedaProductoCatalogo) {
+                    <button
+                      type="button"
+                      (click)="limpiarSeleccionProducto($event)"
+                      title="Limpiar selección"
+                      class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors">
+                      <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="toggleDropdownProductos($event)"
+                    title="Mostrar catálogo"
+                    class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors">
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" [class.rotate-180]="mostrarDropdownProductos"></i>
+                  </button>
+                </div>
+
+                <!-- Dropdown flotante con opciones filtradas -->
+                @if (mostrarDropdownProductos) {
+                  <div class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100">
+                    @for (prod of productosFiltradosParaLote; track prod.id) {
+                      <div
+                        (click)="seleccionarProductoCatalogo(prod)"
+                        class="p-2.5 sm:p-3 hover:bg-emerald-50/90 cursor-pointer flex items-center justify-between transition-colors group"
+                        [class.bg-emerald-50]="prod.id === loteForm.productoId">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                          <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0 border uppercase tracking-wider"
                             [ngClass]="{
-                              'bg-purple-100 text-purple-700': prod.tipoProducto === 'PERFUME',
-                              'bg-sky-100 text-sky-700': prod.tipoProducto === 'OTROS',
-                              'bg-emerald-100 text-emerald-700': prod.tipoProducto !== 'PERFUME' && prod.tipoProducto !== 'OTROS'
+                              'bg-purple-50 text-purple-700 border-purple-200': prod.tipoProducto === 'PERFUME',
+                              'bg-sky-50 text-sky-700 border-sky-200': prod.tipoProducto === 'OTROS',
+                              'bg-emerald-50 text-emerald-700 border-emerald-200': prod.tipoProducto !== 'PERFUME' && prod.tipoProducto !== 'OTROS'
                             }">
-                            {{ prod.tipoProducto === 'PERFUME' ? 'PERF' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MED') }}
+                            {{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}
                           </span>
-                          <div>
-                            <p class="font-bold text-slate-900 text-xs">{{ prod.nombreComercial }} {{ prod.concentracion || '' }}</p>
-                            <p class="text-[10px] text-slate-400">
-                              SKU: {{ prod.sku }}{{ prod.principioActivo ? ' • ' + prod.principioActivo : '' }}{{ prod.laboratorio ? ' • Lab: ' + prod.laboratorio : '' }}
+                          <div class="truncate">
+                            <p class="font-bold text-slate-900 text-xs truncate group-hover:text-emerald-800">
+                              {{ prod.nombreComercial }} {{ prod.concentracion || '' }}
+                            </p>
+                            <p class="text-[10px] text-slate-400 truncate mt-0.5">
+                              SKU: <span class="font-mono text-slate-600 font-semibold">{{ prod.sku }}</span>
+                              @if (prod.codigoBarra) {
+                                <span class="text-slate-300 mx-1">|</span> Barcode: <span class="font-mono text-slate-600 font-semibold">{{ prod.codigoBarra }}</span>
+                              }
+                              @if (prod.principioActivo) {
+                                <span class="text-slate-300 mx-1">•</span> P. Activo: {{ prod.principioActivo }}
+                              }
+                              @if (prod.laboratorio) {
+                                <span class="text-slate-300 mx-1">•</span> Lab: {{ prod.laboratorio }}
+                              }
                             </p>
                           </div>
                         </div>
-                        <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shrink-0">
-                          Elegir
-                        </span>
+                        @if (prod.id === loteForm.productoId) {
+                          <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-100/90 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                            <i class="fa-solid fa-check text-[9px] mr-1"></i> Seleccionado
+                          </span>
+                        }
+                      </div>
+                    } @empty {
+                      <div class="p-6 text-center text-slate-400">
+                        <i class="fa-solid fa-box-open text-2xl text-slate-300 mb-1.5 block"></i>
+                        <p class="text-xs font-bold text-slate-700">No hay productos que coincidan</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Prueba buscando con otro nombre, SKU o código de barras.</p>
                       </div>
                     }
                   </div>
                 }
-              </div>
-
-              <!-- Select con los productos filtrados en tiempo real -->
-              <div class="relative">
-                <select
-                  [(ngModel)]="loteForm.productoId"
-                  (ngModelChange)="onSelectProductoDirecto($event)"
-                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs appearance-none cursor-pointer">
-                  <option value="" disabled [selected]="!loteForm.productoId">-- Seleccionar producto del catálogo --</option>
-                  @for (prod of productosFiltradosParaLote; track prod.id) {
-                    <option [value]="prod.id">
-                      [{{ prod.tipoProducto === 'PERFUME' ? 'PERFUME' : (prod.tipoProducto === 'OTROS' ? 'OTROS' : 'MEDICAMENTO') }}] {{ prod.nombreComercial }} {{ prod.concentracion || '' }} - SKU: {{ prod.sku }}{{ prod.codigoBarra ? ' | Barcode: ' + prod.codigoBarra : '' }}{{ prod.principioActivo ? ' (' + prod.principioActivo + ')' : '' }}
-                    </option>
-                  }
-                  @if (productosFiltradosParaLote.length === 0) {
-                    <option value="" disabled selected>⚠️ No hay productos que coincidan con "{{ busquedaProductoCatalogo }}"</option>
-                  }
-                </select>
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                  <i class="fa-solid fa-chevron-down"></i>
-                </div>
               </div>
 
               <!-- Ficha Informativa del Producto Seleccionado -->
@@ -1201,9 +1218,9 @@
               <div class="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 space-y-3.5">
                 <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
                   <i class="fa-solid fa-pills text-emerald-600"></i>
-                  <span>Control Clínico & FEFO (DIGEMID)</span>
+                  <span>Control Clínico &amp; FEFO (DIGEMID)</span>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">
                       Cantidad (Unidades) <span class="text-rose-500">*</span>
@@ -1228,6 +1245,21 @@
                       placeholder="EE-12345"
                       class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
                   </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Costo Total Proveedor (S/)</label>
+                    <div class="relative">
+                      <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">S/</span>
+                      <input type="number" min="0" step="0.01"
+                        [(ngModel)]="loteForm.costoProveedor"
+                        placeholder="0.00"
+                        class="w-full bg-white border border-emerald-200 rounded-xl pl-7 pr-3 py-2 font-mono font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                    </div>
+                    @if (loteForm.costoProveedor && loteForm.stock > 0) {
+                      <span class="text-[10px] text-emerald-700 font-semibold mt-0.5 block">
+                        S/ {{ (loteForm.costoProveedor / loteForm.stock) | number:'1.2-2' }} c/u
+                      </span>
+                    }
+                  </div>
                 </div>
 
                 <div>
@@ -1241,6 +1273,7 @@
                 </div>
               </div>
             }
+
 
             <!-- Botón para Agregar a la Lista Temporal -->
             <div class="flex justify-end pt-2">

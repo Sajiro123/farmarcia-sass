@@ -1,7 +1,10 @@
 import { Component, OnInit, inject, HostListener, ViewChild, ElementRef, AfterViewInit, ChangeDetectorRef, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import jsPDF from 'jspdf';
 import { forkJoin, of, timeout, catchError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
 import { InventoryService } from '../../core/services/inventory.service';
@@ -112,6 +115,15 @@ export class Pos implements OnInit, AfterViewInit {
         localStorage.removeItem('medicare_catalogo_maestro_v2');
         localStorage.removeItem('medicare_inventario_actas_v3');
         localStorage.removeItem('medicare_categorias_productos_v4');
+
+        const wipeKey = 'medicare_wipe_ventas_caja_v3';
+        if (!localStorage.getItem(wipeKey)) {
+          localStorage.removeItem('historial_ventas_turno');
+          localStorage.removeItem('medicare_turno_caja_activo');
+          localStorage.removeItem('medicare_historial_turnos');
+          localStorage.removeItem('medicare_ultimo_cierre_z');
+          localStorage.setItem(wipeKey, 'true');
+        }
       }
     } catch {
       // Ignorar entornos sin storage
@@ -122,10 +134,10 @@ export class Pos implements OnInit, AfterViewInit {
   
   // ================= 1. CONTROL DE CAJA Y TURNOS =================
 
-  cajaAbierta = true;
+  cajaAbierta = false;
   fondoInicial = 100.00;
-  fechaApertura = new Date(Date.now() - 4 * 3600000);
-  cajeroActual = 'Carlos Mendoza (Cajero Principal)';
+  fechaApertura = new Date();
+  cajeroActual = 'Cajero de Turno';
 
   showAperturaModal = false;
   showCierreModal = false;
@@ -239,9 +251,23 @@ export class Pos implements OnInit, AfterViewInit {
   pagoTransferencia: number | null = null;
   transfRef = '';
 
-  // Ticket Modal
+  // Ticket Modal (Formato 80mm PDF como en Restaurante)
+  private sanitizer = inject(DomSanitizer);
   showTicketModal = false;
+  ticketModalTitulo = 'Imprimir Cliente';
   ticketData: TicketVenta | null = null;
+  pdfUrl: SafeResourceUrl | null = null;
+  pdfBlobUrlRaw: string | null = null;
+
+  // Datos de la Empresa (Caché local sincronizado con Base de Datos)
+  datosEmpresa: {
+    nombreComercial: string;
+    razonSocial: string;
+    ruc: string;
+    telefono: string;
+    email: string;
+    logoUrl: string | null;
+  } | null = null;
 
   // ================= 5. HISTORIAL & ANULACIÓN CON PIN =================
   ventasTurno: TicketVenta[] = [];
@@ -413,14 +439,61 @@ export class Pos implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.cargarDatosEmpresa();
     const turno = this.ventaService.getTurnoActual();
-    this.cajaAbierta = turno.cajaAbierta;
-    this.fondoInicial = turno.fondoInicial;
-    if (turno.fechaApertura) this.fechaApertura = new Date(turno.fechaApertura);
-    if (turno.cajeroActual) this.cajeroActual = turno.cajeroActual;
+    this.cajaAbierta = Boolean(turno && turno.cajaAbierta);
+    
+    if (this.cajaAbierta) {
+      this.fondoInicial = turno.fondoInicial;
+      if (turno.fechaApertura) this.fechaApertura = new Date(turno.fechaApertura);
+      if (turno.cajeroActual) this.cajeroActual = turno.cajeroActual;
+    } else {
+      this.fondoInicial = 100.00;
+      this.cajeroActual = this.authService.getUserDisplayName() || 'Cajero de Turno';
+      this.fechaApertura = new Date();
+    }
 
     this.calculateTotal();
     this.cargarProductosYVentas();
+  }
+
+  cargarDatosEmpresa() {
+    // 1. Cargar desde la caché local primero para velocidad instantánea
+    const cached = localStorage.getItem('medicare_datos_empresa');
+    if (cached) {
+      try {
+        this.datosEmpresa = JSON.parse(cached);
+      } catch (e) {
+        console.warn('Error leyendo caché de empresa:', e);
+      }
+    }
+
+    // 2. Traer de la Base de Datos (SaaS Master API / Supabase) y guardar en caché
+    const subdominio = localStorage.getItem('subdominio') || environment.defaultSubdomain || 'farmacia-medicare';
+    const url = `${environment.saasMasterApiUrl}/tenants/subdomain/${subdominio}`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then((res: any) => {
+        if (res && res.data) {
+          const t = res.data;
+          this.datosEmpresa = {
+            nombreComercial: t.nombreComercial || 'Farmacia Medicare',
+            razonSocial: t.razonSocial || 'FARMACIA MEDICARE S.A.C.',
+            ruc: t.numeroIdentificacion || '20601234567',
+            telefono: t.telefonoContacto || '+51 987654321',
+            email: t.emailContacto || '',
+            logoUrl: t.logoUrl || localStorage.getItem('medicare_tenant_logo') || null
+          };
+          localStorage.setItem('medicare_datos_empresa', JSON.stringify(this.datosEmpresa));
+          if (this.datosEmpresa.logoUrl) {
+            localStorage.setItem('medicare_tenant_logo', this.datosEmpresa.logoUrl);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('[POS] Aviso cargando datos de empresa desde Master API:', err);
+      });
   }
 
   cargarProductosYVentas() {
@@ -576,6 +649,14 @@ export class Pos implements OnInit, AfterViewInit {
     return this.ventaService.getAperturaDelDia();
   }
 
+  /** True si existe algún turno/caja previo (aunque sea cerrado), lo que impide aperturar una nueva caja */
+  get cajaCerradaExiste(): boolean {
+    const turno = this.ventaService.getTurnoActual();
+    if (turno && turno.fechaApertura) return true;
+    const historial = this.ventaService.getHistorialTurnos();
+    return historial && historial.length > 0;
+  }
+
   solicitarReaperturaCaja() {
     if (this.esAdmin) {
       // El Administrador actual puede reabrir directamente registrando su nombre para auditoría
@@ -719,9 +800,13 @@ export class Pos implements OnInit, AfterViewInit {
   }
 
   confirmarCierreCaja() {
+    const fechaAperturaStr = this.fechaApertura ? (typeof this.fechaApertura === 'string' ? this.fechaApertura : this.fechaApertura.toISOString()) : new Date().toISOString();
+    const fechaCierreDate = new Date();
+
     this.reporteZCierre = {
+      id: 'Z-' + Date.now().toString().slice(-6),
       fechaApertura: this.fechaApertura,
-      fechaCierre: new Date(),
+      fechaCierre: fechaCierreDate,
       cajero: this.cajeroActual,
       sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central',
       fondoInicial: this.fondoInicial,
@@ -733,22 +818,36 @@ export class Pos implements OnInit, AfterViewInit {
       totalEsperado: this.totalSistemaEsperado,
       totalDeclarado: this.totalDeclaradoCajero,
       diferencia: this.diferenciaArqueo,
+      declaradoEfectivo: this.declaradoEfectivo,
+      declaradoYape: this.declaradoYape,
+      declaradoPlin: this.declaradoPlin,
+      declaradoTarjeta: this.declaradoTarjeta,
       ticketsEmitidos: this.ventasTurno.filter(v => v.estado === 'EMITIDO').length,
       ticketsAnulados: this.ventasTurno.filter(v => v.estado === 'ANULADO').length
     };
 
+    try {
+      localStorage.setItem('medicare_ultimo_cierre_z', JSON.stringify(this.reporteZCierre));
+    } catch (e) {}
+
     this.cajaAbierta = false;
     this.showCierreModal = false;
+
+    // Generar el PDF 80mm de cierre de caja (Reporte Z)
+    this.generarPdfCierre(this.reporteZCierre);
+
+    // Mostrar el modal con el detalle final y opción de imprimir
     this.showReporteZModal = true;
 
     this.ventaService.guardarTurnoActual({
+      id: this.reporteZCierre.id,
       cajaAbierta: false,
-      fechaApertura: this.fechaApertura.toISOString(),
-      fechaCierre: new Date().toISOString(),
+      fechaApertura: fechaAperturaStr,
+      fechaCierre: fechaCierreDate.toISOString(),
       cajeroActual: this.cajeroActual,
       fondoInicial: this.fondoInicial,
       sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central',
-      totalVentas: this.totalVentasEfectivo + this.totalVentasYape + this.totalVentasPlin + this.totalVentasTarjeta,
+      totalVentas: this.reporteZCierre.totalVentas,
       declaradoEfectivo: this.declaradoEfectivo,
       declaradoYape: this.declaradoYape,
       declaradoPlin: this.declaradoPlin,
@@ -1266,8 +1365,8 @@ export class Pos implements OnInit, AfterViewInit {
     const montoTotal = this.total;
     const metodoUsado = this.paymentMethod;
 
-    // Completar y registrar la venta directamente sin abrir modal repetitivo
-    this.completeSale(false);
+    // Completar venta y abrir de inmediato el ticket de 80mm para imprimir
+    this.completeSale(true);
 
     this.mostrarAlerta(
       'success',
@@ -1277,13 +1376,42 @@ export class Pos implements OnInit, AfterViewInit {
   }
 
   imprimirUltimoComprobante() {
-    if (this.ventasTurno.length > 0) {
-      const ultimo = this.ventasTurno[this.ventasTurno.length - 1];
-      this.ticketData = ultimo;
+    // 1. Si hay productos en el carrito, generar e imprimir el comprobante del carrito actual
+    if (this.cart.length > 0) {
+      const ticketCarrito: TicketVenta = {
+        id: 'TKT-' + Math.floor(100000 + Math.random() * 900000),
+        fecha: new Date(),
+        items: [...this.cart],
+        subtotal: this.subtotal,
+        igv: this.igv,
+        total: this.total,
+        modoPago: 'simple',
+        metodo: this.metodoPagoRapido || 'Efectivo',
+        desglose: [{ metodo: this.metodoPagoRapido || 'Efectivo', monto: this.total }],
+        cliente: this.customerName,
+        dni: this.docNumero || '00000000',
+        tipoComprobante: 'Ticket',
+        sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central',
+        estado: 'EMITIDO'
+      };
+      this.ticketData = ticketCarrito;
+      this.generarPdfTicket(ticketCarrito);
       this.showTicketModal = true;
-      setTimeout(() => window.print(), 300);
+      return;
+    }
+
+    // 2. Si el carrito está vacío, imprimir el comprobante de la última venta realizada
+    if (this.ventasTurno.length > 0) {
+      const ultimo = this.ventasTurno[0] || this.ventasTurno[this.ventasTurno.length - 1];
+      this.ticketData = ultimo;
+      this.generarPdfTicket(ultimo);
+      this.showTicketModal = true;
     } else {
-      this.mostrarAlerta('info', 'No hay comprobantes emitidos en el turno actual para imprimir.', 'Sin Comprobantes');
+      this.mostrarAlerta(
+        'info',
+        'El sistema fue vaciado recientemente. Agrega productos al carrito o realiza una venta para generar el comprobante.',
+        'Sin Comprobantes'
+      );
     }
   }
 
@@ -1428,6 +1556,10 @@ export class Pos implements OnInit, AfterViewInit {
   // --- MODAL DE PAGO ---
   openPayment() {
     if (this.cart.length === 0) return;
+    if (!this.cajaAbierta) {
+      this.mostrarAlerta('warning', 'Debe aperturar la caja antes de registrar ventas.', 'Caja Cerrada');
+      return;
+    }
     this.paymentMode = 'simple';
     this.paymentMethod = 'Efectivo';
     this.montoRecibido = this.total;
@@ -1613,7 +1745,12 @@ export class Pos implements OnInit, AfterViewInit {
     this.ventasTurno = this.ventaService.ventas as any;
     
     this.showPaymentModal = false;
-    this.showTicketModal = mostrarModalTicket;
+    if (mostrarModalTicket) {
+      this.generarPdfTicket(nuevoTicket);
+      this.showTicketModal = true;
+    } else {
+      this.showTicketModal = false;
+    }
     
     // Limpiar carrito y resetear datos del cliente para la siguiente venta
     this.cart = [];
@@ -1634,16 +1771,467 @@ export class Pos implements OnInit, AfterViewInit {
   closeTicket() {
     this.showTicketModal = false;
     this.ticketData = null;
+    if (this.pdfBlobUrlRaw) {
+      URL.revokeObjectURL(this.pdfBlobUrlRaw);
+      this.pdfBlobUrlRaw = null;
+    }
+    this.pdfUrl = null;
     this.enfocarLector();
   }
   
   printTicket() {
-    window.print();
+    const iframe = document.getElementById('ticket-pdf-iframe') as HTMLIFrameElement;
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        return;
+      } catch (e) {
+        console.warn('Iframe print error:', e);
+      }
+    }
+    if (this.pdfBlobUrlRaw) {
+      const win = window.open(this.pdfBlobUrlRaw, '_blank');
+      if (win) {
+        win.focus();
+        setTimeout(() => win.print(), 500);
+      }
+    }
   }
 
-  // --- ANULACIÓN SEGURA CON PIN ---
+  generarPdfTicket(ticket: TicketVenta) {
+    if (!ticket) return;
+
+    this.ticketModalTitulo = 'Imprimir Cliente';
+
+    // Altura dinámica: 80mm de ancho exacto para rollo térmico (estilo Restaurante)
+    const itemsCount = ticket.items?.length || 0;
+    let inicial = 72 + (itemsCount * 7.5);
+    if (ticket.datosReceta) {
+      inicial += 10;
+    }
+    const tieneClienteReal = ticket.cliente &&
+      ticket.cliente.trim() !== '' &&
+      ticket.cliente.trim().toLowerCase() !== 'cliente de mostrador';
+    if (tieneClienteReal) {
+      inicial += 8;
+    }
+    if (ticket.cambio && ticket.cambio > 0) {
+      inicial += 5;
+    }
+    inicial = Math.max(80, Math.ceil(inicial));
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [80, inicial] // 80mm ancho exacto como en el sistema de Restaurante
+    });
+
+    let y = 7;
+    const centerX = 40; // Mitad exacta de 80 mm
+
+    // Encabezado
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    const nombreEmp = this.datosEmpresa?.nombreComercial || 'FARMACIA MEDICARE';
+    doc.text(nombreEmp.toUpperCase(), centerX, y, { align: 'center' });
+    y += 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const sedeNombre = ticket.sede || this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
+    doc.text(sedeNombre, centerX, y, { align: 'center' });
+    y += 3.5;
+
+    doc.text('Ticket de Venta', centerX, y, { align: 'center' });
+    y += 3.5;
+
+    // Separador
+    doc.text('=========================================', centerX, y, { align: 'center' });
+    y += 4;
+
+    // Metadatos
+    doc.setFontSize(8);
+    const fechaObj = new Date(ticket.fecha);
+    const fechaStr = isNaN(fechaObj.getTime())
+      ? new Date().toLocaleString('es-PE')
+      : fechaObj.toLocaleString('es-PE', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+    doc.text('Fecha: ' + fechaStr, 6, y);
+    y += 3.5;
+
+    // Cliente (Solo si no es Cliente de Mostrador)
+    if (tieneClienteReal) {
+      doc.text('Cliente: ' + ticket.cliente, 6, y);
+      y += 3.5;
+      if (ticket.dni && ticket.dni !== '00000000') {
+        doc.text('Doc: ' + ticket.dni, 6, y);
+        y += 3.5;
+      }
+    }
+
+    if (ticket.datosReceta) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`CMP: ${ticket.datosReceta.cmpMedico} (Rec: ${ticket.datosReceta.nroReceta})`, 6, y);
+      y += 3.5;
+      doc.setFont('helvetica', 'normal');
+    }
+
+    // Modalidad omitida a petición del usuario
+
+    doc.text('----------------------------------------------------------------------', centerX, y, { align: 'center' });
+    y += 3.5;
+
+    // Cabecera items
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.text('CANT', 6, y);
+    doc.text('DESCRIPCIÓN', 16, y);
+    doc.text('TOTAL', 74, y, { align: 'right' });
+    y += 3;
+    doc.text('----------------------------------------------------------------------', centerX, y, { align: 'center' });
+    y += 3.5;
+
+    // Detalle de Items
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    ticket.items.forEach((it: any) => {
+      const cant = `${it.cantidad}`;
+      const pres = it.presentacion ? ` (${it.presentacion.substring(0, 3)}.)` : '';
+      const rawNombre = `${it.nombre || 'Producto'}${pres}`;
+      const lineas = doc.splitTextToSize(rawNombre, 46);
+
+      doc.text(cant, 6, y);
+      doc.text(lineas[0], 16, y);
+      const subtotalVal = Number(it.subtotal) || 0;
+      doc.text('S/ ' + subtotalVal.toFixed(2), 74, y, { align: 'right' });
+
+      if (lineas.length > 1) {
+        y += 3;
+        doc.text(lineas[1], 16, y);
+      }
+      y += 4;
+    });
+
+    y += 1;
+    doc.text('=========================================', centerX, y, { align: 'center' });
+    y += 4;
+
+    // Totales
+    doc.setFontSize(8);
+    doc.text('Subtotal:', 44, y);
+    doc.text('S/ ' + (Number(ticket.subtotal) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('IGV (18%):', 44, y);
+    doc.text('S/ ' + (Number(ticket.igv) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4.5;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('TOTAL:', 44, y);
+    doc.text('S/ ' + (Number(ticket.total) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 5;
+
+    // Desglose de pago omitido a petición del usuario
+
+    if (ticket.cambio && ticket.cambio > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text('Vuelto:', 44, y);
+      doc.text('S/ ' + ticket.cambio.toFixed(2), 74, y, { align: 'right' });
+      y += 4.5;
+    }
+
+    y += 1;
+    doc.setFont('helvetica', 'normal');
+    doc.text('***************************************************', centerX, y, { align: 'center' });
+    y += 3.5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('¡GRACIAS POR SU COMPRA!', centerX, y, { align: 'center' });
+    y += 3;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Conserve su comprobante', centerX, y, { align: 'center' });
+
+    // Generar Blob y SafeResourceUrl
+    const pdfBlob = doc.output('blob');
+    if (this.pdfBlobUrlRaw) {
+      URL.revokeObjectURL(this.pdfBlobUrlRaw);
+    }
+    this.pdfBlobUrlRaw = URL.createObjectURL(pdfBlob);
+    this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfBlobUrlRaw);
+  }
+
+  generarPdfCierre(cierre: any) {
+    if (!cierre) return;
+
+    this.ticketModalTitulo = 'Ticket de Cierre de Caja';
+    const alto = 165;
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [80, alto]
+    });
+
+    let y = 7;
+    const centerX = 40;
+
+    // Encabezado
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    const nombreEmp = this.datosEmpresa?.nombreComercial || 'FARMACIA MEDICARE';
+    doc.text(nombreEmp.toUpperCase(), centerX, y, { align: 'center' });
+    y += 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const sedeNombre = cierre.sede || this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
+    doc.text(sedeNombre, centerX, y, { align: 'center' });
+    y += 3.5;
+
+    if (this.datosEmpresa?.ruc) {
+      doc.text('RUC: ' + this.datosEmpresa.ruc, centerX, y, { align: 'center' });
+      y += 3.5;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('REPORTE Z - CIERRE DE CAJA', centerX, y, { align: 'center' });
+    y += 3.5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.text('=========================================', centerX, y, { align: 'center' });
+    y += 4;
+
+    // Metadatos de Turno
+    if (cierre.id) {
+      doc.text('Turno N°: ' + cierre.id, 6, y);
+      y += 3.5;
+    }
+    doc.text('Cajero: ' + (cierre.cajero || this.cajeroActual || 'Cajero de Turno'), 6, y);
+    y += 3.5;
+
+    const formatFecha = (f: any) => {
+      if (!f) return '-';
+      const d = new Date(f);
+      return isNaN(d.getTime()) ? String(f) : d.toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    };
+
+    doc.text('Apertura: ' + formatFecha(cierre.fechaApertura), 6, y);
+    y += 3.5;
+    doc.text('Cierre:   ' + formatFecha(cierre.fechaCierre), 6, y);
+    y += 3.5;
+
+    // Comprobantes
+    doc.text('----------------------------------------------------------------------', centerX, y, { align: 'center' });
+    y += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN DE COMPROBANTES', 6, y);
+    y += 3.5;
+    doc.setFont('helvetica', 'normal');
+    doc.text('Tickets Emitidos:', 6, y);
+    doc.text(String(cierre.ticketsEmitidos || 0), 74, y, { align: 'right' });
+    y += 3.5;
+    doc.text('Tickets Anulados:', 6, y);
+    doc.text(String(cierre.ticketsAnulados || 0), 74, y, { align: 'right' });
+    y += 3.5;
+
+    // Detalle de Ventas
+    doc.text('----------------------------------------------------------------------', centerX, y, { align: 'center' });
+    y += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETALLE DE VENTAS POR SISTEMA', 6, y);
+    y += 3.5;
+    doc.setFont('helvetica', 'normal');
+    
+    doc.text('Fondo Inicial (Sencillo):', 6, y);
+    doc.text('S/ ' + (Number(cierre.fondoInicial) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Ventas en Efectivo:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalEfectivo) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Ventas con Yape:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalYape) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Ventas con Plin:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalPlin) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Ventas con Tarjeta:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalTarjeta) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL VENTAS:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalVentas) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4;
+
+    doc.text('TOTAL SISTEMA (Esperado):', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalEsperado) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4;
+
+    // Arqueo Declarado
+    doc.text('----------------------------------------------------------------------', centerX, y, { align: 'center' });
+    y += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('ARQUEO FÍSICO DECLARADO', 6, y);
+    y += 3.5;
+    doc.setFont('helvetica', 'normal');
+
+    doc.text('Efectivo Contado en Caja:', 6, y);
+    doc.text('S/ ' + (Number(cierre.declaradoEfectivo) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Yape Declarado:', 6, y);
+    doc.text('S/ ' + (Number(cierre.declaradoYape) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Plin Declarado:', 6, y);
+    doc.text('S/ ' + (Number(cierre.declaradoPlin) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 3.5;
+
+    doc.text('Tarjeta Declarado:', 6, y);
+    doc.text('S/ ' + (Number(cierre.declaradoTarjeta) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL DECLARADO:', 6, y);
+    doc.text('S/ ' + (Number(cierre.totalDeclarado) || 0).toFixed(2), 74, y, { align: 'right' });
+    y += 4;
+
+    // Resultado Arqueo
+    doc.text('=========================================', centerX, y, { align: 'center' });
+    y += 4;
+
+    const diff = Number(cierre.diferencia) || 0;
+    let textoDiff = 'CUADRE EXACTO (S/ 0.00)';
+    if (diff > 0) {
+      textoDiff = 'SOBRANTE: + S/ ' + diff.toFixed(2);
+    } else if (diff < 0) {
+      textoDiff = 'FALTANTE: - S/ ' + Math.abs(diff).toFixed(2);
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(textoDiff, centerX, y, { align: 'center' });
+    y += 5;
+
+    // Pie
+    doc.setFont('helvetica', 'normal');
+    doc.text('***************************************************', centerX, y, { align: 'center' });
+    y += 3;
+    doc.setFontSize(6.5);
+    doc.text('Impreso el: ' + new Date().toLocaleString('es-PE'), centerX, y, { align: 'center' });
+    y += 3;
+    doc.text('Medicare Software POS v2.0', centerX, y, { align: 'center' });
+
+    // Generar Blob y SafeResourceUrl
+    const pdfBlob = doc.output('blob');
+    if (this.pdfBlobUrlRaw) {
+      URL.revokeObjectURL(this.pdfBlobUrlRaw);
+    }
+    this.pdfBlobUrlRaw = URL.createObjectURL(pdfBlob);
+    this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfBlobUrlRaw);
+  }
+
+  imprimirTicketCierre() {
+    const cierre = this.getUltimoCierre();
+    if (!cierre) {
+      this.mostrarAlerta('warning', 'No hay datos del cierre de caja disponibles para imprimir.', 'Sin Cierre');
+      return;
+    }
+    this.generarPdfCierre(cierre);
+    this.showReporteZModal = false;
+    this.showTicketModal = true;
+  }
+
+  imprimirUltimoCierre() {
+    const cierre = this.getUltimoCierre();
+    if (!cierre) {
+      this.mostrarAlerta('warning', 'No hay registros de un cierre de caja previo para imprimir.', 'Sin Cierre');
+      return;
+    }
+    this.generarPdfCierre(cierre);
+    this.showTicketModal = true;
+  }
+
+  verDetalleUltimoCierre() {
+    const cierre = this.getUltimoCierre();
+    if (!cierre) {
+      this.mostrarAlerta('warning', 'No hay registros de un cierre de caja previo.', 'Sin Cierre');
+      return;
+    }
+    this.reporteZCierre = cierre;
+    this.showReporteZModal = true;
+  }
+
+  getUltimoCierre(): any | null {
+    if (this.reporteZCierre) return this.reporteZCierre;
+    try {
+      const saved = localStorage.getItem('medicare_ultimo_cierre_z');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (e) {}
+
+    const turnoActual = this.ventaService.getTurnoActual();
+    if (turnoActual && turnoActual.reporteZCierre) {
+      return turnoActual.reporteZCierre;
+    }
+    const historial = this.ventaService.getHistorialTurnos();
+    const cerradoConZ = historial.find(t => t.reporteZCierre);
+    if (cerradoConZ && cerradoConZ.reporteZCierre) {
+      return cerradoConZ.reporteZCierre;
+    }
+    const ultimoCerrado = historial.find(t => !t.cajaAbierta);
+    if (ultimoCerrado) {
+      return {
+        id: ultimoCerrado.id || 'Z-HISTORICO',
+        fechaApertura: ultimoCerrado.fechaApertura,
+        fechaCierre: ultimoCerrado.fechaCierre || new Date().toISOString(),
+        cajero: ultimoCerrado.cajeroActual || 'Cajero de Turno',
+        sede: ultimoCerrado.sede || 'Sede Cajamarca Central',
+        fondoInicial: ultimoCerrado.fondoInicial || 0,
+        totalEfectivo: ultimoCerrado.declaradoEfectivo || 0,
+        totalYape: ultimoCerrado.declaradoYape || 0,
+        totalPlin: ultimoCerrado.declaradoPlin || 0,
+        totalTarjeta: ultimoCerrado.declaradoTarjeta || 0,
+        totalVentas: ultimoCerrado.totalVentas || 0,
+        totalEsperado: (ultimoCerrado.fondoInicial || 0) + (ultimoCerrado.totalVentas || 0),
+        totalDeclarado: (Number(ultimoCerrado.declaradoEfectivo) || 0) + (Number(ultimoCerrado.declaradoYape) || 0) + (Number(ultimoCerrado.declaradoPlin) || 0) + (Number(ultimoCerrado.declaradoTarjeta) || 0),
+        diferencia: ultimoCerrado.diferencia || 0,
+        declaradoEfectivo: ultimoCerrado.declaradoEfectivo,
+        declaradoYape: ultimoCerrado.declaradoYape,
+        declaradoPlin: ultimoCerrado.declaradoPlin,
+        declaradoTarjeta: ultimoCerrado.declaradoTarjeta,
+        ticketsEmitidos: 0,
+        ticketsAnulados: 0
+      };
+    }
+    return null;
+  }
+
+  get usuarioActualNombre(): string {
+    return this.authService.getUserDisplayName() || this.authService.currentUser()?.nombreCompleto || 'Usuario del Sistema';
+  }
+
+  // --- ANULACIÓN SEGURA (USUARIO ACTUAL BLOQUEADO, SIN PIN) ---
   openAnulacionModal(ticket?: TicketVenta) {
     this.ticketAAnular = ticket || (this.ventasTurno.find(v => v.estado === 'EMITIDO') || null);
+    this.anuladoPor = this.usuarioActualNombre;
     this.pinSeguridad = '';
     this.errorAnulacion = '';
     this.showAnulacionModal = true;
@@ -1652,11 +2240,6 @@ export class Pos implements OnInit, AfterViewInit {
   confirmarAnulacion() {
     if (!this.ticketAAnular) {
       this.errorAnulacion = 'Selecciona un ticket válido para anular.';
-      return;
-    }
-
-    if (!this.pinSeguridad || this.pinSeguridad.trim().length < 4) {
-      this.errorAnulacion = 'PIN de seguridad inválido. Debe contener al menos 4 dígitos.';
       return;
     }
 
@@ -1672,7 +2255,7 @@ export class Pos implements OnInit, AfterViewInit {
 
     this.ticketAAnular.estado = 'ANULADO';
     this.ticketAAnular.anulacionInfo = {
-      autorizadoPor: this.anuladoPor,
+      autorizadoPor: this.usuarioActualNombre,
       motivo: this.motivoAnulacion,
       observaciones: this.observacionesAnulacion,
       fecha: new Date()
@@ -1683,7 +2266,7 @@ export class Pos implements OnInit, AfterViewInit {
 
     const ticketId = this.ticketAAnular.id;
     this.showAnulacionModal = false;
-    this.mostrarAlerta('success', `Ticket ${ticketId} anulado correctamente. Stock reingresado a inventario.`, 'Ticket Anulado');
+    this.mostrarAlerta('success', `Ticket ${ticketId} anulado correctamente por ${this.usuarioActualNombre}. Stock reingresado a inventario.`, 'Ticket Anulado');
     this.ticketAAnular = null;
   }
 }

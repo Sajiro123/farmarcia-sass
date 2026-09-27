@@ -60,26 +60,19 @@
           <p class="text-xs font-extrabold text-slate-800 dark:text-white leading-tight">
             {{ cajaAbierta ? 'Turno Activo: Caja Abierta' : 'Caja Cerrada' }}
           </p>
-          <p class="text-[10px] text-slate-500 dark:text-slate-400">
-            Fondo: S/ {{ fondoInicial | number:'1.2-2' }} • {{ cajeroActual }}
-          </p>
+          @if (cajaAbierta) {
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">
+              Fondo: S/ {{ fondoInicial | number:'1.2-2' }} • {{ cajeroActual }}
+            </p>
+          } @else {
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">
+              Apertura requerida para iniciar ventas
+            </p>
+          }
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <button 
-          (click)="enfocarLector()" 
-          type="button"
-          title="Lector de código de barras conectado y listo. Haz clic para enfocar inmediatamente"
-          class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors shadow-2xs">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <i class="fa-solid fa-barcode text-sm"></i>
-          <span class="hidden sm:inline">Lector de Barras Listo</span>
-        </button>
-
         <button 
           (click)="togglePosicionCarrito()" 
           type="button"
@@ -99,6 +92,17 @@
               <i [class]="esAdmin ? 'fa-solid fa-lock-open text-xs' : 'fa-solid fa-user-shield text-xs text-amber-400'"></i> 
               {{ esAdmin ? 'Reabrir Caja de Hoy' : 'Reabrir Caja (Admin)' }}
             </button>
+          } @else if (cajaCerradaExiste) {
+            <!-- Existe caja anterior cerrada: no se permite aperturar una nueva, solo el admin puede reabrir -->
+            <button 
+              (click)="solicitarReaperturaCaja()"
+              [title]="esAdmin ? 'Reabrir la caja cerrada' : 'Existe una caja cerrada. Solo un Administrador puede reabrir.'"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+              [ngClass]="esAdmin ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed opacity-70'"
+              [disabled]="!esAdmin">
+              <i [class]="esAdmin ? 'fa-solid fa-lock-open text-xs' : 'fa-solid fa-lock text-xs'"></i>
+              {{ esAdmin ? 'Reabrir Caja' : 'Caja Cerrada' }}
+            </button>
           } @else {
             <button 
               (click)="showAperturaModal = true"
@@ -106,6 +110,15 @@
               <i class="fa-solid fa-key text-xs"></i> Aperturar Caja
             </button>
           }
+
+          <button 
+            (click)="imprimirUltimoCierre()" 
+            type="button"
+            title="Imprimir ticket del último cierre de caja (Reporte Z en 80mm)"
+            class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
+            <i class="fa-solid fa-print text-xs"></i>
+            <span>Ticket de Cierre</span>
+          </button>
         } @else {
           <button 
             (click)="openCierreCaja()"
@@ -123,59 +136,29 @@
       </div>
     </div>
 
-    <!-- Client Chip & Search Bar (Diseño Maqueta) -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-      <!-- Chip Cliente de Mostrador -->
-      <div (click)="isEditingCustomer = !isEditingCustomer"
-        title="Clic para ver o cambiar datos del cliente"
-        class="flex items-center gap-2.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-2xs hover:border-emerald-400 transition-all cursor-pointer shrink-0">
-        <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
-          <i class="fa-solid fa-user text-xs"></i>
+    <!-- Buscador de Medicamentos & Código de Barras (Ancho completo) -->
+    <div class="relative w-full">
+      <i class="fa-solid fa-barcode absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-sm"></i>
+      <input 
+        #barcodeInput
+        [(ngModel)]="searchQuery" 
+        (input)="filterProducts()"
+        (keydown.enter)="onSearchEnter($event)"
+        type="text" 
+        placeholder="Escanear código de barras con la pistola o buscar por medicamento, SKU, marca..."
+        class="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-xs rounded-2xl py-3 pl-11 pr-24 border border-slate-200/90 dark:border-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400" />
+      
+      @if (cargandoProductos) {
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+          <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+          <span class="hidden sm:inline">Cargando...</span>
         </div>
-        <div class="text-left min-w-[130px]">
-          <div class="text-xs font-bold text-slate-800 dark:text-white leading-tight flex items-center gap-1.5 truncate max-w-[160px]">
-            <span>{{ customerName }}</span>
-            @if (customerPuntos > 0) {
-              <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-md text-[9px] font-bold shrink-0">
-                ⭐ {{ customerPuntos }}
-              </span>
-            }
-          </div>
-          <p class="text-[10px] text-slate-400 leading-none mt-0.5">
-            {{ docNumero ? (tipoDoc + ': ' + docNumero) : 'Sin registro' }}
-          </p>
-        </div>
-        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-auto"></i>
-      </div>
-
-      <!-- Buscador de Medicamentos & Lector de Código de Barras -->
-      <div class="relative flex-1">
-        <i class="fa-solid fa-barcode absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-sm"></i>
-        <input 
-          #barcodeInput
-          [(ngModel)]="searchQuery" 
-          (input)="filterProducts()"
-          (keydown.enter)="onSearchEnter($event)"
-          type="text" 
-          placeholder="Escanear código de barras con la pistola o buscar por medicamento, SKU, marca..."
-          class="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-xs rounded-2xl py-3 pl-11 pr-24 border border-slate-200/90 dark:border-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400" />
-        
-        @if (cargandoProductos) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
-            <i class="fa-solid fa-spinner fa-spin text-xs"></i>
-            <span class="hidden sm:inline">Cargando...</span>
-          </div>
-        } @else if (searchQuery) {
-          <button (click)="limpiarBusqueda()"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-lg transition-colors cursor-pointer">
-            Limpiar
-          </button>
-        } @else {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Pistola lista
-          </div>
-        }
-      </div>
+      } @else if (searchQuery) {
+        <button (click)="limpiarBusqueda()"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-lg transition-colors cursor-pointer">
+          Limpiar
+        </button>
+      }
     </div>
 
     <!-- Category Filter Pills & Toggle de Vista (Tarjetas / Lista) -->
@@ -672,7 +655,10 @@
         </div>
         <div>
           <h2 class="font-extrabold text-slate-900 dark:text-white text-sm leading-tight">Carrito de Compras</h2>
-          <p class="text-[10px] text-slate-400">Orden de venta actual</p>
+          <div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <i class="fa-solid fa-circle-user text-emerald-600 dark:text-emerald-400 text-xs"></i>
+            <span class="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[170px]">{{ usuarioActualNombre }}</span>
+          </div>
         </div>
       </div>
       <span class="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-bold font-mono">
@@ -748,36 +734,36 @@
     </div>
 
     <!-- Lista de Items en Carrito con Miniatura de Imagen -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-2">
+    <div class="flex-1 overflow-y-auto p-2 space-y-1.5">
       @for (item of cart; track $index; let i = $index) {
-        <div class="flex items-center gap-2.5 p-2.5 bg-white dark:bg-slate-700/40 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs hover:border-slate-300 transition-colors">
+        <div class="flex items-center gap-2 p-1.5 bg-white dark:bg-slate-700/40 rounded-lg border border-slate-200/90 dark:border-slate-700 shadow-2xs hover:border-slate-300 transition-colors">
           <!-- Thumbnail de la Foto -->
-          <div class="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+          <div class="w-9 h-9 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
             @if (item.imagenUrl) {
               <img [src]="item.imagenUrl" [alt]="item.nombre" class="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal" />
             } @else {
-              <i class="fa-solid fa-pills text-emerald-600 text-base"></i>
+              <i class="fa-solid fa-pills text-emerald-600 text-[10px]"></i>
             }
           </div>
 
           <!-- Info del Producto & Stepper -->
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-1">
-              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">{{ item.nombre }}</h4>
-              <button (click)="removeFromCart(i)" title="Eliminar del carrito" class="text-slate-300 hover:text-rose-500 transition-colors p-0.5 cursor-pointer">
-                <i class="fa-regular fa-trash-can text-xs"></i>
+              <h4 class="text-[11px] font-bold text-slate-900 dark:text-white truncate leading-none">{{ item.nombre }}</h4>
+              <button (click)="removeFromCart(i)" title="Eliminar del carrito" class="text-slate-300 hover:text-rose-500 transition-colors cursor-pointer">
+                <i class="fa-regular fa-trash-can text-[10px]"></i>
               </button>
             </div>
-            <p class="text-[10px] text-slate-400 mt-0.5">x 1 {{ item.presentacion }} • S/ {{ item.precio | number:'1.2-2' }}</p>
+            <p class="text-[9px] text-slate-400 mt-0.5 leading-none">x 1 {{ item.presentacion }} • S/ {{ item.precio | number:'1.2-2' }}</p>
             
             <!-- Fila de Stepper y Subtotal del Item -->
-            <div class="flex items-center justify-between mt-1.5">
-              <div class="flex items-center border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800">
-                <button (click)="updateQuantity(i, -1)" class="w-6 h-6 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold cursor-pointer">-</button>
-                <span class="w-6 text-center text-xs font-bold text-slate-900 dark:text-white font-mono">{{ item.cantidad }}</span>
-                <button (click)="updateQuantity(i, 1)" class="w-6 h-6 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold cursor-pointer">+</button>
+            <div class="flex items-center justify-between mt-1">
+              <div class="flex items-center border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden bg-slate-50 dark:bg-slate-800">
+                <button (click)="updateQuantity(i, -1)" class="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold cursor-pointer">-</button>
+                <span class="w-5 text-center text-[10px] font-bold text-slate-900 dark:text-white font-mono leading-5">{{ item.cantidad }}</span>
+                <button (click)="updateQuantity(i, 1)" class="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold cursor-pointer">+</button>
               </div>
-              <span class="text-xs font-black text-slate-900 dark:text-white font-mono">
+              <span class="text-[11px] font-black text-slate-900 dark:text-white font-mono">
                 S/ {{ item.subtotal | number:'1.2-2' }}
               </span>
             </div>
@@ -1124,31 +1110,56 @@
 <!-- MODAL 3: REPORTE Z DE CIERRE DE CAJA -->
 @if (showReporteZModal && reporteZCierre) {
   <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-800 animate-slide-up">
-      <div class="text-center pb-2 border-b border-dashed border-slate-300">
-        <p class="font-black text-base text-emerald-800">REPORTE Z - CIERRE DE CAJA</p>
-        <p class="text-xs text-slate-500">{{ reporteZCierre.sede }} • {{ reporteZCierre.cajero }}</p>
-        <p class="text-[10px] text-slate-400">Fecha: {{ reporteZCierre.fechaCierre | date:'medium' }}</p>
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 animate-slide-up">
+      <div class="text-center pb-2 border-b border-dashed border-slate-200 dark:border-slate-700">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <i class="fa-solid fa-cash-register text-lg"></i>
+        </div>
+        <p class="font-black text-base text-slate-900 dark:text-white">CIERRE DE CAJA - DETALLE FINAL</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ reporteZCierre.sede }} • {{ reporteZCierre.cajero }}</p>
+        <p class="text-[10px] text-slate-400">
+          Apertura: {{ reporteZCierre.fechaApertura | date:'short' }} | Cierre: {{ reporteZCierre.fechaCierre | date:'short' }}
+        </p>
       </div>
 
-      <div class="space-y-1 text-xs font-mono">
-        <div class="flex justify-between"><span>Fondo Inicial:</span><span>S/ {{ reporteZCierre.fondoInicial | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between"><span>Ventas Efectivo:</span><span>S/ {{ reporteZCierre.totalEfectivo | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between"><span>Ventas Yape:</span><span class="text-purple-700 font-bold">S/ {{ reporteZCierre.totalYape | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between"><span>Ventas Plin:</span><span class="text-cyan-700 font-bold">S/ {{ reporteZCierre.totalPlin | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between"><span>Ventas Tarjetas:</span><span>S/ {{ reporteZCierre.totalTarjeta | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between font-bold pt-1 border-t border-slate-200"><span>TOTAL VENTAS:</span><span class="text-emerald-700">S/ {{ reporteZCierre.totalVentas | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between font-bold"><span>TOTAL SISTEMA ESPERADO:</span><span>S/ {{ reporteZCierre.totalEsperado | number:'1.2-2' }}</span></div>
-        <div class="flex justify-between font-bold"><span>TOTAL DECLARADO CAJERO:</span><span>S/ {{ reporteZCierre.totalDeclarado | number:'1.2-2' }}</span></div>
+      <div class="space-y-1.5 text-xs font-mono">
+        <div class="flex justify-between py-0.5"><span>Fondo Inicial:</span><span class="font-bold">S/ {{ reporteZCierre.fondoInicial | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between py-0.5"><span>Ventas Efectivo:</span><span>S/ {{ reporteZCierre.totalEfectivo | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between py-0.5"><span>Ventas Yape:</span><span class="text-purple-600 dark:text-purple-400 font-bold">S/ {{ reporteZCierre.totalYape | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between py-0.5"><span>Ventas Plin:</span><span class="text-cyan-600 dark:text-cyan-400 font-bold">S/ {{ reporteZCierre.totalPlin | number:'1.2-2' }}</span></div>
+        <div class="flex justify-between py-0.5"><span>Ventas Tarjetas:</span><span>S/ {{ reporteZCierre.totalTarjeta | number:'1.2-2' }}</span></div>
         
-        <div class="p-2 rounded-lg text-center font-bold text-sm mt-2" [ngClass]="reporteZCierre.diferencia === 0 ? 'bg-emerald-100 text-emerald-800' : reporteZCierre.diferencia > 0 ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'">
-          {{ reporteZCierre.diferencia === 0 ? '✅ CUADRE EXACTO' : (reporteZCierre.diferencia > 0 ? 'SOBRANTE: S/ ' + reporteZCierre.diferencia : 'FALTANTE: S/ ' + (-reporteZCierre.diferencia)) }}
+        <div class="flex justify-between font-bold pt-1.5 border-t border-slate-200 dark:border-slate-700">
+          <span>TOTAL VENTAS:</span>
+          <span class="text-emerald-600 dark:text-emerald-400">S/ {{ reporteZCierre.totalVentas | number:'1.2-2' }}</span>
+        </div>
+        <div class="flex justify-between font-bold">
+          <span>TOTAL SISTEMA (Esperado):</span>
+          <span>S/ {{ reporteZCierre.totalEsperado | number:'1.2-2' }}</span>
+        </div>
+        <div class="flex justify-between font-bold">
+          <span>TOTAL DECLARADO (Cajero):</span>
+          <span>S/ {{ reporteZCierre.totalDeclarado | number:'1.2-2' }}</span>
+        </div>
+        
+        <div class="p-2.5 rounded-xl text-center font-bold text-sm mt-2 shadow-2xs" 
+          [ngClass]="reporteZCierre.diferencia === 0 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' : reporteZCierre.diferencia > 0 ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700' : 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700'">
+          {{ reporteZCierre.diferencia === 0 ? '✅ CUADRE EXACTO' : (reporteZCierre.diferencia > 0 ? 'SOBRANTE: S/ ' + (reporteZCierre.diferencia | number:'1.2-2') : 'FALTANTE: S/ ' + (-reporteZCierre.diferencia | number:'1.2-2')) }}
+        </div>
+
+        <div class="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+          <span>Comprobantes emitidos: {{ reporteZCierre.ticketsEmitidos }}</span>
+          <span>Comprobantes anulados: {{ reporteZCierre.ticketsAnulados }}</span>
         </div>
       </div>
 
-      <div class="flex gap-2">
-        <button (click)="printTicket()" class="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="pi pi-print"></i> Imprimir Reporte Z</button>
-        <button (click)="showReporteZModal = false" class="py-2.5 px-4 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold cursor-pointer">Cerrar</button>
+      <div class="flex gap-2 pt-2">
+        <button (click)="imprimirTicketCierre()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors">
+          <i class="fa-solid fa-print"></i> Imprimir Ticket de Cierre
+        </button>
+        <button (click)="showReporteZModal = false" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold cursor-pointer transition-colors">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
@@ -1511,13 +1522,17 @@
             <label class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <i class="pi pi-user-check text-rose-500"></i> 1. Anulación por quién (Personal Autorizado)
             </label>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <select [(ngModel)]="anuladoPor" class="md:col-span-2 bg-white dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold dark:border-slate-600">
-                @for (aut of autorizadoresDisponibles; track aut) {
-                  <option [value]="aut">{{ aut }}</option>
-                }
-              </select>
-              <input [(ngModel)]="pinSeguridad" type="password" maxlength="6" placeholder="PIN (1234)" class="text-center bg-white dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-mono font-bold dark:border-slate-600" />
+            <div class="relative">
+              <input 
+                type="text" 
+                [value]="usuarioActualNombre" 
+                readonly 
+                disabled
+                class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-not-allowed opacity-90 shadow-2xs" />
+              <div class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs flex items-center gap-1.5 font-semibold">
+                <i class="fa-solid fa-lock text-rose-500"></i>
+                <span class="text-[10px]">Usuario en Sesión</span>
+              </div>
             </div>
           </div>
 
@@ -1536,6 +1551,13 @@
         </div>
       }
 
+      @if (errorAnulacion) {
+        <div class="p-2.5 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl flex items-center gap-2 border border-rose-200 dark:border-rose-800">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>{{ errorAnulacion }}</span>
+        </div>
+      }
+
       <div class="flex gap-3 pt-2">
         <button (click)="showAnulacionModal = false" class="flex-1 py-3 bg-surface-container dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-xs font-bold cursor-pointer">Cerrar</button>
         @if (ticketAAnular && ticketAAnular.estado !== 'ANULADO') {
@@ -1548,65 +1570,40 @@
   </div>
 }
 
-<!-- MODAL 8: TICKET PRINT MODAL -->
-@if (showTicketModal && ticketData) {
-  <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-slate-800 animate-slide-up">
-      <div id="printable-ticket" class="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-xs font-mono space-y-2">
-        <div class="text-center pb-2 border-b border-dashed border-slate-300">
-          <p class="font-extrabold text-sm text-emerald-800">FARMACIA MEDICARE</p>
-          <p class="text-[10px] text-slate-500">{{ ticketData.sede }}</p>
-          <p class="text-[10px] text-slate-400">RUC: 20601234567 • Ticket de Venta</p>
+<!-- MODAL 8: TICKET PRINT MODAL (FORMATO 80MM CLIENTE - ESTILO RESTAURANTE) -->
+@if (showTicketModal && pdfUrl) {
+  <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 max-w-3xl w-full shadow-2xl space-y-3.5 text-slate-800 dark:text-white animate-slide-up flex flex-col h-[88vh] max-h-[92vh]">
+      <!-- Encabezado estilo Restaurante: Imprimir Cliente -->
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center shadow-xs">
+            <i class="fa-solid fa-receipt text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{{ ticketModalTitulo }}</h3>
+            <p class="text-xs text-slate-400">Formato exacto 80mm para ticketera térmica • Vista previa ampliada</p>
+          </div>
         </div>
-
-        <div class="space-y-0.5 text-[11px]">
-          <p>N°: <strong>{{ ticketData.id }}</strong></p>
-          <p>Fecha: {{ ticketData.fecha | date:'short' }}</p>
-          <p>Cliente: {{ ticketData.cliente }}</p>
-          <p>Doc: {{ ticketData.dni }}</p>
-          @if (ticketData.datosReceta) {
-            <p class="text-purple-700 font-bold">CMP Médico: {{ ticketData.datosReceta.cmpMedico }} (Receta: {{ ticketData.datosReceta.nroReceta }})</p>
-          }
-          <p>Modalidad: <strong>{{ ticketData.metodo }}</strong></p>
-        </div>
-
-        <div class="py-2 border-t border-b border-dashed border-slate-300 space-y-1">
-          @for (it of ticketData.items; track it.id) {
-            <div class="flex justify-between text-[11px]">
-              <span class="truncate w-32">{{ it.cantidad }}x {{ it.nombre }}</span>
-              <span>S/ {{ it.subtotal | number:'1.2-2' }}</span>
-            </div>
-          }
-        </div>
-
-        <div class="space-y-0.5 text-right font-bold text-xs pt-1">
-          <p>Subtotal: S/ {{ ticketData.subtotal | number:'1.2-2' }}</p>
-          <p>IGV (18%): S/ {{ ticketData.igv | number:'1.2-2' }}</p>
-          <p class="text-sm font-black text-emerald-700">TOTAL: S/ {{ ticketData.total | number:'1.2-2' }}</p>
-        </div>
-
-        <div class="pt-2 border-t border-dashed border-slate-300 space-y-1 text-[11px]">
-          <p class="font-bold text-[10px] uppercase text-slate-500">Desglose de Pago:</p>
-          @for (dp of ticketData.desglose; track dp.metodo) {
-            <div class="flex justify-between">
-              <span>• {{ dp.metodo }} @if(dp.referencia) { (Ref: {{ dp.referencia }}) }:</span>
-              <span class="font-bold">S/ {{ dp.monto | number:'1.2-2' }}</span>
-            </div>
-          }
-          @if (ticketData.cambio && ticketData.cambio > 0) {
-            <div class="flex justify-between text-emerald-700 font-bold pt-1">
-              <span>Vuelto Entregado:</span>
-              <span>S/ {{ ticketData.cambio | number:'1.2-2' }}</span>
-            </div>
-          }
-        </div>
-
-        <p class="text-center text-[10px] text-slate-400 pt-3">¡Gracias por su compra en Medicare!</p>
+        <button (click)="closeTicket()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
       </div>
 
-      <div class="flex gap-2">
-        <button (click)="printTicket()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"><i class="pi pi-print"></i> Imprimir</button>
-        <button (click)="closeTicket()" class="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer">Cerrar</button>
+      <!-- Visor del PDF en iframe con tamaño ampliado -->
+      <div class="flex-1 w-full bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner flex items-center justify-center">
+        <iframe id="ticket-pdf-iframe" [src]="pdfUrl" width="100%" height="100%" frameborder="0" class="rounded-xl w-full h-full"></iframe>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex gap-2.5 pt-1">
+        <button (click)="printTicket()" class="flex-1 py-3 bg-[#8E44AD] hover:bg-[#7D3C98] text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-98 transition-all">
+          <i class="fa-solid fa-print text-base"></i>
+          <span>Imprimir Ticket</span>
+        </button>
+        <button (click)="closeTicket()" class="py-3 px-6 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold cursor-pointer transition-colors">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
