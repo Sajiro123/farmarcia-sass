@@ -196,7 +196,7 @@ export class VentaService {
   async eliminarTurno(idOFecha: string): Promise<boolean> {
     const fechaBuscada = idOFecha.includes('T') ? idOFecha.split('T')[0] : (idOFecha.includes('-') && idOFecha.length === 10 ? idOFecha : '');
     
-    // 1. Eliminar de Supabase si es un UUID válido (no una fecha)
+    // 1. Eliminar de Supabase si es un UUID válido
     const client = this.supabase.client;
     let eliminadoDB = false;
     if (this.supabase.isConfigured && client && idOFecha.includes('-') && idOFecha.length > 10) {
@@ -204,34 +204,36 @@ export class VentaService {
       if (!error) eliminadoDB = true;
     }
 
-    // 2. Limpiar de la sesión actual
+    // 2. Limpiar de la sesión actual de forma total
     let turnoActual = this.getTurnoActual();
-    if (turnoActual && turnoActual.fechaApertura) {
-      const coincideActual = (turnoActual.id && turnoActual.id === idOFecha) ||
-                             (fechaBuscada && this.toIsoDate(turnoActual.fechaApertura) === fechaBuscada) ||
-                             turnoActual.fechaApertura === idOFecha;
-                             
-      if (coincideActual) {
-        localStorage.removeItem('medicare_turno_caja_activo');
-        this.turnoActivo = null;
-      }
+    const coincideActual = !turnoActual.fechaApertura ||
+                           (turnoActual.id && String(turnoActual.id) === String(idOFecha)) ||
+                           (fechaBuscada && this.toIsoDate(turnoActual.fechaApertura) === fechaBuscada) ||
+                           turnoActual.fechaApertura === idOFecha;
+                           
+    if (coincideActual) {
+      localStorage.removeItem('medicare_turno_caja_activo');
+      this.turnoActivo = null;
     }
 
     // 3. Limpiar del historial local
     const historial = this.getHistorialTurnos();
     const lenAntes = historial.length;
     const nuevoHistorial = historial.filter(t => 
-      !((t.id && t.id === idOFecha) ||
+      !(String(t.id) === String(idOFecha) ||
       (fechaBuscada && this.toIsoDate(t.fechaApertura) === fechaBuscada) ||
       t.fechaApertura === idOFecha)
     );
 
-    if (nuevoHistorial.length !== lenAntes || eliminadoDB) {
-      localStorage.setItem('medicare_historial_turnos', JSON.stringify(nuevoHistorial));
-      return true;
+    localStorage.setItem('medicare_historial_turnos', JSON.stringify(nuevoHistorial));
+
+    // Si el turno actual era el eliminado o ya no hay turnos activos, forzar reset del turno activo
+    if (nuevoHistorial.length === 0 || coincideActual) {
+      localStorage.removeItem('medicare_turno_caja_activo');
+      this.turnoActivo = null;
     }
-    
-    return false;
+
+    return true;
   }
 
   /**
@@ -443,7 +445,7 @@ export class VentaService {
         });
 
         this.fusionarVentasEnMemoria(tickets);
-        return tickets;
+        return this.filtrarVentasLocales(fechaInicio, fechaFin);
       }),
       catchError(err => {
         console.warn('⚠️ Excepción de conexión a Supabase ventas:', err);

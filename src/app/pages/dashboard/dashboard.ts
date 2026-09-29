@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { VentaService, TurnoCajaDTO } from '../../core/services/venta.service';
 import {
   DashboardService,
   DashboardResumen,
@@ -29,8 +31,10 @@ export interface KpiFarmaceutico {
 })
 export class Dashboard implements OnInit {
   public authService = inject(AuthService);
+  public ventaService = inject(VentaService);
   private dashboardService = inject(DashboardService);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
 
   constructor() {
     // Sincronizar automáticamente cuando el usuario cambia de sede en la cabecera
@@ -41,6 +45,23 @@ export class Dashboard implements OnInit {
         this.cargarMetricas();
       }
     });
+  }
+
+  // Información del estado de la caja de hoy
+  get turnoActual(): TurnoCajaDTO {
+    return this.ventaService.getTurnoActual();
+  }
+
+  get cajaAbierta(): boolean {
+    return Boolean(this.turnoActual && this.turnoActual.cajaAbierta);
+  }
+
+  get aperturaHoy(): TurnoCajaDTO | null {
+    return this.ventaService.getAperturaDelDia();
+  }
+
+  irAPuntoDeVenta() {
+    this.router.navigate(['/pos']);
   }
 
   // Estado de carga

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
+import { VentaService } from './venta.service';
 import { Observable, from, of, map, catchError } from 'rxjs';
 
 export interface DashboardKpis {
@@ -97,9 +98,10 @@ export interface DashboardResumen {
 export class DashboardService {
   private supabase = inject(SupabaseService);
   private authService = inject(AuthService);
+  private ventaService = inject(VentaService);
 
   /**
-   * Consulta centralizada y reactiva del Dashboard directamente desde Supabase.
+   * Consulta centralizada y reactiva del Dashboard directamente desde Supabase + Ventas Locales en tiempo real.
    * Agrupa ventas, pagos (Efectivo, Yape, Plin, Tarjeta), productos vendidos y márgenes netos.
    */
   getDashboardCompleto(fechaInicio?: string, fechaFin?: string, sucursalId?: string): Observable<DashboardResumen> {
@@ -124,33 +126,111 @@ export class DashboardService {
       ventasPorCategoria: []
     };
 
-    if (!this.supabase.isConfigured || !client) {
-      return of(baseResumen);
-    }
-
     const selectQuery = 'id, total, subtotal, monto_igv, estado, creado_en, sucursal_id, pagos_venta(metodo_pago, monto), detalle_ventas(id, producto_id, cantidad, precio_unitario, costo_unitario, total, productos(id, codigo_interno, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, categorias_producto(nombre), laboratorios(nombre), principios_activos(nombre)))';
 
-    let query = client
-      .from('ventas')
-      .select(selectQuery)
-      .eq('estado', 'COMPLETADA')
-      .order('creado_en', { ascending: false });
+    let queryObservable: Observable<any[]>;
 
-    // Filtro por fecha si no es 'TODOS'
-    if (fechaInicio && fechaInicio !== 'TODOS') {
-      query = query.gte('creado_en', `${fechaInicio}T00:00:00`);
-      const fFin = fechaFin || fechaInicio;
-      query = query.lte('creado_en', `${fFin}T23:59:59.999Z`);
+    if (this.supabase.isConfigured && client) {
+      let query = client
+        .from('ventas')
+        .select(selectQuery)
+        .eq('estado', 'COMPLETADA')
+        .order('creado_en', { ascending: false });
+
+      // Filtro por fecha si no es 'TODOS'
+      if (fechaInicio && fechaInicio !== 'TODOS') {
+        query = query.gte('creado_en', `${fechaInicio}T00:00:00`);
+        const fFin = fechaFin || fechaInicio;
+        query = query.lte('creado_en', `${fFin}T23:59:59.999Z`);
+      }
+
+      // Filtro por sede
+      if (targetSede && targetSede !== 'TODAS') {
+        query = query.eq('sucursal_id', targetSede);
+      }
+
+      queryObservable = from(query).pipe(
+        map(res => res.data || []),
+        catchError(() => of([]))
+      );
+    } else {
+      queryObservable = of([]);
     }
 
-    // Filtro por sede
-    if (targetSede && targetSede !== 'TODAS') {
-      query = query.eq('sucursal_id', targetSede);
-    }
+    return queryObservable.pipe(
+      map(dbRows => {
+        // Unir con las ventas locales registradas en memoria / localStorage
+        const ventasLocales = this.ventaService.ventas || [];
+        const rowsMap = new Map<string, any>();
 
-    return from(query).pipe(
-      map(res => {
-        const rows = res.data || [];
+        // 1. Agregar filas de DB
+        dbRows.forEach((r: any) => rowsMap.set(String(r.id), r));
+
+        // 2. Fusionar ventas locales que cumplan con los filtros de fecha y sede
+        ventasLocales.forEach((v: any) => {
+          if (v.estado === 'ANULADO') return;
+
+          // Validar fecha
+          if (fechaInicio && fechaInicio !== 'TODOS') {
+            const vFecha = v.fecha ? new Date(v.fecha).toLocaleDateString('en-CA') : '';
+            const fFin = fechaFin || fechaInicio;
+            if (vFecha < fechaInicio || vFecha > fFin) return;
+          }
+
+          // Validar sede
+          if (targetSede && targetSede !== 'TODAS') {
+            const vSedeId = v.sedeId;
+            if (vSedeId && vSedeId !== targetSede) return;
+          }
+
+          const vid = String(v.dbId || v.id);
+          if (!rowsMap.has(vid)) {
+            // Mapear el ticket local a la estructura uniforme esperada
+            const pagos = (v.desglose || []).map((p: any) => ({
+              metodo_pago: p.metodo,
+              monto: p.monto
+            }));
+
+            const detalles = (v.items || []).map((it: any) => {
+              const cant = Number(it.unidadesTotales || it.cantidad) || 1;
+              const unitPrice = Number(it.precioUnitario) || 0;
+              const sub = Number(it.subtotal) || (cant * unitPrice);
+              const costoU = 0.20;
+              return {
+                id: it.productoId || 'local-item',
+                producto_id: it.productoId || 'local-item',
+                cantidad: cant,
+                precio_unitario: unitPrice,
+                costo_unitario: costoU,
+                total: sub,
+                productos: {
+                  id: it.productoId,
+                  nombre_comercial: it.nombre,
+                  nombre_generico: it.principioActivo || '',
+                  concentracion: '',
+                  precio_costo: costoU,
+                  precio_venta: unitPrice,
+                  categorias_producto: { nombre: it.categoria || 'General / Medicamentos' },
+                  laboratorios: { nombre: it.laboratorio || 'Laboratorio' }
+                }
+              };
+            });
+
+            rowsMap.set(vid, {
+              id: vid,
+              total: Number(v.total) || 0,
+              subtotal: Number(v.subtotal) || 0,
+              monto_igv: Number(v.igv) || 0,
+              estado: 'COMPLETADA',
+              creado_en: v.fecha ? new Date(v.fecha).toISOString() : new Date().toISOString(),
+              sucursal_id: v.sedeId || targetSede,
+              pagos_venta: pagos.length > 0 ? pagos : [{ metodo_pago: v.metodo || 'EFECTIVO', monto: v.total }],
+              detalle_ventas: detalles
+            });
+          }
+        });
+
+        const rows = Array.from(rowsMap.values());
         if (rows.length === 0) {
           return baseResumen;
         }

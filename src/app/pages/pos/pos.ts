@@ -451,6 +451,11 @@ export class Pos implements OnInit, AfterViewInit {
       this.fondoInicial = 100.00;
       this.cajeroActual = this.authService.getUserDisplayName() || 'Cajero de Turno';
       this.fechaApertura = new Date();
+      // Si la caja no está abierta (por ejemplo, se eliminó o nunca se aperturó),
+      // abrir automáticamente el modal de apertura para ingresar el monto inicial
+      if (!this.aperturaHoyExistente) {
+        this.showAperturaModal = true;
+      }
     }
 
     this.calculateTotal();
@@ -649,12 +654,13 @@ export class Pos implements OnInit, AfterViewInit {
     return this.ventaService.getAperturaDelDia();
   }
 
-  /** True si existe algún turno/caja previo (aunque sea cerrado), lo que impide aperturar una nueva caja */
+  /** True si hoy se cerró una caja (no eliminada), permitiendo al administrador reabrirla */
   get cajaCerradaExiste(): boolean {
-    const turno = this.ventaService.getTurnoActual();
-    if (turno && turno.fechaApertura) return true;
-    const historial = this.ventaService.getHistorialTurnos();
-    return historial && historial.length > 0;
+    const turnoHoy = this.aperturaHoyExistente;
+    if (turnoHoy && !turnoHoy.cajaAbierta && turnoHoy.fechaCierre) {
+      return true;
+    }
+    return false;
   }
 
   solicitarReaperturaCaja() {

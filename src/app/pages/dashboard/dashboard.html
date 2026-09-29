@@ -17,8 +17,28 @@
         </p>
       </div>
 
-      <!-- Sede Selector & Botón Actualizar -->
+      <!-- Sede Selector, Estado de Caja & Botón Actualizar -->
       <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Indicador de Estado de Caja -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-2xs"
+          [ngClass]="cajaAbierta ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'">
+          <span class="w-2.5 h-2.5 rounded-full" [ngClass]="cajaAbierta ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"></span>
+          <span>
+            @if (cajaAbierta) {
+              Caja Abierta (Fondo: S/ {{ turnoActual.fondoInicial | number:'1.2-2' }})
+            } @else {
+              Caja Cerrada
+            }
+          </span>
+          <button
+            (click)="irAPuntoDeVenta()"
+            [title]="cajaAbierta ? 'Ir al Punto de Venta' : 'Ir a Aperturar Caja en POS'"
+            class="ml-1 text-[11px] underline hover:opacity-80 cursor-pointer font-extrabold flex items-center gap-0.5">
+            <i class="pi pi-external-link text-[10px]"></i>
+            {{ cajaAbierta ? 'POS' : 'Aperturar' }}
+          </button>
+        </div>
+
         <!-- Selector de Sede -->
         <div class="relative">
           <select

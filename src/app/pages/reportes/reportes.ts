@@ -127,16 +127,6 @@ export class Reportes implements OnInit {
     this.rangoFechasGeneral = [ini, fin];
     this.rangoFechasApertura = [ini, fin];
 
-    // Limpiar caché residual una sola vez si se solicita reset de pruebas
-    const wipeKey = 'medicare_wipe_ventas_caja_v3';
-    if (!localStorage.getItem(wipeKey)) {
-      localStorage.removeItem('historial_ventas_turno');
-      localStorage.removeItem('medicare_turno_caja_activo');
-      localStorage.removeItem('medicare_historial_turnos');
-      localStorage.removeItem('medicare_ultimo_cierre_z');
-      localStorage.setItem(wipeKey, 'true');
-    }
-
     // Cargar datos iniciales desde memoria local para renderizado instantáneo
     this.turnoActual = this.ventaService.getTurnoActual();
     this.historialTurnos = this.ventaService.getHistorialTurnos();
@@ -177,8 +167,11 @@ export class Reportes implements OnInit {
           this.ultimaConsultaNube = new Date();
           this.conteoVentasNube = ventas.length;
 
-          // Deduplicar ventas por id
+          // Deduplicar ventas por id (fusionando ventas locales en memoria con la nube)
           const mapa = new Map<string, TicketVentaDTO>();
+          this.ventaService.ventas.forEach(v => {
+            if (v && v.id) mapa.set(v.id, v);
+          });
           ventas.forEach(v => {
             if (v && v.id) mapa.set(v.id, v);
           });
@@ -198,6 +191,10 @@ export class Reportes implements OnInit {
         this.ngZone.run(() => {
           this.cargandoSupabase = false;
           console.warn('Error al consultar Supabase en Reporte General:', err);
+          const mapa = new Map<string, TicketVentaDTO>();
+          this.ventaService.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+          this.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+          this.ventas = Array.from(mapa.values());
           this.calcularReporteGeneral();
           this.cdr.markForCheck();
           this.cdr.detectChanges();
@@ -218,8 +215,9 @@ export class Reportes implements OnInit {
             this.ultimaConsultaNube = new Date();
 
             const mapa = new Map<string, TicketVentaDTO>();
-            this.ventas.forEach(v => mapa.set(v.id, v));
-            ventasDb.forEach(v => mapa.set(v.id, v));
+            this.ventaService.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+            this.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+            ventasDb.forEach(v => { if (v?.id) mapa.set(v.id, v); });
             this.ventas = Array.from(mapa.values());
 
             this.aplicarFiltrosDetallados();
@@ -230,6 +228,10 @@ export class Reportes implements OnInit {
         error: () => {
           this.ngZone.run(() => {
             this.cargandoSupabase = false;
+            const mapa = new Map<string, TicketVentaDTO>();
+            this.ventaService.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+            this.ventas.forEach(v => { if (v?.id) mapa.set(v.id, v); });
+            this.ventas = Array.from(mapa.values());
             this.aplicarFiltrosDetallados();
             this.cdr.markForCheck();
             this.cdr.detectChanges();

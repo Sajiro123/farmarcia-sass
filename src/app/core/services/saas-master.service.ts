@@ -76,6 +76,20 @@ export class SaasMasterService {
       );
       return response;
     } catch (error: any) {
+      // Si falló con el email resuelto y el usuario ingresó un texto sin @, intentar con el texto tal cual
+      const rawUser = (usernameOrEmail || '').trim();
+      if (!rawUser.includes('@') && email !== rawUser) {
+        try {
+          const retryResponse = await firstValueFrom(
+            this.http.post<SaasApiResponse<SaasAuthData>>(`${this.apiUrl}/auth/login`, {
+              email: rawUser,
+              password
+            })
+          );
+          return retryResponse;
+        } catch (ignored) {}
+      }
+
       console.error('[SaasMasterService] Error de login:', error);
       const msg = error?.error?.message || error?.message || 'Error al conectar con SaaS Master API';
       throw new Error(msg);
