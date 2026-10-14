@@ -7,7 +7,7 @@ export type TipoProducto = 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
 export interface ProductoCatalogoItem {
   id: string;
   tipoProducto: TipoProducto;
-  categoriaId?: number;
+  categoriaId?: string | null;
   categoriaNombre?: string;
   nombreComercial: string;
   sku: string;
@@ -64,8 +64,10 @@ export class ProductService {
   }
 
   private mapSupabaseToProducto(p: any): ProductoCatalogoItem {
-    const esPerfume = p.codigo_interno?.startsWith('PERF') || p.categorias_producto?.nombre?.toLowerCase().includes('perfum');
-    const esOtros = p.codigo_interno?.startsWith('OTR') || p.categorias_producto?.nombre?.toLowerCase().includes('higiene');
+    const catNom = p.categorias_producto?.nombre || 'General';
+    const catId = p.categoria_id || p.categorias_producto?.id || undefined;
+    const esPerfume = p.codigo_interno?.startsWith('PERF') || catNom.toLowerCase().includes('perfum');
+    const esOtros = p.codigo_interno?.startsWith('OTR') || catNom.toLowerCase().includes('higiene') || catNom.toLowerCase().includes('pañal') || catNom.toLowerCase().includes('labial');
     const tipo: TipoProducto = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
 
     const precioCaja = Number(p.precio_venta) || 0;
@@ -79,7 +81,8 @@ export class ProductService {
     return {
       id: p.id,
       tipoProducto: tipo,
-      categoriaNombre: p.categorias_producto?.nombre || 'General',
+      categoriaId: catId,
+      categoriaNombre: catNom,
       nombreComercial: p.nombre_comercial,
       sku: p.codigo_interno || ('MED-' + p.id.slice(0, 6)),
       codigoBarra: p.codigo_barras || undefined,
@@ -102,20 +105,23 @@ export class ProductService {
     };
   }
 
+  private readonly selectColumns = `
+    id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
+    concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
+    es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
+    precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
+    categoria_id,
+    principios_activos (nombre),
+    laboratorios (nombre),
+    categorias_producto (id, nombre, idtipoproducto)
+  `;
+
   private sincronizarConSupabase(): void {
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
       client
         .from('productos')
-        .select(`
-          id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
-          concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
-          es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
-          precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
-          principios_activos (nombre),
-          laboratorios (nombre),
-          categorias_producto (nombre)
-        `)
+        .select(this.selectColumns)
         .order('nombre_comercial', { ascending: true })
         .then(res => {
           if (res.data && Array.isArray(res.data)) {
@@ -140,15 +146,7 @@ export class ProductService {
       return from(
         client
           .from('productos')
-          .select(`
-            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
-            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
-            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
-            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
-            principios_activos (nombre),
-            laboratorios (nombre),
-            categorias_producto (nombre)
-          `)
+          .select(this.selectColumns)
           .order('nombre_comercial', { ascending: true })
       ).pipe(
         map(res => {
@@ -174,15 +172,7 @@ export class ProductService {
       return from(
         client
           .from('productos')
-          .select(`
-            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
-            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
-            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
-            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
-            principios_activos (nombre),
-            laboratorios (nombre),
-            categorias_producto (nombre)
-          `)
+          .select(this.selectColumns)
           .eq('esta_activo', true)
           .order('nombre_comercial', { ascending: true })
       ).pipe(
@@ -212,15 +202,7 @@ export class ProductService {
       return from(
         client
           .from('productos')
-          .select(`
-            id, codigo_barras, codigo_interno, nombre_comercial, nombre_generico,
-            concentracion, registro_sanitario, tipo_receta, requiere_cadena_frio,
-            es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
-            precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
-            principios_activos (nombre),
-            laboratorios (nombre),
-            categorias_producto (nombre)
-          `)
+          .select(this.selectColumns)
           .eq('id', id)
           .single()
       ).pipe(
@@ -256,21 +238,53 @@ export class ProductService {
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
-      const payload: any = {
-        id: item.id,
-        nombre_comercial: item.nombreComercial,
-        nombre_generico: item.principioActivo || item.nombreComercial,
-        codigo_interno: item.sku || ('MED-' + item.id.slice(0, 6)),
-        codigo_barras: item.codigoBarra || null,
-        precio_venta: Number(item.precioCaja) || Number(item.precioVenta) || 0,
-        precio_costo: Number(item.precioBlister) || 0, // Lo usamos temporalmente para el precio del blister
-        precio_venta_fraccion: Number(item.precioUnidad) || 0,
-        unidades_por_caja: Number(item.unidadesPorCaja) || 100,
-        concentracion: item.concentracion || null,
-        tipo_receta: item.requiereReceta ? 'RECETA_MEDICA' : 'VENTA_LIBRE',
-        esta_activo: item.estaActivo !== false
+      const ejecutarUpsert = async () => {
+        let catId = item.categoriaId || null;
+        if (!catId && item.categoriaNombre && item.categoriaNombre !== 'General') {
+          try {
+            const res = await client
+              .from('categorias_producto')
+              .select('id')
+              .ilike('nombre', item.categoriaNombre.trim())
+              .maybeSingle();
+            if (res.data?.id) {
+              catId = res.data.id;
+              item.categoriaId = catId;
+            }
+          } catch (e) {
+            console.warn('[ProductService] Error buscando categoria por nombre:', e);
+          }
+        }
+
+        const payload: any = {
+          id: item.id,
+          categoria_id: catId,
+          nombre_comercial: item.nombreComercial,
+          nombre_generico: item.principioActivo || item.nombreComercial,
+          codigo_interno: item.sku || ('MED-' + item.id.slice(0, 6)),
+          codigo_barras: item.codigoBarra || null,
+          precio_venta: Number(item.precioCaja) || Number(item.precioVenta) || 0,
+          precio_costo: Number(item.precioBlister) || 0,
+          precio_venta_fraccion: Number(item.precioUnidad) || 0,
+          unidades_por_caja: Number(item.unidadesPorCaja) || 100,
+          concentracion: item.concentracion || null,
+          tipo_receta: item.requiereReceta ? 'RECETA_MEDICA' : 'VENTA_LIBRE',
+          esta_activo: item.estaActivo !== false
+        };
+
+        const { error } = await client.from('productos').upsert(payload);
+        if (error) {
+          console.error('[ProductService] Error al guardar producto en Supabase:', error);
+        }
       };
-      client.from('productos').upsert(payload).then();
+
+      return from(ejecutarUpsert()).pipe(
+        map(() => ({ ...item })),
+        catchError(err => {
+          console.error('[ProductService] Error en upsert producto:', err);
+          return of({ ...item });
+        })
+      );
     }
 
     return of({ ...item });

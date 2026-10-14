@@ -460,6 +460,13 @@ export class Products implements OnInit, OnDestroy {
       if (!this.productoForm.precioCaja) this.productoForm.precioCaja = precio;
       this.productoForm.precioBlister = 0;
     }
+    // Asegurar categoriaId
+    if (!this.productoForm.categoriaId && this.productoForm.categoriaNombre) {
+      const encontrada = this.categorias.find(c => c.nombre.toLowerCase().trim() === this.productoForm.categoriaNombre?.toLowerCase().trim());
+      if (encontrada) {
+        this.productoForm.categoriaId = encontrada.id;
+      }
+    }
     this.productoIdEnEdicion = p.id;
     this.vistaActual = 'EDITAR';
     this.router.navigate(['/productos/editar', p.id]);
@@ -740,7 +747,17 @@ export class Products implements OnInit, OnDestroy {
     const target = event.target as HTMLSelectElement;
     if (target && target.value === '__NUEVA_CATEGORIA__') {
       this.productoForm.categoriaNombre = '';
+      this.productoForm.categoriaId = undefined;
       this.abrirModalNuevaCategoriaRapida();
+      return;
+    }
+    const selNombre = (target?.value || this.productoForm.categoriaNombre || '').trim();
+    if (selNombre) {
+      const encontrada = this.categorias.find(c => c.nombre.toLowerCase().trim() === selNombre.toLowerCase());
+      if (encontrada) {
+        this.productoForm.categoriaId = encontrada.id;
+        this.productoForm.categoriaNombre = encontrada.nombre;
+      }
     }
   }
 
@@ -782,6 +799,7 @@ export class Products implements OnInit, OnDestroy {
 
         if (esModalRapido) {
           this.productoForm.categoriaNombre = catGuardada.nombre;
+          this.productoForm.categoriaId = catGuardada.id;
           this.cerrarModalNuevaCategoriaRapida();
           this.mostrarAlerta('success', `¡Categoría "${catGuardada.nombre}" registrada con éxito (idtipoproducto: ${catGuardada.idtipoproducto}) y autoseleccionada!`);
           this.cdr.markForCheck();
@@ -789,11 +807,13 @@ export class Products implements OnInit, OnDestroy {
           // Asegurar autoselección en el select de la plantilla tras el ciclo de detección
           setTimeout(() => {
             this.productoForm.categoriaNombre = catGuardada.nombre;
+            this.productoForm.categoriaId = catGuardada.id;
             this.cdr.markForCheck();
           }, 50);
         } else {
           if (this.vistaActual !== 'GRILLA') {
             this.productoForm.categoriaNombre = catGuardada.nombre;
+            this.productoForm.categoriaId = catGuardada.id;
           }
           const idTipoActual = mapTipoProductoToIdTipo(this.tipoSeleccionado);
           this.categoriaForm = { nombre: '', idtipoproducto: idTipoActual, tipoAsociado: this.tipoSeleccionado, descripcion: '' };
@@ -854,6 +874,7 @@ export class Products implements OnInit, OnDestroy {
       this.mostrarAlerta('info', `Filtro aplicado: Mostrando productos de categoría "${cat.nombre}".`);
     } else {
       this.productoForm.categoriaNombre = cat.nombre;
+      this.productoForm.categoriaId = cat.id;
       this.cerrarModalCategorias();
       this.mostrarAlerta('success', `Categoría "${cat.nombre}" seleccionada para el producto.`);
     }
