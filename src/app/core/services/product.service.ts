@@ -27,6 +27,7 @@ export interface ProductoCatalogoItem {
 
   // Específicos Medicamentos
   requiereReceta?: boolean;
+  laboratorioId?: string | null;
   laboratorio?: string;
   principioActivo?: string;
   concentracion?: string;
@@ -99,7 +100,8 @@ export class ProductService {
       creadoEn: p.creado_en ? p.creado_en.split('T')[0] : new Date().toLocaleDateString('en-CA'),
       requiereReceta: p.tipo_receta === 'RECETA_MEDICA' || p.tipo_receta === 'RECETA_RETENIDA',
       esControlado: p.tipo_receta === 'RECETA_RETENIDA',
-      laboratorio: p.laboratorios?.nombre || 'Genfar',
+      laboratorioId: p.laboratorio_id || p.laboratorios?.id || null,
+      laboratorio: p.laboratorios?.nombre || (p.laboratorio ? p.laboratorio : ''),
       principioActivo: p.principios_activos?.nombre || p.nombre_generico || 'Genérico',
       concentracion: p.concentracion || ''
     };
@@ -111,8 +113,9 @@ export class ProductService {
     es_fraccionable, unidades_por_caja, precio_costo, precio_venta,
     precio_venta_fraccion, stock_minimo, stock_maximo, esta_activo, creado_en,
     categoria_id,
+    laboratorio_id,
     principios_activos (nombre),
-    laboratorios (nombre),
+    laboratorios (id, nombre),
     categorias_producto (id, nombre, idtipoproducto)
   `;
 
@@ -256,9 +259,51 @@ export class ProductService {
           }
         }
 
+        // Resolver laboratorio_id
+        let labId: string | null = null;
+        if (item.laboratorio && item.laboratorio.trim()) {
+          const labNombre = item.laboratorio.trim();
+          try {
+            if (item.laboratorioId) {
+              const resCheck = await client
+                .from('laboratorios')
+                .select('id, nombre')
+                .eq('id', item.laboratorioId)
+                .maybeSingle();
+              if (resCheck.data && resCheck.data.nombre.toLowerCase().trim() === labNombre.toLowerCase()) {
+                labId = item.laboratorioId;
+              }
+            }
+
+            if (!labId) {
+              const resLab = await client
+                .from('laboratorios')
+                .select('id')
+                .ilike('nombre', labNombre)
+                .maybeSingle();
+              if (resLab.data?.id) {
+                labId = resLab.data.id;
+              } else {
+                // Si no existe, crearlo automáticamente en la tabla laboratorios
+                const nuevoLabId = crypto.randomUUID();
+                const insertLab = await client.from('laboratorios').insert({
+                  id: nuevoLabId,
+                  nombre: labNombre,
+                  esta_activo: true
+                }).select('id').maybeSingle();
+                labId = insertLab.data?.id || nuevoLabId;
+              }
+            }
+            item.laboratorioId = labId;
+          } catch (e) {
+            console.warn('[ProductService] Error resolviendo laboratorio:', e);
+          }
+        }
+
         const payload: any = {
           id: item.id,
           categoria_id: catId,
+          laboratorio_id: labId,
           nombre_comercial: item.nombreComercial,
           nombre_generico: item.principioActivo || item.nombreComercial,
           codigo_interno: item.sku || ('MED-' + item.id.slice(0, 6)),
@@ -288,6 +333,26 @@ export class ProductService {
     }
 
     return of({ ...item });
+  }
+
+  /**
+   * Listar todos los laboratorios activos desde Supabase
+   */
+  listarLaboratorios(): Observable<{ id: string; nombre: string; pais?: string }[]> {
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      return from(
+        client
+          .from('laboratorios')
+          .select('id, nombre, pais')
+          .eq('esta_activo', true)
+          .order('nombre', { ascending: true })
+      ).pipe(
+        map(res => (res.data && Array.isArray(res.data)) ? res.data : []),
+        catchError(() => of([]))
+      );
+    }
+    return of([]);
   }
 
   /**

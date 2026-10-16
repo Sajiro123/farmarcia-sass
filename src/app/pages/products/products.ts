@@ -62,13 +62,17 @@ export class Products implements OnInit, OnDestroy {
     descripcion: ''
   };
 
+  // Gestión de Laboratorios
+  laboratorios: { id: string; nombre: string; pais?: string }[] = [];
+  cargandoLaboratorios = false;
+
   // Filtros de la Grilla
   busquedaGrilla = '';
   filtroTipo: 'TODOS' | 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = 'TODOS';
   filtroCondicion: 'TODOS' | 'RECETA' | 'VENTA_LIBRE' = 'TODOS';
   filtroEstado: 'TODOS' | 'ACTIVO' | 'INACTIVO' = 'TODOS';
   filtroCategoria: string = 'TODOS';
-  ordenarPor: 'NOMBRE_ASC' | 'NOMBRE_DESC' | 'PRECIO_ASC' | 'PRECIO_DESC' | 'CATEGORIA_ASC' = 'NOMBRE_ASC';
+  ordenarPor: 'NOMBRE_ASC' | 'NOMBRE_DESC' | 'PRECIO_ASC' | 'PRECIO_DESC' | 'CATEGORIA_ASC' | 'LABORATORIO_ASC' = 'NOMBRE_ASC';
 
   // Búsqueda en tabla de recientes (vista nuevo)
   busquedaRecientes = '';
@@ -80,6 +84,7 @@ export class Products implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.detectarRutaActual();
     this.cargarCategorias();
+    this.cargarLaboratorios();
     this.cargarProductos();
 
     // Escuchar cambios de ruta para alternar entre /productos, /productos/nuevo y /productos/editar/:id
@@ -94,6 +99,22 @@ export class Products implements OnInit, OnDestroy {
     if (this.routerSub) {
       this.routerSub.unsubscribe();
     }
+  }
+
+  cargarLaboratorios(): void {
+    this.cargandoLaboratorios = true;
+    this.productService.listarLaboratorios().subscribe({
+      next: (labs) => {
+        this.laboratorios = labs;
+        this.cargandoLaboratorios = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al cargar laboratorios:', err);
+        this.cargandoLaboratorios = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   cargarCategorias(): void {
@@ -272,7 +293,9 @@ export class Products implements OnInit, OnDestroy {
         ubicacionAlmacen: '',
         descripcion: '',
         estaActivo: true,
-        requiereReceta: false
+        requiereReceta: false,
+        laboratorio: '',
+        laboratorioId: null
       };
     } else if (tipo === 'PERFUME') {
       return {
@@ -405,6 +428,11 @@ export class Products implements OnInit, OnDestroy {
       if (!this.productoForm.precioCaja) this.productoForm.precioCaja = this.productoForm.precioVenta;
       this.productoForm.precioBlister = 0;
     } else {
+      if (!this.productoForm.laboratorio?.trim()) {
+        this.mostrarAlerta('error', 'Por favor especifique o seleccione el Laboratorio Fabricante.');
+        return;
+      }
+
       const pUnidad = Number(this.productoForm.precioUnidad) || 0;
       const pBlister = Number(this.productoForm.precioBlister) || 0;
       const pCaja = Number(this.productoForm.precioCaja) || 0;
@@ -432,6 +460,7 @@ export class Products implements OnInit, OnDestroy {
           : `Producto "${guardado.nombreComercial}" guardado exitosamente en el catálogo.`;
         this.mostrarAlerta('success', msg);
         this.cargarProductos();
+        this.cargarLaboratorios();
         this.volverAGrilla();
         this.cdr.markForCheck();
       },
@@ -442,6 +471,22 @@ export class Products implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  onLaboratorioChange(event?: any): void {
+    const val = (this.productoForm.laboratorio || '').trim();
+    if (val) {
+      const encontrado = this.laboratorios.find(l => l.nombre.toLowerCase().trim() === val.toLowerCase());
+      if (encontrado) {
+        this.productoForm.laboratorioId = encontrado.id;
+        this.productoForm.laboratorio = encontrado.nombre;
+      } else {
+        this.productoForm.laboratorioId = null;
+      }
+    } else {
+      this.productoForm.laboratorioId = null;
+    }
+    this.cdr.markForCheck();
   }
 
   editarProducto(p: ProductoCatalogoItem): void {
@@ -465,6 +510,15 @@ export class Products implements OnInit, OnDestroy {
       const encontrada = this.categorias.find(c => c.nombre.toLowerCase().trim() === this.productoForm.categoriaNombre?.toLowerCase().trim());
       if (encontrada) {
         this.productoForm.categoriaId = encontrada.id;
+      }
+    }
+    // Asegurar laboratorio y laboratorioId
+    this.productoForm.laboratorio = p.laboratorio || '';
+    this.productoForm.laboratorioId = p.laboratorioId || null;
+    if (!this.productoForm.laboratorioId && this.productoForm.laboratorio) {
+      const lab = this.laboratorios.find(l => l.nombre.toLowerCase().trim() === this.productoForm.laboratorio?.toLowerCase().trim());
+      if (lab) {
+        this.productoForm.laboratorioId = lab.id;
       }
     }
     this.productoIdEnEdicion = p.id;
@@ -595,6 +649,9 @@ export class Products implements OnInit, OnDestroy {
       case 'CATEGORIA_ASC':
         result.sort((a, b) => (a.categoriaNombre || '').localeCompare(b.categoriaNombre || ''));
         break;
+      case 'LABORATORIO_ASC':
+        result.sort((a, b) => (a.laboratorio || a.marca || '').localeCompare(b.laboratorio || b.marca || ''));
+        break;
     }
 
     return result;
@@ -648,13 +705,15 @@ export class Products implements OnInit, OnDestroy {
     }
   }
 
-  alternarOrden(criterio: 'NOMBRE' | 'PRECIO' | 'CATEGORIA'): void {
+  alternarOrden(criterio: 'NOMBRE' | 'PRECIO' | 'CATEGORIA' | 'LABORATORIO'): void {
     if (criterio === 'NOMBRE') {
       this.ordenarPor = this.ordenarPor === 'NOMBRE_ASC' ? 'NOMBRE_DESC' : 'NOMBRE_ASC';
     } else if (criterio === 'PRECIO') {
       this.ordenarPor = this.ordenarPor === 'PRECIO_ASC' ? 'PRECIO_DESC' : 'PRECIO_ASC';
     } else if (criterio === 'CATEGORIA') {
       this.ordenarPor = this.ordenarPor === 'CATEGORIA_ASC' ? 'NOMBRE_ASC' : 'CATEGORIA_ASC';
+    } else if (criterio === 'LABORATORIO') {
+      this.ordenarPor = this.ordenarPor === 'LABORATORIO_ASC' ? 'NOMBRE_ASC' : 'LABORATORIO_ASC';
     }
     this.paginaActual = 1;
     this.cdr.markForCheck();
