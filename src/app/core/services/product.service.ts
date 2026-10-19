@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { Observable, of, from, map, catchError } from 'rxjs';
+import { Observable, of, from, map, catchError, throwError } from 'rxjs';
 
 export type TipoProducto = 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
 
@@ -317,9 +317,38 @@ export class ProductService {
           esta_activo: item.estaActivo !== false
         };
 
-        const { error } = await client.from('productos').upsert(payload);
-        if (error) {
-          console.error('[ProductService] Error al guardar producto en Supabase:', error);
+        let intento = 0;
+        let resultado = await client.from('productos').upsert(payload);
+
+        // Si ocurre error de clave duplicada (código 23505 en codigo_interno/SKU),
+        // agregarle internamente un número aleatorio más y reintentar de inmediato
+        while (resultado.error && intento < 5) {
+          const err = resultado.error;
+          const esColisionSku =
+            err.code === '23505' &&
+            (err.message?.includes('codigo_interno') || (err.details && err.details.includes('codigo_interno')));
+
+          if (esColisionSku) {
+            // Le agrega internamente un número aleatorio adicional al SKU (ej. OTR-222 -> OTR-222-7)
+            const numAleatorio = Math.floor(1 + Math.random() * 9);
+            payload.codigo_interno = `${payload.codigo_interno}-${numAleatorio}`;
+            item.sku = payload.codigo_interno;
+            intento++;
+            resultado = await client.from('productos').upsert(payload);
+          } else {
+            break;
+          }
+        }
+
+        if (resultado.error) {
+          console.error('[ProductService] Error al guardar producto en Supabase:', resultado.error);
+          throw resultado.error;
+        }
+
+        // Asegurar que el catálogo local mantenga el SKU definitivo persistido
+        const localIdx = this.productosCatalogo.findIndex(p => p.id === item.id);
+        if (localIdx >= 0) {
+          this.productosCatalogo[localIdx].sku = item.sku;
         }
       };
 
@@ -327,7 +356,7 @@ export class ProductService {
         map(() => ({ ...item })),
         catchError(err => {
           console.error('[ProductService] Error en upsert producto:', err);
-          return of({ ...item });
+          return throwError(() => err);
         })
       );
     }
@@ -356,14 +385,90 @@ export class ProductService {
   }
 
   /**
-   * Eliminar un producto del catálogo maestro (soft delete en Supabase)
+   * Eliminar permanentemente un producto de la base de datos Supabase y de la memoria local.
+   * Elimina en cascada inventario y lotes asociados, y borra el registro de la tabla 'productos'.
    */
   eliminarDelCatalogo(id: string): Observable<boolean> {
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      const ejecutarEliminar = async (): Promise<boolean> => {
+        try {
+          // 1. Obtener los IDs de los lotes asociados al producto para evitar violaciones de clave foránea
+          const { data: lotes } = await client
+            .from('lotes_producto')
+            .select('id')
+            .eq('producto_id', id);
+
+          const loteIds = (lotes || []).map(l => l.id);
+
+          // 2. Eliminar registros de inventario (por lote_id y por producto_id)
+          if (loteIds.length > 0) {
+            await client.from('stock_inventario').delete().in('lote_id', loteIds);
+          }
+          await client.from('stock_inventario').delete().eq('producto_id', id);
+
+          // 3. Eliminar los lotes del producto
+          await client.from('lotes_producto').delete().eq('producto_id', id);
+
+          // 4. Eliminar el producto definitivamente de la tabla 'productos' en Supabase
+          const { error } = await client
+            .from('productos')
+            .delete()
+            .eq('id', id);
+
+          if (error) {
+            console.error('[ProductService] Error al eliminar producto en Supabase:', error);
+            return false;
+          }
+
+          // 5. Remover del catálogo local en memoria
+          this.productosCatalogo = this.productosCatalogo.filter(p => p.id !== id);
+          return true;
+        } catch (err) {
+          console.error('[ProductService] Excepción al eliminar producto en Supabase:', err);
+          return false;
+        }
+      };
+
+      return from(ejecutarEliminar());
+    }
+
     this.productosCatalogo = this.productosCatalogo.filter(p => p.id !== id);
+    return of(true);
+  }
+
+  /**
+   * Cambiar el estado (activar / desactivar) de un producto en Supabase y localmente.
+   * Permite mantener el producto en el catálogo pero deshabilitado para ventas.
+   */
+  cambiarEstadoProducto(id: string, estaActivo: boolean): Observable<boolean> {
+    const item = this.productosCatalogo.find(p => p.id === id);
+    if (item) {
+      item.estaActivo = estaActivo;
+    }
 
     const client = this.supabase.client;
     if (this.supabase.isConfigured && client) {
-      client.from('productos').update({ esta_activo: false }).eq('id', id).then();
+      return from(
+        client
+          .from('productos')
+          .update({ esta_activo: estaActivo })
+          .eq('id', id)
+      ).pipe(
+        map(res => {
+          if (res.error) {
+            console.error('[ProductService] Error al actualizar estado en Supabase:', res.error);
+            if (item) item.estaActivo = !estaActivo;
+            return false;
+          }
+          return true;
+        }),
+        catchError(err => {
+          console.error('[ProductService] Excepción al actualizar estado:', err);
+          if (item) item.estaActivo = !estaActivo;
+          return of(false);
+        })
+      );
     }
 
     return of(true);

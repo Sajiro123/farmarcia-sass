@@ -45,6 +45,11 @@ export class Products implements OnInit, OnDestroy {
   cargando = false;
   guardando = false;
 
+  // Modal de confirmación para eliminar de la base de datos (Tacho)
+  mostrarModalEliminar = false;
+  productoAEliminar: ProductoCatalogoItem | null = null;
+  eliminandoProducto = false;
+
   // Gestión de Categorías
   categorias: CategoriaItem[] = [];
   cargandoCategorias = false;
@@ -370,8 +375,32 @@ export class Products implements OnInit, OnDestroy {
 
   generarSkuAutomatico(tipo: TipoProducto): string {
     const prefijo = tipo === 'MEDICAMENTO' ? 'MED' : (tipo === 'PERFUME' ? 'PERF' : 'OTR');
-    const rand = Math.floor(100 + Math.random() * 900);
-    return `${prefijo}-${rand}`;
+    
+    // Conjunto de todos los SKUs existentes para evitar colisiones
+    const skusExistentes = new Set(
+      (this.productos || [])
+        .concat(this.productService.productosCatalogo || [])
+        .map(p => (p.sku || '').toUpperCase().trim())
+        .filter(s => !!s)
+    );
+
+    // Encontrar el número secuencial más alto disponible (inicia en 1000)
+    let numSiguiente = 1000;
+    skusExistentes.forEach(s => {
+      if (s.startsWith(prefijo + '-')) {
+        const numPart = parseInt(s.replace(prefijo + '-', ''), 10);
+        if (!isNaN(numPart) && numPart >= numSiguiente && numPart < 99000) {
+          numSiguiente = numPart + 1;
+        }
+      }
+    });
+
+    let candidato = `${prefijo}-${numSiguiente}`;
+    while (skusExistentes.has(candidato)) {
+      numSiguiente++;
+      candidato = `${prefijo}-${numSiguiente}`;
+    }
+    return candidato;
   }
 
   onPrecioPerfumeChange(valor: any): void {
@@ -394,6 +423,19 @@ export class Products implements OnInit, OnDestroy {
 
     if (!sku) {
       this.mostrarAlerta('error', 'El código SKU es obligatorio.');
+      return;
+    }
+
+    // Validar preventivamente duplicados de SKU en memoria local
+    const skuDuplicado = (this.productos || []).find(p =>
+      p.sku?.toUpperCase().trim() === sku.toUpperCase().trim() &&
+      String(p.id) !== String(this.productoForm.id)
+    );
+    if (skuDuplicado) {
+      this.mostrarAlerta(
+        'error',
+        `El código SKU "${sku}" ya pertenece a "${skuDuplicado.nombreComercial}". Haz clic en el botón "Auto" para generar un código único.`
+      );
       return;
     }
 
@@ -455,9 +497,10 @@ export class Products implements OnInit, OnDestroy {
     this.productService.guardarEnCatalogo(this.productoForm).subscribe({
       next: (guardado) => {
         this.guardando = false;
+        const skuInfo = guardado.sku !== sku ? ` (SKU asignado: ${guardado.sku})` : '';
         const msg = esEdit
-          ? `Producto "${guardado.nombreComercial}" actualizado exitosamente.`
-          : `Producto "${guardado.nombreComercial}" guardado exitosamente en el catálogo.`;
+          ? `Producto "${guardado.nombreComercial}" actualizado exitosamente${skuInfo}.`
+          : `Producto "${guardado.nombreComercial}" guardado exitosamente en el catálogo${skuInfo}.`;
         this.mostrarAlerta('success', msg);
         this.cargarProductos();
         this.cargarLaboratorios();
@@ -467,7 +510,14 @@ export class Products implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error al guardar producto:', err);
         this.guardando = false;
-        this.mostrarAlerta('error', 'Ocurrió un error al guardar el producto en el catálogo.');
+        if (err?.code === '23505' || err?.message?.includes('codigo_interno') || err?.details?.includes('codigo_interno')) {
+          this.mostrarAlerta(
+            'error',
+            `El código SKU "${sku}" ya está registrado en la base de datos de Supabase. Haz clic en "Auto" para generar un SKU único.`
+          );
+        } else {
+          this.mostrarAlerta('error', `Error al guardar en la base de datos: ${err?.message || 'Error desconocido'}`);
+        }
         this.cdr.markForCheck();
       }
     });
@@ -531,26 +581,87 @@ export class Products implements OnInit, OnDestroy {
 
   alternarEstadoProducto(p: ProductoCatalogoItem, event?: Event): void {
     if (event) event.stopPropagation();
-    p.estaActivo = !p.estaActivo;
-    this.productService.guardarEnCatalogo(p).subscribe({
-      next: (actualizado) => {
-        this.mostrarAlerta(actualizado.estaActivo ? 'success' : 'info',
-          `Producto "${actualizado.nombreComercial}" ${actualizado.estaActivo ? 'activado' : 'desactivado'}.`);
+    const nuevoEstado = !p.estaActivo;
+    this.productService.cambiarEstadoProducto(p.id, nuevoEstado).subscribe({
+      next: (ok) => {
+        if (ok) {
+          p.estaActivo = nuevoEstado;
+          this.mostrarAlerta(
+            nuevoEstado ? 'success' : 'info',
+            `Producto "${p.nombreComercial}" ${nuevoEstado ? 'activado' : 'desactivado'}.`
+          );
+        } else {
+          this.mostrarAlerta('error', `No se pudo cambiar el estado de "${p.nombreComercial}".`);
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.mostrarAlerta('error', `Error de conexión al cambiar el estado.`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // ==========================================
+  // GESTIÓN DEL TACHO / ELIMINAR DE BASE DE DATOS
+  // ==========================================
+
+  abrirModalEliminar(p: ProductoCatalogoItem, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.productoAEliminar = p;
+    this.mostrarModalEliminar = true;
+    this.cdr.markForCheck();
+  }
+
+  cancelarEliminar(): void {
+    if (this.eliminandoProducto) return;
+    this.mostrarModalEliminar = false;
+    this.productoAEliminar = null;
+    this.cdr.markForCheck();
+  }
+
+  confirmarEliminarDeBaseDatos(): void {
+    if (!this.productoAEliminar || !this.productoAEliminar.id) return;
+    const prod = this.productoAEliminar;
+    this.eliminandoProducto = true;
+    this.cdr.markForCheck();
+
+    this.productService.eliminarDelCatalogo(prod.id).subscribe({
+      next: (eliminado) => {
+        this.eliminandoProducto = false;
+        this.mostrarModalEliminar = false;
+        if (eliminado) {
+          // Remover inmediatamente del listado en memoria y grilla
+          this.productos = this.productos.filter(item => item.id !== prod.id);
+          if (this.paginaActual > 1 && this.productosPaginados.length === 0) {
+            this.paginaActual--;
+          }
+          this.mostrarAlerta(
+            'success',
+            `¡Producto "${prod.nombreComercial}" eliminado definitivamente de la base de datos de Supabase!`
+          );
+          if (this.vistaActual !== 'GRILLA') {
+            this.volverAGrilla();
+          }
+        } else {
+          this.mostrarAlerta('error', `No se pudo eliminar "${prod.nombreComercial}" de la base de datos.`);
+        }
+        this.productoAEliminar = null;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al eliminar producto de BD:', err);
+        this.eliminandoProducto = false;
+        this.mostrarModalEliminar = false;
+        this.productoAEliminar = null;
+        this.mostrarAlerta('error', `Error de conexión al eliminar el producto de la base de datos.`);
         this.cdr.markForCheck();
       }
     });
   }
 
   eliminarProducto(p: ProductoCatalogoItem): void {
-    if (!confirm(`¿Estás seguro de eliminar "${p.nombreComercial}" del catálogo?`)) return;
-
-    this.productService.eliminarDelCatalogo(p.id).subscribe({
-      next: () => {
-        this.mostrarAlerta('success', `Producto "${p.nombreComercial}" eliminado del catálogo.`);
-        this.cargarProductos();
-        this.cdr.markForCheck();
-      }
-    });
+    this.abrirModalEliminar(p);
   }
 
   mostrarAlerta(tipo: 'success' | 'error' | 'info', texto: string): void {
@@ -567,6 +678,14 @@ export class Products implements OnInit, OnDestroy {
   // KPIs y Contadores
   get totalProductos(): number {
     return this.productos.length;
+  }
+
+  get totalActivos(): number {
+    return this.productos.filter(p => p.estaActivo).length;
+  }
+
+  get totalDesactivados(): number {
+    return this.productos.filter(p => !p.estaActivo).length;
   }
 
   get totalMedicamentos(): number {

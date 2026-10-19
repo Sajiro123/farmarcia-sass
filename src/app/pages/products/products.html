@@ -86,15 +86,15 @@
 
       <!-- FILTROS Y BUSCADORES INTEGRADOS -->
       <div class="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-sm">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-center">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 items-center">
           
           <!-- Buscador principal -->
-          <div class="sm:col-span-2 md:col-span-4 relative">
+          <div class="relative">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
             <input type="text"
               [(ngModel)]="busquedaGrilla"
               (ngModelChange)="paginaActual = 1"
-              placeholder="Buscar por nombre, SKU, código de barras, marca..."
+              placeholder="Buscar por nombre, SKU, marca..."
               class="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
             @if (busquedaGrilla) {
               <button (click)="busquedaGrilla = ''; paginaActual = 1" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -104,7 +104,7 @@
           </div>
 
           <!-- Filtro Tipo de Producto -->
-          <div class="sm:col-span-1 md:col-span-2">
+          <div>
             <select [(ngModel)]="filtroTipo"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -116,7 +116,7 @@
           </div>
 
           <!-- Filtro Categoría -->
-          <div class="sm:col-span-1 md:col-span-2">
+          <div>
             <select [(ngModel)]="filtroCategoria"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -128,7 +128,7 @@
           </div>
 
           <!-- Filtro Condición de Venta -->
-          <div class="sm:col-span-1 md:col-span-2">
+          <div>
             <select [(ngModel)]="filtroCondicion"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -138,8 +138,19 @@
             </select>
           </div>
 
+          <!-- Filtro Estado (Activo / Desactivado) -->
+          <div>
+            <select [(ngModel)]="filtroEstado"
+              (ngModelChange)="paginaActual = 1"
+              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+              <option value="TODOS">⚡ Todos los Estados</option>
+              <option value="ACTIVO">🟢 Solo Activos</option>
+              <option value="INACTIVO">⚪ Solo Desactivados</option>
+            </select>
+          </div>
+
           <!-- Ordenar Por -->
-          <div class="sm:col-span-1 md:col-span-2">
+          <div>
             <select [(ngModel)]="ordenarPor"
               (ngModelChange)="paginaActual = 1"
               class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
@@ -159,7 +170,7 @@
             <div class="flex items-center gap-2">
               <i class="fa-solid fa-filter text-emerald-600 text-xs"></i>
               <span class="font-medium text-slate-700">Filtros aplicados:</span>
-              <span>Mostrando {{ productosGrillaFiltrados.length }} de {{ productos.length }} productos</span>
+              <span>Mostrando {{ productosGrillaFiltrados.length }} de {{ productos.length }} productos ({{ totalActivos }} activos, {{ totalDesactivados }} desactivados)</span>
             </div>
             <button (click)="limpiarFiltrosGrilla()"
               class="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline flex items-center gap-1.5">
@@ -237,7 +248,7 @@
             <!-- CUERPO DE LA TABLA -->
             <tbody class="divide-y divide-slate-100 text-xs">
               @for (p of productosPaginados; track p.id) {
-                <tr class="hover:bg-slate-50/90 transition-colors group">
+                <tr class="hover:bg-slate-50/90 transition-colors group" [ngClass]="{ 'bg-slate-50/60 opacity-75': !p.estaActivo }">
                   <!-- Tipo & SKU Compactos -->
                   <td class="py-2 px-3 whitespace-nowrap">
                     <div class="flex items-center gap-1.5">
@@ -413,24 +424,36 @@
                   <td class="py-2 px-2.5 text-center whitespace-nowrap">
                     <button type="button" (click)="alternarEstadoProducto(p, $event)"
                       [title]="p.estaActivo ? 'Haga clic para desactivar producto' : 'Haga clic para activar producto'"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer"
-                      [ngClass]="p.estaActivo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'">
-                      <i class="fa-solid text-[6px]" [ngClass]="p.estaActivo ? 'fa-circle text-emerald-500' : 'fa-circle text-slate-400'"></i>
-                      <span>{{ p.estaActivo ? 'Activo' : 'Inactivo' }}</span>
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all hover:scale-105 cursor-pointer shadow-2xs"
+                      [ngClass]="p.estaActivo ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-300 hover:bg-slate-200'">
+                      <i class="fa-solid text-[7px]" [ngClass]="p.estaActivo ? 'fa-circle text-emerald-500' : 'fa-circle text-slate-400'"></i>
+                      <span>{{ p.estaActivo ? 'Activo' : 'Desactivado' }}</span>
                     </button>
                   </td>
 
                   <!-- Acciones Fijas y Siempre Visibles -->
-                  <td class="py-2 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)]">
+                  <td class="py-2 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.06)]"
+                    [class.bg-slate-50]="!p.estaActivo">
                     <div class="flex items-center justify-end gap-1.5">
+                      <!-- 1. Desactivar / Activar -->
+                      <button type="button" (click)="alternarEstadoProducto(p, $event)"
+                        [title]="p.estaActivo ? 'Desactivar producto (mantener en catálogo pero inhabilitar para venta)' : 'Activar producto para ventas'"
+                        class="p-1.5 rounded-lg border transition-all shadow-2xs cursor-pointer hover:scale-105"
+                        [ngClass]="p.estaActivo ? 'text-amber-600 bg-amber-50/70 hover:bg-amber-100 border-amber-200' : 'text-emerald-600 bg-emerald-50/70 hover:bg-emerald-100 border-emerald-200'">
+                        <i class="fa-solid text-xs" [ngClass]="p.estaActivo ? 'fa-ban' : 'fa-check'"></i>
+                      </button>
+
+                      <!-- 2. Editar ficha técnica -->
                       <button (click)="editarProducto(p)"
-                        title="Editar ficha"
+                        title="Editar ficha técnica"
                         class="p-1.5 rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-colors shadow-2xs cursor-pointer">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                       </button>
-                      <button (click)="eliminarProducto(p)"
-                        title="Eliminar del catálogo"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors shadow-2xs cursor-pointer">
+
+                      <!-- 3. Eliminar definitivamente de la Base de Datos (Tacho) -->
+                      <button type="button" (click)="abrirModalEliminar(p, $event)"
+                        title="Eliminar de la Base de Datos (tacho)"
+                        class="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 hover:border-rose-300 transition-colors shadow-2xs cursor-pointer">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                       </button>
                     </div>
@@ -438,7 +461,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="py-14 text-center text-slate-400">
+                  <td colspan="8" class="py-14 text-center text-slate-400">
                     <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                       <i class="fa-solid fa-box-open text-2xl"></i>
                     </div>
@@ -1164,6 +1187,13 @@
                 class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-2">
                 <i class="fa-solid fa-xmark text-slate-400 text-xs"></i>
                 <span>Cancelar Edición</span>
+              </button>
+
+              <button type="button"
+                (click)="abrirModalEliminar(productoForm)"
+                class="px-5 py-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-2">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+                <span>Eliminar de Base de Datos</span>
               </button>
             }
 
@@ -1930,6 +1960,83 @@
             class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-circle-check text-xs"></i>
             <span>Crear y Seleccionar</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CONFIRMAR ELIMINACIÓN DE BASE DE DATOS (TACHO)     -->
+  <!-- ======================================================== -->
+  @if (mostrarModalEliminar && productoAEliminar) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
+        
+        <!-- Header con Icono de Tacho Rojo -->
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0 text-xl shadow-xs">
+            <i class="fa-solid fa-trash-can"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-base font-black text-slate-900 tracking-tight">¿Eliminar Producto de la Base de Datos?</h3>
+            <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              Estás a punto de borrar definitivamente este producto de la tabla <strong class="text-slate-800">productos</strong> en Supabase.
+            </p>
+          </div>
+        </div>
+
+        <!-- Ficha Resumen del Producto a Eliminar -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+          <div class="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+            <span class="text-slate-500 font-medium">Producto:</span>
+            <strong class="text-slate-900 font-bold truncate max-w-[220px]" [title]="productoAEliminar.nombreComercial">
+              {{ productoAEliminar.nombreComercial }}
+            </strong>
+          </div>
+          <div class="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+            <span class="text-slate-500 font-medium">SKU / Código:</span>
+            <span class="font-mono font-bold text-slate-700">{{ productoAEliminar.sku }}</span>
+          </div>
+          <div class="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+            <span class="text-slate-500 font-medium">Categoría / Tipo:</span>
+            <span class="font-semibold text-slate-700">{{ productoAEliminar.categoriaNombre || 'General' }} ({{ productoAEliminar.tipoProducto }})</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 font-medium">Precio Venta:</span>
+            <span class="font-mono font-bold text-emerald-700">S/ {{ (productoAEliminar.precioVenta || 0) | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Advertencia de Eliminación Permanente -->
+        <div class="p-3 bg-rose-50/80 rounded-2xl border border-rose-200 text-[11px] text-rose-800 flex items-start gap-2.5 leading-relaxed">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 shrink-0 text-sm mt-0.5"></i>
+          <div>
+            <strong class="font-bold block">Esta acción no se puede deshacer:</strong>
+            <span>El registro se eliminará permanentemente de Supabase junto con sus lotes y stock. No se volverá a mostrar en el catálogo ni en el punto de venta.</span>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <button type="button"
+            (click)="cancelarEliminar()"
+            [disabled]="eliminandoProducto"
+            class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50">
+            Cancelar
+          </button>
+          <button type="button"
+            (click)="confirmarEliminarDeBaseDatos()"
+            [disabled]="eliminandoProducto"
+            class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
+            @if (eliminandoProducto) {
+              <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+              <span>Eliminando de BD...</span>
+            } @else {
+              <i class="fa-solid fa-trash-can text-xs"></i>
+              <span>Sí, Eliminar de la Base de Datos</span>
+            }
           </button>
         </div>
 
