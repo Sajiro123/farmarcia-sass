@@ -946,6 +946,17 @@ export class Products implements OnInit, OnDestroy {
       return;
     }
 
+    // Verificar si ya existe una categoría con este nombre
+    const catExistente = this.categorias.find(c => c.nombre.toLowerCase().trim() === nom.toLowerCase());
+    if (esModalRapido && catExistente) {
+      this.productoForm.categoriaNombre = catExistente.nombre;
+      this.productoForm.categoriaId = catExistente.id;
+      this.cerrarModalNuevaCategoriaRapida();
+      this.mostrarAlerta('info', `La categoría "${catExistente.nombre}" ya existe en el catálogo y ha sido autoseleccionada.`);
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.guardandoCategoria = true;
     this.cdr.markForCheck();
 
@@ -956,7 +967,7 @@ export class Products implements OnInit, OnDestroy {
     const tipoDestino = mapIdTipoToTipoProducto(idTipo);
 
     const payload: Partial<CategoriaItem> = {
-      id: this.categoriaEnEdicionId || undefined,
+      id: this.categoriaEnEdicionId || catExistente?.id || undefined,
       nombre: nom,
       idtipoproducto: idTipo,
       tipoAsociado: tipoDestino,
@@ -1007,7 +1018,11 @@ export class Products implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error al guardar categoría:', err);
         this.guardandoCategoria = false;
-        this.mostrarAlerta('error', 'Ocurrió un error al guardar la categoría.');
+        if (err?.code === '23505' || err?.message?.includes('nombre') || err?.details?.includes('nombre')) {
+          this.mostrarAlerta('error', `Ya existe una categoría registrada con el nombre "${nom}".`);
+        } else {
+          this.mostrarAlerta('error', 'Ocurrió un error al guardar la categoría.');
+        }
         this.cdr.markForCheck();
       }
     });

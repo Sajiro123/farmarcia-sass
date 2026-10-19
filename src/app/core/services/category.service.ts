@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, from, map, catchError } from 'rxjs';
+import { Observable, of, from, map, catchError, throwError } from 'rxjs';
 import { TipoProducto } from './product.service';
 import { SupabaseService } from './supabase.service';
 
@@ -130,53 +130,103 @@ export class CategoryService {
 
   /**
    * Crear o registrar una nueva categoría en Supabase con idtipoproducto (1, 2 o 3)
+   * Si la categoría ya existe por nombre, actualiza el registro existente en vez de duplicar.
    */
   guardarCategoria(cat: Partial<CategoriaItem>): Observable<CategoriaItem> {
-    const nuevoId = cat.id || crypto.randomUUID();
+    const nombreLimpio = (cat.nombre || '').trim();
     const idTipo = cat.idtipoproducto !== undefined && cat.idtipoproducto !== null
       ? Number(cat.idtipoproducto)
       : mapTipoProductoToIdTipo(cat.tipoAsociado);
     const tipoAsociado = mapIdTipoToTipoProducto(idTipo);
 
-    const nuevoItem: CategoriaItem = {
-      id: nuevoId,
-      codigo: cat.codigo || `CAT-${(this.categorias.length + 1).toString().padStart(2, '0')}`,
-      nombre: (cat.nombre || '').trim(),
+    // Buscar si ya existe previamente en memoria local
+    const existente = this.categorias.find(c =>
+      (cat.id && c.id === cat.id) ||
+      (c.nombre && c.nombre.toLowerCase().trim() === nombreLimpio.toLowerCase())
+    );
+
+    const client = this.supabase.client;
+    if (this.supabase.isConfigured && client) {
+      const ejecutarUpsert = async (): Promise<CategoriaItem> => {
+        const payload: any = {
+          nombre: nombreLimpio,
+          idtipoproducto: idTipo
+        };
+
+        if (cat.id || existente?.id) {
+          payload.id = cat.id || existente?.id;
+        }
+
+        // Upsert con resolución automática de conflicto en la columna única 'nombre'
+        const { data, error } = await client
+          .from('categorias_producto')
+          .upsert(payload, { onConflict: 'nombre' })
+          .select('id, nombre, idtipoproducto')
+          .single();
+
+        if (error) {
+          console.error('[CategoryService] Error en upsert categorias_producto:', error);
+          throw error;
+        }
+
+        const catData = data || {};
+        const idPersistido = catData.id || payload.id || crypto.randomUUID();
+
+        const itemFinal: CategoriaItem = {
+          id: idPersistido,
+          codigo: cat.codigo || existente?.codigo || `CAT-${(this.categorias.length + 1).toString().padStart(2, '0')}`,
+          nombre: catData.nombre || nombreLimpio,
+          idtipoproducto: catData.idtipoproducto !== undefined ? Number(catData.idtipoproducto) : idTipo,
+          tipoAsociado: mapIdTipoToTipoProducto(catData.idtipoproducto !== undefined ? Number(catData.idtipoproducto) : idTipo),
+          descripcion: (cat.descripcion || existente?.descripcion || '').trim(),
+          colorBadge: idTipo === 2 ? 'purple' : (idTipo === 3 ? 'sky' : 'emerald'),
+          creadoEn: cat.creadoEn || existente?.creadoEn || new Date().toLocaleDateString('en-CA'),
+          estaActiva: cat.estaActiva !== undefined ? cat.estaActiva : true
+        };
+
+        // Actualizar en el catálogo local en memoria
+        const idx = this.categorias.findIndex(c =>
+          c.id === itemFinal.id || c.nombre.toLowerCase().trim() === itemFinal.nombre.toLowerCase().trim()
+        );
+        if (idx >= 0) {
+          this.categorias[idx] = itemFinal;
+        } else {
+          this.categorias.unshift(itemFinal);
+        }
+
+        return itemFinal;
+      };
+
+      return from(ejecutarUpsert()).pipe(
+        catchError(err => {
+          console.error('[CategoryService] Error al guardar categoría:', err);
+          return throwError(() => err);
+        })
+      );
+    }
+
+    // Modo local / offline
+    const idLocal = cat.id || existente?.id || crypto.randomUUID();
+    const itemLocal: CategoriaItem = {
+      id: idLocal,
+      codigo: cat.codigo || existente?.codigo || `CAT-${(this.categorias.length + 1).toString().padStart(2, '0')}`,
+      nombre: nombreLimpio,
       idtipoproducto: idTipo,
       tipoAsociado: tipoAsociado,
-      descripcion: (cat.descripcion || '').trim(),
+      descripcion: (cat.descripcion || existente?.descripcion || '').trim(),
       colorBadge: idTipo === 2 ? 'purple' : (idTipo === 3 ? 'sky' : 'emerald'),
       creadoEn: cat.creadoEn || new Date().toLocaleDateString('en-CA'),
       estaActiva: cat.estaActiva !== undefined ? cat.estaActiva : true
     };
 
-    // Actualizar inmediatamente en memoria
-    const idx = this.categorias.findIndex(c => c.id === nuevoItem.id || c.nombre.toLowerCase().trim() === nuevoItem.nombre.toLowerCase().trim());
+    const idx = this.categorias.findIndex(c => c.id === itemLocal.id || c.nombre.toLowerCase().trim() === itemLocal.nombre.toLowerCase().trim());
     if (idx >= 0) {
-      this.categorias[idx] = nuevoItem;
+      this.categorias[idx] = itemLocal;
     } else {
-      this.categorias.unshift(nuevoItem);
-    }
-    
-    // Persistir directamente en Supabase con la columna idtipoproducto
-    const client = this.supabase.client;
-    if (this.supabase.isConfigured && client) {
-      return from(
-        client.from('categorias_producto').upsert({
-          id: nuevoId,
-          nombre: nuevoItem.nombre,
-          idtipoproducto: idTipo
-        }).select()
-      ).pipe(
-        map(() => nuevoItem),
-        catchError(err => {
-          console.error('Error al guardar en Supabase categorias_producto:', err);
-          return of(nuevoItem);
-        })
-      );
+      this.categorias.unshift(itemLocal);
     }
 
-    return of({ ...nuevoItem });
+    return of(itemLocal);
   }
 
   /**
