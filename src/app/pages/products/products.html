@@ -115,16 +115,66 @@
             </select>
           </div>
 
-          <!-- Filtro Categoría -->
-          <div>
-            <select [(ngModel)]="filtroCategoria"
-              (ngModelChange)="paginaActual = 1"
-              class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-              <option value="TODOS">🏷️ Todas Categorías</option>
-              @for (cat of categorias; track cat.id) {
-                <option [value]="cat.nombre">{{ cat.nombre }}</option>
-              }
-            </select>
+          <!-- Filtro Categoría Autocompletable -->
+          <div class="categoria-filtro-container relative sm:col-span-1 md:col-span-2">
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-tags absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+              <input
+                type="text"
+                [value]="filtroCategoria === 'TODOS' ? (busquedaFiltroCategoria || '') : filtroCategoria"
+                (input)="onInputFiltroCategoria($event)"
+                (focus)="toggleDropdownFiltroCategoria($event)"
+                placeholder="🏷️ Filtrar Categoría..."
+                class="w-full pl-8 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all truncate" />
+              
+              <div class="absolute right-2 flex items-center gap-0.5">
+                @if (filtroCategoria !== 'TODOS' || busquedaFiltroCategoria) {
+                  <button
+                    type="button"
+                    (click)="seleccionarCategoriaFiltro('TODOS')"
+                    title="Ver todas las categorías"
+                    class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                    <i class="fa-solid fa-xmark text-[10px]"></i>
+                  </button>
+                }
+                <button
+                  type="button"
+                  (click)="toggleDropdownFiltroCategoria($event)"
+                  title="Desplegar lista"
+                  class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                  <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" [class.rotate-180]="mostrarDropdownFiltroCategoria"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel Flotante de Categorías en Grilla -->
+            @if (mostrarDropdownFiltroCategoria) {
+              <div class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                <div
+                  (click)="seleccionarCategoriaFiltro('TODOS')"
+                  class="p-2.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between text-xs text-slate-700 font-semibold"
+                  [class.bg-slate-100]="filtroCategoria === 'TODOS'">
+                  <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-border-all text-emerald-600 text-xs"></i>
+                    <span>🏷️ Todas las Categorías</span>
+                  </div>
+                  <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full">{{ categorias.length }}</span>
+                </div>
+                @for (cat of categoriasFiltradasParaGridAutocomplete; track cat.id) {
+                  <div
+                    (click)="seleccionarCategoriaFiltro(cat.nombre)"
+                    class="p-2.5 hover:bg-emerald-50/80 cursor-pointer flex items-center justify-between text-xs text-slate-800 transition-colors group"
+                    [class.bg-emerald-50]="filtroCategoria === cat.nombre">
+                    <span class="font-medium truncate group-hover:text-emerald-700">{{ cat.nombre }}</span>
+                    <span class="text-[9px] text-slate-400 shrink-0 font-mono">({{ contarProductosPorCategoria(cat.nombre) }})</span>
+                  </div>
+                } @empty {
+                  <div class="p-3 text-center text-xs text-slate-400">
+                    No se encontró ninguna categoría.
+                  </div>
+                }
+              </div>
+            }
           </div>
 
           <!-- Filtro Condición de Venta -->
@@ -196,10 +246,10 @@
                     <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
-                <th (click)="alternarOrden('NOMBRE')" class="py-2.5 px-3 cursor-pointer hover:bg-slate-700/80 transition-colors">
+                <th (click)="alternarOrden('NOMBRE')" class="py-2.5 px-4 min-w-[280px] md:min-w-[360px] lg:min-w-[420px] cursor-pointer hover:bg-slate-700/80 transition-colors">
                   <div class="flex items-center gap-1.5">
                     <i class="fa-solid fa-pills text-emerald-400 text-xs"></i>
-                    <span>PRODUCTO / FICHA</span>
+                    <span>PRODUCTO / FICHA TÉCNICA</span>
                     <i class="fa-solid fa-sort text-[9px] text-slate-400"></i>
                   </div>
                 </th>
@@ -278,34 +328,38 @@
                     }
                   </td>
 
-                  <!-- Producto / Ficha con Foto Compacta -->
-                  <td class="py-2 px-3">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/90 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs">
+                  <!-- Producto / Ficha con Foto Completa y Salto de Línea -->
+                  <td class="py-2.5 px-4 min-w-[280px] md:min-w-[360px] lg:min-w-[420px]">
+                    <div class="flex items-start gap-2.5">
+                      <div class="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-2xs mt-0.5">
                         @if (p.imagenUrl) {
                           <img [src]="p.imagenUrl" [alt]="p.nombreComercial" class="max-h-full max-w-full object-contain mix-blend-multiply" />
                         } @else if (p.tipoProducto === 'PERFUME') {
-                          <i class="fa-solid fa-spray-can-sparkles text-purple-600 text-xs"></i>
+                          <i class="fa-solid fa-spray-can-sparkles text-purple-600 text-sm"></i>
                         } @else if (p.tipoProducto === 'OTROS') {
-                          <i class="fa-solid fa-box-open text-sky-600 text-xs"></i>
+                          <i class="fa-solid fa-box-open text-sky-600 text-sm"></i>
                         } @else {
-                          <i class="fa-solid fa-pills text-emerald-600 text-xs"></i>
+                          <i class="fa-solid fa-pills text-emerald-600 text-sm"></i>
                         }
                       </div>
-                      <div class="min-w-0 max-w-[240px]">
-                        <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate text-xs">
+                      <div class="flex-1 min-w-0">
+                        <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors text-xs leading-snug break-words whitespace-normal">
                           {{ p.nombreComercial }}
                         </div>
                         @if (p.tipoProducto === 'PERFUME') {
-                          <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1">
+                          <div class="text-[10px] text-slate-500 mt-1 flex flex-wrap items-center gap-1.5 leading-tight">
                             @if (p.marca) {
                               <span class="font-semibold text-slate-700">{{ p.marca }}</span>
                               <span>•</span>
                             }
                             <span class="text-purple-600 font-medium">{{ p.generoObjetivo || 'UNISEX' }}</span>
+                            @if (p.volumenMl) {
+                              <span>•</span>
+                              <span>{{ p.volumenMl }} ml</span>
+                            }
                           </div>
                         } @else if (p.tipoProducto === 'OTROS') {
-                          <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1">
+                          <div class="text-[10px] text-slate-500 mt-1 flex flex-wrap items-center gap-1.5 leading-tight">
                             @if (p.marca) {
                               <span class="font-semibold text-slate-700">{{ p.marca }}</span>
                               <span>•</span>
@@ -313,11 +367,17 @@
                             <span class="text-slate-500">{{ p.categoriaNombre || 'Higiene y Cuidado' }}</span>
                           </div>
                         } @else if (p.principioActivo || p.laboratorio) {
-                          <div class="text-[10px] text-slate-400 truncate mt-0.5">
-                            {{ p.principioActivo || '' }} {{ p.laboratorio ? '• ' + p.laboratorio : '' }}
+                          <div class="text-[10px] text-slate-500 mt-1 leading-snug break-words whitespace-normal">
+                            <span class="font-medium text-slate-600">{{ p.principioActivo || '' }}</span>
+                            @if (p.concentracion) {
+                              <span class="text-slate-400"> ({{ p.concentracion }})</span>
+                            }
+                            @if (p.laboratorio) {
+                              <span class="text-slate-400"> • {{ p.laboratorio }}</span>
+                            }
                           </div>
                         } @else if (p.descripcion) {
-                          <div class="text-[10px] text-slate-500 mt-0.5 leading-snug truncate">
+                          <div class="text-[10px] text-slate-500 mt-1 leading-snug break-words whitespace-normal">
                             {{ p.descripcion }}
                           </div>
                         }
@@ -790,27 +850,92 @@
                   </button>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <div class="relative flex-1">
-                    <select
-                      [(ngModel)]="productoForm.categoriaNombre"
-                      (change)="onCategoriaSelectChange($event)"
-                      class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none pr-8 font-medium">
-                      <option value="">-- Seleccionar categoría --</option>
-                      @if (productoForm.categoriaNombre && !estaEnCategoriasFiltradas(productoForm.categoriaNombre)) {
-                        <option [value]="productoForm.categoriaNombre">
-                          {{ productoForm.categoriaNombre }} (Seleccionada)
-                        </option>
-                      }
-                      @for (cat of categoriasFiltradasParaForm; track cat.id) {
-                        <option [value]="cat.nombre">
-                          {{ cat.nombre }} ({{ cat.tipoAsociado }})
-                        </option>
-                      }
-                      <option value="__NUEVA_CATEGORIA__" class="font-bold text-emerald-600 bg-emerald-50">
-                        ➕ + Agregar nueva categoría si desea...
-                      </option>
-                    </select>
-                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                  <div class="categoria-form-container relative flex-1">
+                    <div class="relative flex items-center">
+                      <i class="fa-solid fa-tags absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+                      <input
+                        type="text"
+                        [value]="busquedaCategoriaForm !== '' ? busquedaCategoriaForm : (productoForm.categoriaNombre || '')"
+                        (input)="onInputCategoriaForm($event)"
+                        (focus)="abrirDropdownCategoriaForm($event)"
+                        placeholder="Buscar o escribir categoría..."
+                        class="w-full pl-8 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium truncate" />
+
+                      <div class="absolute right-2 flex items-center gap-0.5">
+                        @if (productoForm.categoriaNombre || busquedaCategoriaForm) {
+                          <button
+                            type="button"
+                            (click)="limpiarCategoriaForm($event)"
+                            title="Limpiar categoría"
+                            class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                            <i class="fa-solid fa-xmark text-[10px]"></i>
+                          </button>
+                        }
+                        <button
+                          type="button"
+                          (click)="toggleDropdownCategoriaForm($event)"
+                          title="Desplegar lista de categorías"
+                          class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                          <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" [class.rotate-180]="mostrarDropdownCategoriaForm"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Panel Flotante Desplegable de Categorías -->
+                    @if (mostrarDropdownCategoriaForm) {
+                      <div class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                        @for (cat of categoriasFiltradasParaFormAutocomplete; track cat.id) {
+                          <div
+                            (click)="seleccionarCategoriaForm(cat)"
+                            class="px-3 py-2 hover:bg-emerald-50/80 cursor-pointer flex items-center justify-between text-xs transition-colors group"
+                            [class.bg-emerald-50]="productoForm.categoriaNombre === cat.nombre">
+                            <div class="flex items-center gap-2 min-w-0">
+                              <i class="fa-solid fa-tag text-[10px]" [class.text-emerald-600]="productoForm.categoriaNombre === cat.nombre" [class.text-slate-400]="productoForm.categoriaNombre !== cat.nombre"></i>
+                              <span class="font-medium text-slate-800 group-hover:text-emerald-700 truncate">
+                                {{ cat.nombre }}
+                              </span>
+                              <span class="text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider"
+                                [ngClass]="{
+                                  'bg-blue-50 text-blue-700 border border-blue-200': cat.tipoAsociado === 'MEDICAMENTO',
+                                  'bg-purple-50 text-purple-700 border border-purple-200': cat.tipoAsociado === 'PERFUME',
+                                  'bg-amber-50 text-amber-700 border border-amber-200': cat.tipoAsociado === 'OTROS'
+                                }">
+                                {{ cat.tipoAsociado }}
+                              </span>
+                            </div>
+                            @if (productoForm.categoriaNombre === cat.nombre) {
+                              <span class="text-[10px] text-emerald-700 font-bold flex items-center gap-1 shrink-0">
+                                <i class="fa-solid fa-check"></i>
+                                <span class="hidden sm:inline">Seleccionada</span>
+                              </span>
+                            }
+                          </div>
+                        }
+
+                        <!-- Opción para crear categoría rápida si no existe o se busca texto nuevo -->
+                        @if (busquedaCategoriaForm.trim() && !estaEnCategoriasFiltradas(busquedaCategoriaForm)) {
+                          <div
+                            (click)="crearNuevaCategoriaConNombre(busquedaCategoriaForm)"
+                            class="p-2.5 bg-emerald-50 hover:bg-emerald-100/90 cursor-pointer text-emerald-800 flex items-center justify-between transition-colors border-t border-emerald-100">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                              <i class="fa-solid fa-circle-plus text-emerald-600 text-xs shrink-0"></i>
+                              <span class="text-xs font-semibold truncate">
+                                Registrar "<strong>{{ busquedaCategoriaForm.trim() }}</strong>"
+                              </span>
+                            </div>
+                            <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-md shrink-0">
+                              + Crear
+                            </span>
+                          </div>
+                        }
+
+                        @if (categoriasFiltradasParaFormAutocomplete.length === 0 && (!busquedaCategoriaForm.trim() || estaEnCategoriasFiltradas(busquedaCategoriaForm))) {
+                          <div class="p-3 text-center text-xs text-slate-400">
+                            No se encontraron categorías disponibles.
+                          </div>
+                        }
+                      </div>
+                    }
                   </div>
                   <button type="button"
                     (click)="abrirModalGestionCategorias()"

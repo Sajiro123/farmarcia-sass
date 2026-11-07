@@ -12,6 +12,7 @@ import { VentaService, TurnoCajaDTO } from '../../core/services/venta.service';
 import { DecolectaService } from '../../core/services/decolecta.service';
 import { CustomerService } from '../../core/services/customer.service';
 import { StorageService } from '../../core/services/storage.service';
+import { SearchService } from '../../core/services/search.service';
 
 export interface PagoDetalle {
   metodo: string;
@@ -92,6 +93,7 @@ export class Pos implements OnInit, AfterViewInit {
   private decolectaService = inject(DecolectaService);
   private customerService = inject(CustomerService);
   public storageService = inject(StorageService);
+  private searchService = inject(SearchService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
 
@@ -438,10 +440,22 @@ export class Pos implements OnInit, AfterViewInit {
     }
   }
 
+  private toIsoDate(dStr: string | Date | undefined): string {
+    if (!dStr) return '';
+    try {
+      const dt = typeof dStr === 'string' ? new Date(dStr) : dStr;
+      return dt.toLocaleDateString('en-CA');
+    } catch {
+      return '';
+    }
+  }
+
   ngOnInit() {
     this.cargarDatosEmpresa();
+    const hoyIso = new Date().toLocaleDateString('en-CA');
     const turno = this.ventaService.getTurnoActual();
-    this.cajaAbierta = Boolean(turno && turno.cajaAbierta);
+    const esTurnoValidoHoy = Boolean(turno && turno.cajaAbierta && turno.fechaApertura && this.toIsoDate(turno.fechaApertura) === hoyIso);
+    this.cajaAbierta = esTurnoValidoHoy;
     
     if (this.cajaAbierta) {
       this.fondoInicial = turno.fondoInicial;
@@ -743,7 +757,8 @@ export class Pos implements OnInit, AfterViewInit {
       fechaApertura: this.fechaApertura.toISOString(),
       cajeroActual: this.cajeroActual,
       fondoInicial: this.fondoInicial,
-      sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central'
+      sedeId: this.authService.activeSede()?.id,
+      sede: this.authService.activeSede()?.nombre || 'Medicare Farmacia'
     });
 
     this.mostrarAlerta('success', `Caja aperturada exitosamente con S/ ${this.fondoInicial.toFixed(2)} de fondo.`, 'Caja Aperturada');
@@ -852,7 +867,8 @@ export class Pos implements OnInit, AfterViewInit {
       fechaCierre: fechaCierreDate.toISOString(),
       cajeroActual: this.cajeroActual,
       fondoInicial: this.fondoInicial,
-      sede: this.authService.activeSede()?.nombre || 'Sede Cajamarca Central',
+      sedeId: this.authService.activeSede()?.id,
+      sede: this.authService.activeSede()?.nombre || 'Medicare Farmacia',
       totalVentas: this.reporteZCierre.totalVentas,
       declaradoEfectivo: this.declaradoEfectivo,
       declaradoYape: this.declaradoYape,
@@ -1063,14 +1079,12 @@ export class Pos implements OnInit, AfterViewInit {
         );
       }
     }
-    if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase().trim();
-      result = result.filter(p => 
-        p.nombre.toLowerCase().includes(q) || 
-        p.principioActivo.toLowerCase().includes(q) ||
-        p.laboratorio.toLowerCase().includes(q) ||
-        (p.sku && p.sku.toLowerCase().includes(q)) ||
-        (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q))
+    if (this.searchQuery && this.searchQuery.trim()) {
+      result = this.searchService.search(
+        result,
+        this.searchQuery,
+        ['nombre', 'principioActivo', 'laboratorio', 'sku', 'codigoBarra', 'categoria', 'concentracion'],
+        { nombre: 3, principioActivo: 2, sku: 2, codigoBarra: 2 }
       );
     }
     this.filteredProducts = result;

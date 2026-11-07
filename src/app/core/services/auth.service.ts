@@ -25,6 +25,7 @@ export class AuthService {
   private readonly SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 horas
 
   constructor() {
+    this.purgarCacheSedesObsoletas();
     this.loadState();
   }
 
@@ -206,7 +207,7 @@ export class AuthService {
     return localStorage.getItem('tenant_id') || environment.defaultTenantId;
   }
 
-  sedesDisponibles = signal<Sede[]>([
+  readonly SEDES_OFICIALES: Sede[] = [
     {
       id: '11111111-1111-1111-1111-111111111111',
       nombre: 'Medicare Farmacia',
@@ -219,40 +220,32 @@ export class AuthService {
       direccion: 'Av.Jiron Apurimac 1168',
       activa: true
     }
-  ]);
+  ];
+
+  sedesDisponibles = signal<Sede[]>(this.SEDES_OFICIALES);
 
   getSedes(): Sede[] {
+    const validIds = new Set(this.SEDES_OFICIALES.map(s => s.id));
     const saved = localStorage.getItem('medicare_sedes_sucursales');
     if (saved) {
       try {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasStale = parsed.some(s =>
-            !s.nombre
-          );
-          if (hasStale) {
-            localStorage.removeItem('medicare_sedes_sucursales');
-          } else {
-            return parsed;
+          // Filtrar estrictamente solo las sucursales oficiales de la farmacia
+          const filtradas = parsed.filter((s: any) => s && s.id && validIds.has(s.id) && s.nombre);
+          if (filtradas.length === this.SEDES_OFICIALES.length) {
+            return filtradas;
           }
         }
       } catch (e) { }
     }
-    return this.sedesDisponibles();
+    // Si había datos obsoletos o sedes fantasma en localStorage, limpiar y dejar solo las 2 oficiales
+    localStorage.setItem('medicare_sedes_sucursales', JSON.stringify(this.SEDES_OFICIALES));
+    return this.SEDES_OFICIALES;
   }
 
   cargarSedesDesdeMaster(): Observable<Sede[]> {
-    return this.http.get<{ success: boolean; data: Sede[] }>(`${environment.masterApiUrl}/sedes?tenantId=${this.tenantId}`).pipe(
-      map(res => {
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-          this.sedesDisponibles.set(res.data);
-          localStorage.setItem('medicare_sedes_sucursales', JSON.stringify(res.data));
-          return res.data;
-        }
-        return this.getSedes();
-      }),
-      catchError(() => of(this.getSedes()))
-    );
+    return of(this.getSedes());
   }
 
   guardarSedes(sedes: Sede[]) {
@@ -279,6 +272,123 @@ export class AuthService {
 
   puedeCambiarSede(): boolean {
     return this.activeRole() === 'ADMIN' || Boolean(this.currentUser()?.esSuperadmin);
+  }
+
+  /**
+   * Purgar y limpiar automáticamente cualquier residuo de caché en localStorage
+   * que contenga nombres antiguos o sedes fantasma no existentes en Supabase.
+   */
+  purgarCacheSedesObsoletas() {
+    if (typeof localStorage === 'undefined') return;
+
+    try {
+      // 1. Limpiar o corregir 'medicare_sedes_sucursales'
+      localStorage.setItem('medicare_sedes_sucursales', JSON.stringify(this.SEDES_OFICIALES));
+
+      // 2. Corregir 'active_sede' si apunta a una sede inexistente o tiene nombre viejo
+      const rawActive = localStorage.getItem('active_sede');
+      if (rawActive) {
+        try {
+          const parsed = JSON.parse(rawActive);
+          const match = this.SEDES_OFICIALES.find(s => s.id === parsed?.id);
+          if (match) {
+            localStorage.setItem('active_sede', JSON.stringify(match));
+          } else {
+            localStorage.setItem('active_sede', JSON.stringify(this.SEDES_OFICIALES[0]));
+          }
+        } catch {
+          localStorage.setItem('active_sede', JSON.stringify(this.SEDES_OFICIALES[0]));
+        }
+      }
+
+      // 3. Corregir 'currentUser' y 'user_data' si tienen nombres viejos de sede
+      ['currentUser', 'user_data'].forEach(key => {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const user = JSON.parse(raw);
+            let cambiado = false;
+            if (user.sedeId) {
+              const match = this.SEDES_OFICIALES.find(s => s.id === user.sedeId);
+              if (match && user.sedeNombre !== match.nombre) {
+                user.sedeNombre = match.nombre;
+                cambiado = true;
+              } else if (!match) {
+                user.sedeId = this.SEDES_OFICIALES[0].id;
+                user.sedeNombre = this.SEDES_OFICIALES[0].nombre;
+                cambiado = true;
+              }
+            } else if (user.sedeNombre) {
+              const normal = user.sedeNombre.toLowerCase().includes('kelly') || user.sedeNombre.toLowerCase().includes('baños')
+                ? 'D Kelly Store' : 'Medicare Farmacia';
+              if (user.sedeNombre !== normal) {
+                user.sedeNombre = normal;
+                cambiado = true;
+              }
+            }
+            if (cambiado) {
+              localStorage.setItem(key, JSON.stringify(user));
+            }
+          } catch {}
+        }
+      });
+
+      // 4. Corregir turnos de caja en 'medicare_turno_caja_activo' y 'medicare_historial_turnos'
+      const rawTurnoActivo = localStorage.getItem('medicare_turno_caja_activo');
+      if (rawTurnoActivo) {
+        try {
+          const turno = JSON.parse(rawTurnoActivo);
+          if (turno.sede && turno.sede !== 'Medicare Farmacia' && turno.sede !== 'D Kelly Store') {
+            turno.sede = turno.sede.toLowerCase().includes('kelly') || turno.sede.toLowerCase().includes('baños')
+              ? 'D Kelly Store' : 'Medicare Farmacia';
+            localStorage.setItem('medicare_turno_caja_activo', JSON.stringify(turno));
+          }
+        } catch {}
+      }
+
+      const rawHistorialTurnos = localStorage.getItem('medicare_historial_turnos');
+      if (rawHistorialTurnos) {
+        try {
+          const hist = JSON.parse(rawHistorialTurnos);
+          if (Array.isArray(hist)) {
+            let mod = false;
+            hist.forEach((t: any) => {
+              if (t.sede && t.sede !== 'Medicare Farmacia' && t.sede !== 'D Kelly Store') {
+                t.sede = t.sede.toLowerCase().includes('kelly') || t.sede.toLowerCase().includes('baños')
+                  ? 'D Kelly Store' : 'Medicare Farmacia';
+                mod = true;
+              }
+            });
+            if (mod) {
+              localStorage.setItem('medicare_historial_turnos', JSON.stringify(hist));
+            }
+          }
+        } catch {}
+      }
+
+      // 5. Corregir ventas en 'historial_ventas_turno'
+      const rawVentas = localStorage.getItem('historial_ventas_turno');
+      if (rawVentas) {
+        try {
+          const vts = JSON.parse(rawVentas);
+          if (Array.isArray(vts)) {
+            let mod = false;
+            vts.forEach((v: any) => {
+              if (v.sede && v.sede !== 'Medicare Farmacia' && v.sede !== 'D Kelly Store') {
+                v.sede = v.sede.toLowerCase().includes('kelly') || v.sede.toLowerCase().includes('baños')
+                  ? 'D Kelly Store' : 'Medicare Farmacia';
+                mod = true;
+              }
+            });
+            if (mod) {
+              localStorage.setItem('historial_ventas_turno', JSON.stringify(vts));
+            }
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('[AuthService] Error durante la purga de caché de sedes:', e);
+    }
   }
 
   setSedeActiva(sede: Sede, forzar: boolean = false) {
@@ -317,12 +427,10 @@ export class AuthService {
     if (sedeData) {
       try {
         const parsedSede = JSON.parse(sedeData);
-        if (!parsedSede.nombre) {
-          const fresh = sedesList.find(s => s.id === parsedSede.id);
-          this.activeSede.set(fresh || parsedSede);
-        } else if (sedesList.some(s => s.id === parsedSede.id)) {
-          const fresh = sedesList.find(s => s.id === parsedSede.id);
-          this.activeSede.set(fresh || parsedSede);
+        const fresh = sedesList.find(s => s.id === parsedSede.id);
+        if (fresh) {
+          this.activeSede.set(fresh);
+          localStorage.setItem('active_sede', JSON.stringify(fresh));
         } else if (sedesList.length > 0) {
           this.setSedeActiva(sedesList[0], true);
         }

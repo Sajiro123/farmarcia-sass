@@ -36,7 +36,7 @@
               <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Reportes de Ventas & Caja</h1>
               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-bold border border-emerald-300 dark:border-emerald-800">
                 <i class="fa-solid fa-store text-emerald-600 text-xs"></i>
-                {{ filtroSedeGeneral !== 'TODAS' ? filtroSedeGeneral : (sedeActivaNombre || 'Sede Cajamarca Central') }}
+                {{ filtroSedeGeneral !== 'TODAS' ? filtroSedeGeneral : (sedeActivaNombre || 'Medicare Farmacia') }}
               </span>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400">Supervisión integral de ventas diarias, detalle de compras y auditoría de aperturas independientes por sede.</p>
@@ -97,6 +97,19 @@
         <div class="text-left">
           <span class="block leading-tight">Apertura de Caja</span>
           <span class="text-[10px] opacity-80 font-normal">Monto inicial, quién abrió y fechas</span>
+        </div>
+      </button>
+
+      <!-- Pestaña 4: Reporte de Stock Valorizado -->
+      <button (click)="cambiarTab('STOCK')"
+        [ngClass]="tabActiva === 'STOCK'
+          ? 'bg-emerald-600 text-white shadow-xs font-bold'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 font-medium'"
+        class="flex-1 min-w-[200px] py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+        <i class="fa-solid fa-boxes-stacked text-sm"></i>
+        <div class="text-left">
+          <span class="block leading-tight">Reporte de Stock</span>
+          <span class="text-[10px] opacity-80 font-normal">Productos, cantidades y valorizado</span>
         </div>
       </button>
     </div>
@@ -185,89 +198,105 @@
                 </tr>
               </thead>
               <tbody class="font-sans">
-                @for (dia of reportePorDias; track dia.fecha) {
-                  <tr [ngClass]="$even ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/80 dark:bg-slate-800/40'"
-                    class="hover:bg-emerald-50/50 dark:hover:bg-slate-700/40 transition-colors border-b border-slate-200 dark:border-slate-700/80">
-                    <!-- Fecha / Día -->
-                    <td class="py-2 px-3 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
-                      <div class="font-bold text-slate-900 dark:text-white leading-tight text-xs">{{ dia.fechaFormateada }}</div>
-                      <span class="text-[10px] font-mono text-slate-400">{{ dia.fecha }} • {{ dia.diaSemana }}</span>
-                    </td>
-
-                    <!-- Quién Trabajó -->
-                    <td class="py-2 px-3 border-r border-slate-100 dark:border-slate-700/60">
-                      <div class="flex items-center gap-1.5">
-                        <div class="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 text-[10px]">
-                          <i class="fa-solid fa-user-tie"></i>
-                        </div>
-                        <span class="font-bold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[170px]">{{ dia.cajeroPrincipal }}</span>
-                      </div>
-                    </td>
-
-                    <!-- Fondo Apertura -->
-                    <td class="py-2 px-3 text-right whitespace-nowrap font-mono font-bold text-emerald-700 dark:text-emerald-400 border-r border-slate-100 dark:border-slate-700/60 text-xs">
-                      S/ {{ dia.fondoApertura | number:'1.2-2' }}
-                    </td>
-
-                    <!-- Total Vendido -->
-                    <td class="py-2 px-3 text-right whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
-                      <span class="font-mono font-black text-slate-900 dark:text-white text-xs">
-                        S/ {{ dia.totalVentas | number:'1.2-2' }}
-                      </span>
-                    </td>
-
-                    <!-- Desglose de Métodos -->
-                    <td class="py-2 px-3 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
-                      <div class="flex flex-wrap items-center gap-1 text-[10px] font-mono">
-                        <span class="px-1.5 py-0.5 bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 rounded border border-teal-200 dark:border-teal-800">
-                          Ef: S/ {{ dia.totalEfectivo | number:'1.0-0' }}
-                        </span>
-                        <span class="px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">
-                          Yp: S/ {{ dia.totalYape | number:'1.0-0' }}
-                        </span>
-                        @if (dia.totalPlin > 0) {
-                          <span class="px-1.5 py-0.5 bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 rounded border border-cyan-200 dark:border-cyan-800">
-                            Pl: S/ {{ dia.totalPlin | number:'1.0-0' }}
-                          </span>
-                        }
-                        @if (dia.totalTarjeta > 0) {
-                          <span class="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 rounded border border-sky-200 dark:border-sky-800">
-                            Tj: S/ {{ dia.totalTarjeta | number:'1.0-0' }}
-                          </span>
-                        }
-                      </div>
-                    </td>
-
-                    <!-- Tickets -->
-                    <td class="py-2 px-3 text-center whitespace-nowrap font-mono border-r border-slate-100 dark:border-slate-700/60 text-xs">
-                      <span class="font-bold text-slate-700 dark:text-slate-300">{{ dia.ticketsEmitidos }}</span>
-                      @if (dia.ticketsAnulados > 0) {
-                        <span class="text-[10px] text-rose-500 ml-1">({{ dia.ticketsAnulados }} anl)</span>
-                      }
-                    </td>
-
-                    <!-- Ticket Promedio -->
-                    <td class="py-2 px-3 text-right whitespace-nowrap font-mono text-slate-500 border-r border-slate-100 dark:border-slate-700/60 text-xs">
-                      S/ {{ dia.ticketPromedio | number:'1.2-2' }}
-                    </td>
-
-                    <!-- Acción: Ir a detalle -->
-                    <td class="py-2 px-3 text-center whitespace-nowrap">
-                      <button (click)="irADetalleDia(dia.fecha)"
-                        title="Ver detalle de todas las compras de este día"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold transition-colors cursor-pointer">
-                        <span>Ver Detalle</span>
-                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                      </button>
-                    </td>
-                  </tr>
-                } @empty {
+                @if (cargandoSupabase) {
                   <tr>
-                    <td colspan="8" class="py-8 text-center text-slate-400">
-                      <i class="fa-regular fa-folder-open text-2xl mb-1 block"></i>
-                      No se encontraron movimientos de ventas en el rango de fechas seleccionado.
+                    <td colspan="8" class="py-12 text-center text-slate-400">
+                      <div class="flex flex-col items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Consultando movimientos en la nube...</span>
+                      </div>
                     </td>
                   </tr>
+                } @else {
+                  @for (dia of reportePorDias; track dia.fecha) {
+                    <tr [ngClass]="$even ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/80 dark:bg-slate-800/40'"
+                      class="hover:bg-emerald-50/50 dark:hover:bg-slate-700/40 transition-colors border-b border-slate-200 dark:border-slate-700/80">
+                      <!-- Fecha / Día -->
+                      <td class="py-2 px-3 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                        <div class="font-bold text-slate-900 dark:text-white leading-tight text-xs">{{ dia.fechaFormateada }}</div>
+                        <span class="text-[10px] font-mono text-slate-400">{{ dia.fecha }} • {{ dia.diaSemana }}</span>
+                      </td>
+
+                      <!-- Quién Trabajó -->
+                      <td class="py-2 px-3 border-r border-slate-100 dark:border-slate-700/60">
+                        <div class="flex items-center gap-1.5">
+                          <div class="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 text-[10px]">
+                            <i class="fa-solid fa-user-tie"></i>
+                          </div>
+                          <span class="font-bold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[170px]">{{ dia.cajeroPrincipal }}</span>
+                        </div>
+                      </td>
+
+                      <!-- Fondo Apertura -->
+                      <td class="py-2 px-3 text-right whitespace-nowrap font-mono font-bold text-emerald-700 dark:text-emerald-400 border-r border-slate-100 dark:border-slate-700/60 text-xs">
+                        S/ {{ dia.fondoApertura | number:'1.2-2' }}
+                      </td>
+
+                      <!-- Total Vendido -->
+                      <td class="py-2 px-3 text-right whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                        <span class="font-mono font-black text-slate-900 dark:text-white text-xs">
+                          S/ {{ dia.totalVentas | number:'1.2-2' }}
+                        </span>
+                      </td>
+
+                      <!-- Desglose de Métodos -->
+                      <td class="py-2 px-3 whitespace-nowrap border-r border-slate-100 dark:border-slate-700/60">
+                        <div class="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+                          <span class="px-1.5 py-0.5 bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 rounded border border-teal-200 dark:border-teal-800">
+                            Ef: S/ {{ dia.totalEfectivo | number:'1.0-0' }}
+                          </span>
+                          <span class="px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded border border-purple-200 dark:border-purple-800">
+                            Yp: S/ {{ dia.totalYape | number:'1.0-0' }}
+                          </span>
+                          @if (dia.totalPlin > 0) {
+                            <span class="px-1.5 py-0.5 bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 rounded border border-cyan-200 dark:border-cyan-800">
+                              Pl: S/ {{ dia.totalPlin | number:'1.0-0' }}
+                            </span>
+                          }
+                          @if (dia.totalTarjeta > 0) {
+                            <span class="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 rounded border border-sky-200 dark:border-sky-800">
+                              Tj: S/ {{ dia.totalTarjeta | number:'1.0-0' }}
+                            </span>
+                          }
+                        </div>
+                      </td>
+
+                      <!-- Tickets -->
+                      <td class="py-2 px-3 text-center whitespace-nowrap font-mono border-r border-slate-100 dark:border-slate-700/60 text-xs">
+                        <span class="font-bold text-slate-700 dark:text-slate-300">{{ dia.ticketsEmitidos }}</span>
+                        @if (dia.ticketsAnulados > 0) {
+                          <span class="text-[10px] text-rose-500 ml-1">({{ dia.ticketsAnulados }} anl)</span>
+                        }
+                      </td>
+
+                      <!-- Ticket Promedio -->
+                      <td class="py-2 px-3 text-right whitespace-nowrap font-mono text-slate-500 border-r border-slate-100 dark:border-slate-700/60 text-xs">
+                        S/ {{ dia.ticketPromedio | number:'1.2-2' }}
+                      </td>
+
+                      <!-- Acción: Ir a detalle -->
+                      <td class="py-2 px-3 text-center whitespace-nowrap">
+                        <button (click)="irADetalleDia(dia.fecha)"
+                          title="Ver detalle de todas las compras de este día"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold transition-colors cursor-pointer">
+                          <span>Ver Detalle</span>
+                          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="py-12 text-center text-slate-400">
+                        <div class="flex flex-col items-center justify-center gap-2">
+                          <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center text-slate-400 text-xl">
+                            <i class="fa-regular fa-folder-open"></i>
+                          </div>
+                          <span class="font-bold text-sm text-slate-700 dark:text-slate-200">No existe información registrada</span>
+                          <p class="text-xs text-slate-400 max-w-sm">No se encontraron movimientos ni aperturas de caja para el rango de fechas y sede seleccionados.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
 
@@ -621,36 +650,36 @@
       <div class="space-y-6 animate-slide-up">
 
         <!-- Banner de Apertura Activa Hoy (Diseño sobrio de un solo color) -->
-        @if (turnoActual) {
+        @if (turnoHoy) {
           <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-700">
               <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 flex items-center justify-center text-lg">
-                  <i class="fa-solid" [ngClass]="turnoActual.cajaAbierta ? 'fa-cash-register' : 'fa-lock'"></i>
+                  <i class="fa-solid" [ngClass]="turnoHoy.cajaAbierta ? 'fa-cash-register' : 'fa-lock'"></i>
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200">
-                      {{ turnoActual.cajaAbierta ? 'Turno en Curso • Caja Abierta' : 'Caja Cerrada del Día de Hoy' }}
+                      {{ turnoHoy.cajaAbierta ? 'Turno en Curso • Caja Abierta' : 'Caja Cerrada del Día de Hoy' }}
                     </span>
-                    @if (turnoActual.reabierta) {
+                    @if (turnoHoy.reabierta) {
                       <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
                         🔄 Reabierta
                       </span>
                     }
                   </div>
-                  <p class="text-sm font-bold text-slate-800 dark:text-white mt-1">Cajero: <strong>{{ turnoActual.cajeroActual }}</strong></p>
+                  <p class="text-sm font-bold text-slate-800 dark:text-white mt-1">Cajero: <strong>{{ turnoHoy.cajeroActual }}</strong></p>
                 </div>
               </div>
 
               <div class="flex items-center gap-4">
                 <div class="text-right">
                   <span class="text-[10px] font-bold uppercase text-slate-400 block">Fondo con que abrió hoy</span>
-                  <p class="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">S/ {{ turnoActual.fondoInicial | number:'1.2-2' }}</p>
+                  <p class="text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5">S/ {{ turnoHoy.fondoInicial | number:'1.2-2' }}</p>
                 </div>
 
-                @if (!turnoActual.cajaAbierta) {
-                  <button (click)="abrirModalReapertura(turnoActual)"
+                @if (!turnoHoy.cajaAbierta) {
+                  <button (click)="abrirModalReapertura(turnoHoy)"
                     class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-colors">
                     <i class="fa-solid fa-lock-open text-xs"></i>
                     <span>Reabrir Caja de Hoy</span>
@@ -662,30 +691,46 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
               <div>
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Fecha y Hora de Apertura:</span>
-                <p class="font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoActual.fechaApertura | date:'short' }}</p>
+                <p class="font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoHoy.fechaApertura | date:'short' }}</p>
               </div>
               <div>
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Día:</span>
-                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ getDiaSemana(toIsoDate(turnoActual.fechaApertura)) }}</p>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ getDiaSemana(toIsoDate(turnoHoy.fechaApertura)) }}</p>
               </div>
               <div>
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Sede:</span>
-                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoActual.sede }}</p>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ turnoHoy.sede }}</p>
               </div>
               <div>
                 <span class="text-[10px] uppercase font-bold text-slate-400 block">Estado:</span>
                 <p class="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                  {{ turnoActual.cajaAbierta ? 'Operativo para cobros' : 'Cerrado' }}
+                  {{ turnoHoy.cajaAbierta ? 'Operativo para cobros' : 'Cerrado' }}
                 </p>
               </div>
             </div>
 
-            @if (turnoActual.reabierta && turnoActual.motivoReapertura) {
+            @if (turnoHoy.reabierta && turnoHoy.motivoReapertura) {
               <div class="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <i class="fa-solid fa-circle-info text-slate-400"></i>
-                <span><strong>Auditoría de Reapertura:</strong> Reabierta el {{ turnoActual.fechaReapertura | date:'dd/MM/yyyy • hh:mm a' }} — Motivo: <em>{{ turnoActual.motivoReapertura }}</em> (Autorizado por: {{ turnoActual.autorizadoReapertura || 'Supervisor' }}).</span>
+                <span><strong>Auditoría de Reapertura:</strong> Reabierta el {{ turnoHoy.fechaReapertura | date:'dd/MM/yyyy • hh:mm a' }} — Motivo: <em>{{ turnoHoy.motivoReapertura }}</em> (Autorizado por: {{ turnoHoy.autorizadoReapertura || 'Supervisor' }}).</span>
               </div>
             }
+          </div>
+        } @else {
+          <div class="bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-200/80 dark:border-amber-800/60 shrink-0">
+                <i class="fa-solid fa-cash-register"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-800 dark:text-white">Sin turno de caja registrado para el día de hoy</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">La caja no ha sido aperturada aún en esta fecha. Inicia turno en el Punto de Venta (POS) para comenzar a emitir ventas.</p>
+              </div>
+            </div>
+            <a routerLink="/pos" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-colors shrink-0">
+              <i class="fa-solid fa-play text-xs"></i>
+              <span>Ir a Aperturar en POS</span>
+            </a>
           </div>
         }
 
@@ -841,7 +886,7 @@
                         </div>
                         <div>
                           <span class="font-bold text-slate-900 dark:text-white block text-xs leading-tight">{{ t.cajeroActual }}</span>
-                          <span class="text-[10px] text-slate-400 block">{{ t.sede || 'Sede Cajamarca Central' }}</span>
+                          <span class="text-[10px] text-slate-400 block">{{ normalizarNombreSede(t.sede) }}</span>
                           @if (t.reabierta) {
                             <span class="inline-flex items-center gap-1 text-[9px] text-cyan-700 dark:text-cyan-400 font-bold bg-cyan-50 dark:bg-cyan-950/60 px-1 py-0.2 rounded border border-cyan-200 dark:border-cyan-800">
                               🔄 Reabierta
@@ -861,7 +906,7 @@
                     <!-- Sede -->
                     <td class="py-2 px-3 text-slate-600 dark:text-slate-400 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800 text-xs">
                       <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                        {{ t.sede || 'Sede Cajamarca Central' }}
+                        {{ normalizarNombreSede(t.sede) }}
                       </span>
                     </td>
 
@@ -976,6 +1021,318 @@
             <span class="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400 block tracking-wider">Fondo Promedio / Caja</span>
             <p class="text-xl font-black text-purple-700 dark:text-purple-300 font-mono mt-1">S/ {{ kpiPromedioFondoInicial | number:'1.2-2' }}</p>
           </div>
+        </div>
+
+      </div>
+    }
+
+    <!-- ========================================================================= -->
+    <!-- PESTAÑA 4: REPORTE DE STOCK VALORIZADO (PRODUCTOS, CANTIDAD Y DINERO)     -->
+    <!-- ========================================================================= -->
+    @if (tabActiva === 'STOCK') {
+      <div class="space-y-6 animate-slide-up">
+
+        <!-- Tarjetas KPI de Resumen de Stock y Valorizado -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- KPI 1: Stock Físico Total -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-4 shadow-xs flex items-start justify-between">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Total Stock Físico</span>
+              <p class="text-2xl font-black text-slate-900 dark:text-white font-mono mt-1">
+                {{ totalUnidadesStockReporte | number:'1.0-0' }} <span class="text-xs font-bold text-slate-500">unid.</span>
+              </p>
+              <div class="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <span><strong class="text-slate-700 dark:text-slate-200">{{ itemsReporteStockFiltrados.length }}</strong> productos</span>
+                <span>•</span>
+                <span><strong class="text-emerald-600 dark:text-emerald-400">{{ totalLotesStockReporte }}</strong> lotes</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-boxes-stacked text-base"></i>
+            </div>
+          </div>
+
+          <!-- KPI 2: Costo Total de Inversión -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-blue-200/80 dark:border-blue-800/70 p-4 shadow-xs flex items-start justify-between">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Costo de Inversión (Stock)</span>
+              <p class="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono mt-1">
+                S/ {{ totalCostoInversionStockReporte | number:'1.2-2' }}
+              </p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Capital invertido en mercadería
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-Vault fa-sack-dollar text-base"></i>
+            </div>
+          </div>
+
+          <!-- KPI 3: Valorizado Total en Venta -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/80 p-4 shadow-xs flex items-start justify-between">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Valorizado Total en Venta</span>
+              <p class="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono mt-1">
+                S/ {{ totalValorVentaStockReporte | number:'1.2-2' }}
+              </p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Dinero proyectado a precio venta
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-coins text-base"></i>
+            </div>
+          </div>
+
+          <!-- KPI 4: Utilidad Bruta Proyectada -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-amber-200/80 dark:border-amber-800/70 p-4 shadow-xs flex items-start justify-between">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Ganancia Proyectada</span>
+              <p class="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono mt-1">
+                + S/ {{ totalGananciaStockReporte | number:'1.2-2' }}
+              </p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Margen estimado (Venta - Costo)
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-chart-line text-base"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros del Reporte de Stock -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/90 dark:border-slate-700 p-5 shadow-xs space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+            <!-- Búsqueda por producto, SKU, laboratorio o categoría -->
+            <div class="lg:col-span-4">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Buscar Producto / Código / Laboratorio</label>
+              <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" [(ngModel)]="busquedaStock" (ngModelChange)="paginaStock = 1"
+                  placeholder="Ej: Paracetamol, MED-106, Portugal, Antibióticos..."
+                  class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+              </div>
+            </div>
+
+            <!-- Filtro por Sede -->
+            <div class="lg:col-span-2">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Sede / Sucursal</label>
+              <select [(ngModel)]="filtroSedeStock" (ngModelChange)="consultarSupabaseStock()"
+                class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                <option value="TODAS">Todas las Sedes</option>
+                @for (s of listaSedes; track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Filtro por Nivel de Stock -->
+            <div class="lg:col-span-2">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Estado de Stock</label>
+              <select [(ngModel)]="filtroNivelStock" (ngModelChange)="calcularReporteStock()"
+                class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                <option value="CON_STOCK">Con Stock (&gt; 0)</option>
+                <option value="STOCK_BAJO">Stock Bajo (1 a 10)</option>
+                <option value="SIN_STOCK">Agotados (Stock 0)</option>
+                <option value="TODOS">Todos los productos</option>
+              </select>
+            </div>
+
+            <!-- Filtro por Tipo -->
+            <div class="lg:col-span-2">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Tipo Producto</label>
+              <select [(ngModel)]="filtroTipoStock" (ngModelChange)="paginaStock = 1"
+                class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                <option value="TODOS">Todos los tipos</option>
+                <option value="MEDICAMENTO">Medicamentos</option>
+                <option value="PERFUME">Perfumería</option>
+                <option value="OTROS">Otros / Insumos</option>
+              </select>
+            </div>
+
+            <!-- Ordenar por -->
+            <div class="lg:col-span-2 flex items-center gap-1.5">
+              <div class="flex-1">
+                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Ordenar Por</label>
+                <select [(ngModel)]="ordenStock" (ngModelChange)="paginaStock = 1"
+                  class="w-full px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                  <option value="VALOR_DESC">Mayor Valor (S/)</option>
+                  <option value="STOCK_DESC">Mayor Cantidad</option>
+                  <option value="STOCK_ASC">Menor Cantidad</option>
+                  <option value="NOMBRE_ASC">Nombre (A - Z)</option>
+                </select>
+              </div>
+              <button (click)="limpiarFiltrosStock()" title="Restablecer filtros"
+                class="mt-4 px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 text-xs cursor-pointer">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla Detallada de Productos en Stock y su Valorizado -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-xs overflow-hidden">
+          <div class="px-5 py-3.5 bg-slate-100 dark:bg-slate-900/90 border-b border-slate-300 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-table-list text-emerald-600 text-sm"></i>
+              <h2 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                Inventario Valorizado por Producto ({{ itemsReporteStockFiltrados.length }} registros)
+              </h2>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] font-semibold">
+              <span class="text-slate-600 dark:text-slate-300">
+                Stock Total: <strong class="font-mono text-slate-900 dark:text-white">{{ totalUnidadesStockReporte | number:'1.0-0' }} unid.</strong>
+              </span>
+              <span class="text-blue-700 dark:text-blue-300">
+                Inversión: <strong class="font-mono">S/ {{ totalCostoInversionStockReporte | number:'1.2-2' }}</strong>
+              </span>
+              <span class="text-emerald-700 dark:text-emerald-300">
+                Valor Venta: <strong class="font-mono">S/ {{ totalValorVentaStockReporte | number:'1.2-2' }}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-800 text-white text-[10px] uppercase tracking-wider font-bold">
+                  <th class="py-2.5 px-3 border-r border-slate-700 text-center w-10">#</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700">Código / Categoría</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700">Producto & Laboratorio</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700 text-center">Lotes / Vencimiento</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700 text-center">Stock Actual</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700 text-right">Costo Unit. / Inversión</th>
+                  <th class="py-2.5 px-3 border-r border-slate-700 text-right">Precio Unit. / Valor Venta</th>
+                  <th class="py-2.5 px-3 text-right">Utilidad Proyectada</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-slate-700/70 text-xs">
+                @for (item of itemsReporteStockPaginados; track item.productoId; let idx = $index) {
+                  <tr class="hover:bg-emerald-50/40 dark:hover:bg-slate-700/40 transition-colors">
+                    <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-400 border-r border-slate-100 dark:border-slate-800">
+                      {{ (paginaStock - 1) * itemsPorPaginaStock + idx + 1 }}
+                    </td>
+                    <td class="py-2.5 px-3 border-r border-slate-100 dark:border-slate-800">
+                      <span class="font-mono font-bold text-slate-800 dark:text-slate-200 block text-[11px]">{{ item.sku }}</span>
+                      <span class="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        {{ item.categoria }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 border-r border-slate-100 dark:border-slate-800">
+                      <span class="font-bold text-slate-900 dark:text-white block">{{ item.nombre }}</span>
+                      <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                        <i class="fa-solid fa-flask text-[9px] text-teal-600"></i> {{ item.laboratorio }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center border-r border-slate-100 dark:border-slate-800">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        {{ item.cantidadLotes }} {{ item.cantidadLotes === 1 ? 'lote' : 'lotes' }}
+                      </span>
+                      <span class="block text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-1">
+                        Vence: {{ item.proximoVencimiento }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center border-r border-slate-100 dark:border-slate-800">
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-lg font-mono font-black text-xs"
+                        [ngClass]="{
+                          'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800': item.stockTotal > 10,
+                          'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800': item.stockTotal > 0 && item.stockTotal <= 10,
+                          'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800': item.stockTotal === 0
+                        }">
+                        {{ item.stockTotal | number:'1.0-0' }} unid.
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono border-r border-slate-100 dark:border-slate-800 whitespace-nowrap">
+                      <span class="block font-bold text-blue-700 dark:text-blue-400">
+                        S/ {{ item.costoInversionTotal | number:'1.2-2' }}
+                      </span>
+                      <span class="block text-[10px] text-slate-400">
+                        C.U.: S/ {{ item.costoUnitario | number:'1.2-2' }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono border-r border-slate-100 dark:border-slate-800 whitespace-nowrap">
+                      <span class="block font-black text-emerald-700 dark:text-emerald-400 text-xs">
+                        S/ {{ item.valorVentaTotal | number:'1.2-2' }}
+                      </span>
+                      <span class="block text-[10px] text-slate-500 dark:text-slate-400">
+                        P.V.: S/ {{ item.precioVentaUnitario | number:'1.2-2' }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono whitespace-nowrap">
+                      <span class="font-bold text-amber-600 dark:text-amber-400">
+                        + S/ {{ item.gananciaProyectada | number:'1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="py-10 text-center text-slate-400">
+                      <i class="fa-solid fa-boxes-stacked text-2xl mb-2 block"></i>
+                      No se encontraron productos en stock para los filtros seleccionados.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+
+              <!-- TOTALES GENERALES AL FINAL DE LA TABLA (TFOOT) -->
+              @if (itemsReporteStockFiltrados.length > 0) {
+                <tfoot class="bg-slate-100 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-700 text-xs font-black text-slate-900 dark:text-white">
+                  <tr>
+                    <td colspan="3" class="py-3 px-3 text-left border-r border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
+                      TOTAL GENERAL ({{ itemsReporteStockFiltrados.length }} productos filtrados)
+                    </td>
+                    <td class="py-3 px-3 text-center font-mono text-indigo-700 dark:text-indigo-400 border-r border-slate-200 dark:border-slate-800 text-[11px]">
+                      {{ totalLotesStockReporte }} lotes
+                    </td>
+                    <td class="py-3 px-3 text-center font-mono text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-800 text-xs whitespace-nowrap">
+                      {{ totalUnidadesStockReporte | number:'1.0-0' }} unid.
+                    </td>
+                    <td class="py-3 px-3 text-right font-mono text-blue-700 dark:text-blue-400 border-r border-slate-200 dark:border-slate-800 text-xs whitespace-nowrap">
+                      S/ {{ totalCostoInversionStockReporte | number:'1.2-2' }}
+                    </td>
+                    <td class="py-3 px-3 text-right font-mono text-emerald-700 dark:text-emerald-400 border-r border-slate-200 dark:border-slate-800 text-xs whitespace-nowrap">
+                      S/ {{ totalValorVentaStockReporte | number:'1.2-2' }}
+                    </td>
+                    <td class="py-3 px-3 text-right font-mono text-amber-600 dark:text-amber-400 text-xs whitespace-nowrap">
+                      + S/ {{ totalGananciaStockReporte | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+
+          <!-- Paginación del Reporte de Stock -->
+          @if (totalPaginasStock > 1) {
+            <div class="px-5 py-3 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span class="text-slate-500 dark:text-slate-400">
+                Mostrando página <strong class="text-slate-800 dark:text-white">{{ paginaStock }}</strong> de <strong class="text-slate-800 dark:text-white">{{ totalPaginasStock }}</strong>
+                ({{ itemsReporteStockFiltrados.length }} productos en total)
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button (click)="cambiarPaginaStock(1)" [disabled]="paginaStock === 1"
+                  class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer">
+                  <i class="fa-solid fa-angles-left"></i>
+                </button>
+                <button (click)="cambiarPaginaStock(paginaStock - 1)" [disabled]="paginaStock === 1"
+                  class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer font-semibold">
+                  Anterior
+                </button>
+                <span class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold font-mono">
+                  {{ paginaStock }} / {{ totalPaginasStock }}
+                </span>
+                <button (click)="cambiarPaginaStock(paginaStock + 1)" [disabled]="paginaStock === totalPaginasStock"
+                  class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer font-semibold">
+                  Siguiente
+                </button>
+                <button (click)="cambiarPaginaStock(totalPaginasStock)" [disabled]="paginaStock === totalPaginasStock"
+                  class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer">
+                  <i class="fa-solid fa-angles-right"></i>
+                </button>
+              </div>
+            </div>
+          }
         </div>
 
       </div>

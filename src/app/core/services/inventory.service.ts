@@ -6,6 +6,8 @@ import { Observable, of, from, map, catchError } from 'rxjs';
 export interface LoteItem {
   id: string | number;
   productoId: string;
+  sku?: string;
+  categoriaNombre?: string;
   tipoProducto?: 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
   lote: string;
   producto: string;
@@ -21,6 +23,8 @@ export interface LoteItem {
   ubicacion?: string;
   registroSanitario?: string;
   temperatura?: string;
+  precioVentaUnitario?: number;
+  valorVentaTotal?: number;
   costoUnitario?: number;
   costoTotalProveedor?: number;
   fechaIngreso?: string;
@@ -79,6 +83,30 @@ export class InventoryService {
     }
   }
 
+  private obtenerCostosLocales(): Record<string, { costoUnitario?: number; costoTotalProveedor?: number }> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('medicare_costos_lotes_v1');
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {
+      // Ignorar errores
+    }
+    return {};
+  }
+
+  private guardarCostoLocal(id: string | number, costoUnitario?: number, costoTotalProveedor?: number): void {
+    try {
+      if (typeof localStorage !== 'undefined' && id) {
+        const mapa = this.obtenerCostosLocales();
+        mapa[String(id)] = { costoUnitario, costoTotalProveedor };
+        localStorage.setItem('medicare_costos_lotes_v1', JSON.stringify(mapa));
+      }
+    } catch {
+      // Ignorar errores
+    }
+  }
+
   private mapSupabaseToLote(s: any): LoteItem {
     const vto = s.lotes_producto?.fecha_vencimiento || '2027-12-31';
     const now = Date.now();
@@ -86,19 +114,36 @@ export class InventoryService {
     const dias = isNaN(vtoDate) ? 999 : Math.round((vtoDate - now) / (1000 * 3600 * 24));
 
     const p = s.productos;
-    const esPerfume = p?.codigo_interno?.startsWith('PERF') || p?.categorias_producto?.nombre?.toLowerCase().includes('perfum');
-    const esOtros = p?.codigo_interno?.startsWith('OTR') || p?.categorias_producto?.nombre?.toLowerCase().includes('higiene');
+    const catNombre = p?.categorias_producto?.nombre || 'General';
+    const esPerfume = p?.codigo_interno?.startsWith('PERF') || catNombre.toLowerCase().includes('perfum');
+    const esOtros = p?.codigo_interno?.startsWith('OTR') || catNombre.toLowerCase().includes('higiene') || catNombre.toLowerCase().includes('pañal') || catNombre.toLowerCase().includes('labial');
     const tipo: 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = esPerfume ? 'PERFUME' : (esOtros ? 'OTROS' : 'MEDICAMENTO');
+
+    const stockCant = Number(s.cantidad) || 0;
+    const precioVentaUnit = Number(p?.precio_venta_fraccion) > 0
+      ? Number(p.precio_venta_fraccion)
+      : (Number(p?.precio_venta) || 0);
+    const valorVentaTotal = Number((stockCant * precioVentaUnit).toFixed(2));
+
+    const costosLocales = this.obtenerCostosLocales()[String(s.id)];
+    const costoUnit = costosLocales?.costoUnitario && costosLocales.costoUnitario > 0
+      ? costosLocales.costoUnitario
+      : Number((precioVentaUnit * 0.70).toFixed(2));
+    const costoTotalProv = costosLocales?.costoTotalProveedor && costosLocales.costoTotalProveedor > 0
+      ? costosLocales.costoTotalProveedor
+      : Number((stockCant * costoUnit).toFixed(2));
 
     return {
       id: s.id,
       productoId: p?.id || s.producto_id,
+      sku: p?.codigo_interno || ('MED-' + String(p?.id || s.producto_id || '').slice(0, 6)),
+      categoriaNombre: catNombre,
       tipoProducto: tipo,
       lote: s.lotes_producto?.numero_lote || 'LOT-2026A',
       producto: p?.nombre_comercial || 'Producto de Farmacia',
       principioActivo: p?.principios_activos?.nombre || p?.nombre_generico || 'Genérico',
       laboratorio: p?.laboratorios?.nombre || 'Laboratorio',
-      stock: Number(s.cantidad) || 0,
+      stock: stockCant,
       vencimiento: vto,
       dias: dias,
       pasillo: 'P1',
@@ -106,7 +151,10 @@ export class InventoryService {
       nivel: 'N1',
       ubicacion: s.almacenes?.nombre || 'Almacén Principal',
       registroSanitario: s.lotes_producto?.registro_sanitario || p?.registro_sanitario || 'EN-04512',
-      costoUnitario: Number(p?.precio_costo) || 0.20,
+      precioVentaUnitario: precioVentaUnit,
+      valorVentaTotal: valorVentaTotal,
+      costoUnitario: costoUnit,
+      costoTotalProveedor: costoTotalProv,
       fechaIngreso: s.actualizado_en ? s.actualizado_en.split('T')[0] : new Date().toLocaleDateString('en-CA'),
       almacenId: s.almacen_id,
       sucursalId: s.almacenes?.sucursal_id,
@@ -121,14 +169,14 @@ export class InventoryService {
         .from('stock_inventario')
         .select(`
           id, cantidad, cantidad_fraccion, almacen_id, producto_id, lote_id, actualizado_en,
-          productos (id, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, principios_activos(nombre), laboratorios(nombre), categorias_producto(nombre)),
+          productos (id, codigo_interno, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, precio_venta_fraccion, unidades_por_caja, principios_activos(nombre), laboratorios(nombre), categorias_producto(nombre)),
           lotes_producto (id, numero_lote, fecha_vencimiento, registro_sanitario, estado),
           almacenes!inner (id, nombre, sucursal_id, sucursales(id, nombre))
         `)
         .then(res => {
           if (res.data !== null && Array.isArray(res.data)) {
             this.lotesInventario = res.data.map(s => this.mapSupabaseToLote(s));
-                      }
+          }
         });
     }
   }
@@ -173,7 +221,7 @@ export class InventoryService {
         .from('stock_inventario')
         .select(`
           id, cantidad, cantidad_fraccion, almacen_id, producto_id, lote_id, actualizado_en,
-          productos (id, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, principios_activos(nombre), laboratorios(nombre), categorias_producto(nombre)),
+          productos (id, codigo_interno, nombre_comercial, nombre_generico, concentracion, precio_costo, precio_venta, precio_venta_fraccion, unidades_por_caja, principios_activos(nombre), laboratorios(nombre), categorias_producto(nombre)),
           lotes_producto (id, numero_lote, fecha_vencimiento, registro_sanitario, estado),
           almacenes!inner (id, nombre, sucursal_id, sucursales(id, nombre))
         `);
@@ -297,6 +345,10 @@ export class InventoryService {
       }
     }
 
+    if (lote.costoUnitario || lote.costoTotalProveedor) {
+      this.guardarCostoLocal(lote.id, lote.costoUnitario, lote.costoTotalProveedor);
+    }
+
     this.lotesInventario.push({ ...lote });
     return { ...lote };
   }
@@ -317,6 +369,10 @@ export class InventoryService {
    * Actualizar un lote existente en el inventario y Supabase
    */
   async actualizarLoteAsync(lote: LoteItem): Promise<LoteItem> {
+    if (lote.costoUnitario || lote.costoTotalProveedor) {
+      this.guardarCostoLocal(lote.id, lote.costoUnitario, lote.costoTotalProveedor);
+    }
+
     const idx = this.lotesInventario.findIndex(l => l.id === lote.id);
     if (idx >= 0) {
       this.lotesInventario[idx] = { ...lote };

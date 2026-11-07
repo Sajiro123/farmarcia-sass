@@ -1,189 +1,215 @@
 <div [class.dark]="themeService.isDarkMode()" class="login-page">
-  
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- PANEL IZQUIERDO — Formulario                       -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="login-panel">
-    <div class="login-card animate-fade-slide">
 
-      <!-- ── Cabecera: Toggle de tema ── -->
-      <div class="flex justify-end">
-        <button (click)="toggleTheme()" type="button" aria-label="Cambiar tema" class="theme-btn">
-          <i class="fa-solid" [class.fa-sun]="themeService.isDarkMode()" [class.fa-moon]="!themeService.isDarkMode()"></i>
-        </button>
-      </div>
+  <!-- Efectos de fondo ambiental y grilla geométrica -->
+  <div class="bg-grid-pattern"></div>
+  <div class="ambient-glow ambient-glow--top-left"></div>
+  <div class="ambient-glow ambient-glow--bottom-right"></div>
 
-      <!-- ── Título de bienvenida (Sin Logo) ── -->
-      <div>
-        <h1 class="login-title">
-          Acceso <span class="accent">Farmacia</span>
-        </h1>
-        <p class="login-subtitle">
-          Selecciona tu sede e ingresa tus credenciales para acceder al sistema de {{ businessName }}.
-        </p>
-      </div>
+  <!-- Contenedor principal centrado -->
+  <div class="login-container">
 
-      <!-- ── Formulario ── -->
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-3">
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- COLUMNA IZQUIERDA — Tarjeta Flotante de Acceso      -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="login-panel">
+      <div class="login-card animate-fade-slide">
 
-        <!-- Sede -->
-        <div>
-          <label class="field-label">
-            Sede / Sucursal <span class="req">*</span>
-          </label>
-          <div class="field-wrap">
-            <i class="fa-solid fa-store field-icon"></i>
-            <select formControlName="sede" class="field-input">
-              @for (sede of sedes; track sede.id) {
+        <!-- ── Barra superior: Estado del servidor y Toggle de tema ── -->
+        <div class="card-topbar">
+          <div class="server-pill">
+            <span class="server-dot"></span>
+            <span>Servidor Activo</span>
+          </div>
+          <button (click)="toggleTheme()" type="button" aria-label="Cambiar tema" class="theme-btn">
+            <i class="fa-solid" [class.fa-sun]="themeService.isDarkMode()"
+              [class.fa-moon]="!themeService.isDarkMode()"></i>
+          </button>
+        </div>
+
+        <!-- ── Título y subtítulo ── -->
+        <div class="login-header-text">
+          <h1 class="login-title">
+            Acceso <span class="accent">Farmacia</span>
+          </h1>
+        </div>
+
+        <!-- ── Formulario ── -->
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+
+          <!-- Sede / Sucursal -->
+          <div class="form-field">
+            <label class="field-label">
+              SEDE / SUCURSAL <span class="req">*</span>
+            </label>
+            <div class="field-wrap">
+              <i class="fa-solid fa-store field-icon"></i>
+              <select formControlName="sede" class="field-input">
+                @for (sede of sedes; track sede.id) {
                 <option [value]="sede.id">{{ sede.nombre }}</option>
-              }
-            </select>
-            <i class="fa-solid fa-chevron-down field-chevron"></i>
-          </div>
-          @if (loginForm.get('sede')?.touched && loginForm.get('sede')?.invalid) {
+                }
+              </select>
+              <i class="fa-solid fa-chevron-down field-chevron"></i>
+            </div>
+            @if (loginForm.get('sede')?.touched && loginForm.get('sede')?.invalid) {
             <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Debes seleccionar una sede.</p>
-          }
-        </div>
-
-        <!-- Usuario -->
-        <div>
-          <label class="field-label">
-            Usuario o Correo <span class="req">*</span>
-          </label>
-          <div class="field-wrap">
-            <i class="fa-regular fa-user field-icon"></i>
-            <input
-              type="text"
-              formControlName="email"
-              placeholder="admin, quimico, o correo"
-              autocomplete="username"
-              class="field-input">
+            }
           </div>
-          @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
+
+          <!-- Usuario o Correo -->
+          <div class="form-field">
+            <label class="field-label">
+              USUARIO O CORREO <span class="req">*</span>
+            </label>
+            <div class="field-wrap">
+              <i class="fa-regular fa-user field-icon"></i>
+              <input type="text" formControlName="email" placeholder="admin@medicare.com" autocomplete="username"
+                class="field-input">
+            </div>
+            @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
             <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Ingresa tu usuario o correo.</p>
-          }
-        </div>
-
-        <!-- Contraseña -->
-        <div>
-          <label class="field-label">
-            Contraseña <span class="req">*</span>
-          </label>
-          <div class="field-wrap">
-            <i class="fa-solid fa-lock field-icon"></i>
-            <input
-              [type]="showPassword ? 'text' : 'password'"
-              formControlName="password"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              class="field-input field-input-pass font-mono">
-            <button type="button" (click)="togglePasswordVisibility()" class="field-eye-btn">
-              <i class="fa-solid" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
-            </button>
+            }
           </div>
-          @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-            <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Ingresa tu contraseña.</p>
-          }
-        </div>
 
-        <!-- Error de autenticación -->
-        @if (errorMessage) {
+          <!-- Contraseña -->
+          <div class="form-field">
+            <div class="field-label-row">
+              <label class="field-label">
+                CONTRASEÑA <span class="req">*</span>
+              </label>
+              <span class="forgot-link">¿Olvidaste clave?</span>
+            </div>
+            <div class="field-wrap">
+              <i class="fa-solid fa-lock field-icon"></i>
+              <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••••••••"
+                autocomplete="current-password" class="field-input field-input-pass">
+              <button type="button" (click)="togglePasswordVisibility()" class="field-eye-btn">
+                <i class="fa-regular" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+              </button>
+            </div>
+            @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
+            <p class="field-error"><i class="fa-solid fa-circle-exclamation"></i> Ingresa tu contraseña.</p>
+            }
+          </div>
+
+          <!-- Opciones de terminal y seguridad SSL -->
+          <div class="form-meta-row">
+            <label class="remember-check">
+              <input type="checkbox" checked>
+              <span class="check-box"><i class="fa-solid fa-check"></i></span>
+              <span class="remember-text">Recordar terminal</span>
+            </label>
+          </div>
+
+          <!-- Error de autenticación -->
+          @if (errorMessage) {
           <div class="error-alert animate-fade-in">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span>{{ errorMessage }}</span>
           </div>
-        }
+          }
 
-        <!-- Separador decorativo -->
-        <div class="form-divider"><span>Plataforma Segura</span></div>
-
-        <!-- Botón de ingreso -->
-        <button type="submit" [disabled]="isSubmitting" class="btn-login">
-          @if (isSubmitting) {
+          <!-- Botón de ingreso -->
+          <button type="submit" [disabled]="isSubmitting" class="btn-login">
+            @if (isSubmitting) {
             <i class="fa-solid fa-circle-notch fa-spin"></i>
             <span>Verificando...</span>
-          } @else {
+            } @else {
             <i class="fa-solid fa-arrow-right-to-bracket"></i>
             <span>Ingresar al Sistema</span>
-          }
-        </button>
+            }
+          </button>
 
-      </form>
+        </form>
 
-      <!-- ── Pie ── -->
-      <div class="login-footer">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>Autenticación centralizada SaaS</span>
+        <!-- ── Pie de la tarjeta ── -->
+        <div class="login-footer">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Plataforma Segura • Autenticación Centralizada SaaS</span>
+        </div>
+
       </div>
-
     </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- COLUMNA DERECHA — Hero Farmacéutico Medicare        -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="hero-panel">
+      <div class="hero-content animate-fade-in">
+
+        <!-- ── Tarjeta de Marca / Logo Medicare ── -->
+        <div class="hero-brand-card">
+          <div class="brand-icon-box">
+            <i class="fa-solid fa-capsules"></i>
+          </div>
+          <div class="brand-info">
+            <div class="brand-title-row">
+              <span class="brand-name">Medicare</span>
+            </div>
+            <p class="brand-tagline">"Pensando en tu Salud" • <span>BOTICA &amp; PERFUMERÍA</span></p>
+          </div>
+        </div>
+
+        <!-- ── Título principal ── -->
+        <div class="hero-heading-group">
+          <h2 class="hero-title">
+            Gestión Inteligente<br>
+            de <span>Farmacias Modernas</span>
+          </h2>
+          <p class="hero-desc">
+            Plataforma omnicanal médica con control riguroso de inventarios, optimización de márgenes y cumplimiento de
+            normativas de salud en tiempo real.
+          </p>
+        </div>
+
+        <!-- ── Píldoras de características ── -->
+        <div class="hero-stats">
+          <span class="hero-stat-pill hero-stat-pill--fefo">
+            <i class="fa-regular fa-calendar-check"></i> Control FEFO (Primero Vence, Primero Sale)
+          </span>
+          <span class="hero-stat-pill hero-stat-pill--arqueo">
+            <i class="fa-solid fa-cash-register"></i> Arqueo Ciego &amp; Turnos
+          </span>
+          <span class="hero-stat-pill hero-stat-pill--analytics">
+            <i class="fa-solid fa-chart-line"></i> Analítica &amp; Reposición Predictiva
+          </span>
+        </div>
+
+        <!-- ── Divisor sutil ── -->
+        <div class="hero-divider"></div>
+
+        <!-- ── Tarjetas de Roles ── -->
+        <div class="hero-roles">
+          <div class="hero-role-card hero-role-card--admin">
+            <div class="role-icon"><i class="fa-solid fa-chart-pie"></i></div>
+            <div class="role-name">Administración</div>
+            <div class="role-desc">KPIs, Finanzas, Kardex y Auditoría fiscal.</div>
+          </div>
+          <div class="hero-role-card hero-role-card--quimico">
+            <div class="role-icon"><i class="fa-solid fa-vial-circle-check"></i></div>
+            <div class="role-name">Químico Farmacéutico</div>
+            <div class="role-desc">Control de recetas, estupefacientes y lotes.</div>
+          </div>
+          <div class="hero-role-card hero-role-card--ventas">
+            <div class="role-icon"><i class="fa-solid fa-barcode"></i></div>
+            <div class="role-name">Ventas &amp; POS</div>
+            <div class="role-desc">Facturación rápida, tickets y fidelización.</div>
+          </div>
+        </div>
+
+        <!-- ── Estado de sincronización en la nube ── -->
+        <div class="hero-sync-status">
+          <span class="sync-dot"></span>
+          <span>Sincronización multi-sucursal en la nube: <strong>100% Operativa</strong></span>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- PANEL DERECHO — Hero Farmacéutico Moderno          -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="hero-panel">
-
-    <!-- Fondo -->
-    <div class="hero-bg-pattern"></div>
-    <div class="hero-glow-top"></div>
-    <div class="hero-glow-bottom"></div>
-
-    <!-- Contenido central -->
-    <div class="hero-content">
-
-      <!-- Logo dinámico de la base de datos con estilo glassmorphism detallado -->
-      @if (logoUrl && !logoError) {
-        <div class="hero-logo-card animate-fade-in">
-          <img [src]="logoUrl" [alt]="businessName" fetchpriority="high" class="hero-logo-img" (error)="handleLogoError()">
-        </div>
-      } @else {
-        <div class="hero-icon-fallback animate-fade-in">
-          <i class="fa-solid fa-prescription-bottle-medical"></i>
-        </div>
-      }
-
-      <!-- Título y descripción -->
-      <h2 class="hero-title">Gestión Inteligente<br>de <span>Farmacias</span></h2>
-
-      <p class="hero-desc">
-        Punto de Venta con Arqueo Ciego, control de lotes y vencimientos (FEFO) y compras con cálculo predictivo de stock.
-      </p>
-
-      <!-- Estadísticas / pills -->
-      <div class="hero-stats">
-        <span class="hero-stat-pill">
-          <i class="fa-solid fa-box-open"></i> Control FEFO
-        </span>
-        <span class="hero-stat-pill">
-          <i class="fa-solid fa-cash-register"></i> Arqueo Ciego
-        </span>
-        <span class="hero-stat-pill">
-          <i class="fa-solid fa-chart-pie"></i> Analítica Real-Time
-        </span>
-      </div>
-
-      <!-- Cards de roles (Sin emojis de texto, con iconos fa) -->
-      <div class="hero-roles">
-        <div class="hero-role-card">
-          <div class="role-icon"><i class="fa-solid fa-crown"></i></div>
-          <div class="role-name">Admin</div>
-          <div class="role-desc">KPIs, Finanzas & Auditoría</div>
-        </div>
-        <div class="hero-role-card">
-          <div class="role-icon"><i class="fa-solid fa-flask"></i></div>
-          <div class="role-name">Químico</div>
-          <div class="role-desc">Control Sanitario estricto</div>
-        </div>
-        <div class="hero-role-card">
-          <div class="role-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-          <div class="role-name">Ventas</div>
-          <div class="role-desc">POS, Caja y Turnos</div>
-        </div>
-      </div>
-
-    </div>
-
+  <!-- Pie de página global inferior -->
+  <div class="page-copyright">
+    © 2026 Medicare Botica &amp; Perfumería • Sistema Certificado de Gestión Farmacéutica • V 4.8.2
   </div>
 
 </div>

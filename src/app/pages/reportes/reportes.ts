@@ -1,11 +1,34 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { VentaService, TicketVentaDTO, TurnoCajaDTO } from '../../core/services/venta.service';
 import { AuthService } from '../../core/services/auth.service';
+import { InventoryService, LoteItem } from '../../core/services/inventory.service';
+import { ProductService, ProductoCatalogoItem } from '../../core/services/product.service';
+import { SearchService } from '../../core/services/search.service';
 
 import { DatePickerModule } from 'primeng/datepicker';
+
+export interface ItemReporteStock {
+  productoId: string;
+  sku: string;
+  nombre: string;
+  laboratorio: string;
+  categoria: string;
+  tipoProducto: 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
+  cantidadLotes: number;
+  lotePrincipal: string;
+  proximoVencimiento: string;
+  sede: string;
+  stockTotal: number;
+  costoUnitario: number;
+  precioVentaUnitario: number;
+  costoInversionTotal: number;
+  valorVentaTotal: number;
+  gananciaProyectada: number;
+}
 
 export interface ResumenDiaReporte {
   fecha: string; // YYYY-MM-DD
@@ -28,22 +51,45 @@ export interface ResumenDiaReporte {
 @Component({
   selector: 'app-reportes',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePickerModule],
+  imports: [CommonModule, FormsModule, DatePickerModule, RouterLink],
   templateUrl: './reportes.html'
 })
 export class Reportes implements OnInit {
   public ventaService = inject(VentaService);
   public authService = inject(AuthService);
+  public inventoryService = inject(InventoryService);
+  public productService = inject(ProductService);
+  private searchService = inject(SearchService);
+  private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
 
   // --- NAVEGACIÓN POR PESTAÑAS ---
-  tabActiva: 'GENERAL' | 'DETALLADO' | 'APERTURAS' = 'GENERAL';
+  tabActiva: 'GENERAL' | 'DETALLADO' | 'APERTURAS' | 'STOCK' = 'GENERAL';
 
   // Datos base
   turnoActual: TurnoCajaDTO | null = null;
   historialTurnos: TurnoCajaDTO[] = [];
   ventas: TicketVentaDTO[] = [];
+
+  get turnoHoy(): TurnoCajaDTO | null {
+    if (!this.turnoActual || !this.turnoActual.fechaApertura) return null;
+    const hoyIso = new Date().toLocaleDateString('en-CA');
+    const fIso = this.toIsoDate(this.turnoActual.fechaApertura);
+    return fIso === hoyIso ? this.turnoActual : null;
+  }
+
+  // ================= 4. PESTAÑA: REPORTE DE STOCK VALORIZADO =================
+  lotesStockReporte: LoteItem[] = [];
+  catalogoStockReporte: ProductoCatalogoItem[] = [];
+  itemsReporteStock: ItemReporteStock[] = [];
+  busquedaStock = '';
+  filtroSedeStock = 'TODAS';
+  filtroTipoStock: 'TODOS' | 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = 'TODOS';
+  filtroNivelStock: 'CON_STOCK' | 'TODOS' | 'STOCK_BAJO' | 'SIN_STOCK' = 'CON_STOCK';
+  ordenStock: 'VALOR_DESC' | 'STOCK_DESC' | 'STOCK_ASC' | 'NOMBRE_ASC' = 'VALOR_DESC';
+  paginaStock = 1;
+  itemsPorPaginaStock = 15;
 
   // ================= 1. PESTAÑA: REPORTE GENERAL =================
   fechaInicioGeneral: string = '';
@@ -96,25 +142,40 @@ export class Reportes implements OnInit {
   conteoVentasNube = 0;
 
   get sedeActivaNombre(): string {
-    return this.authService.activeSede()?.nombre || 'Sede Cajamarca Central';
+    return this.authService.activeSede()?.nombre || 'Medicare Farmacia';
+  }
+
+  normalizarNombreSede(nombre?: string): string {
+    if (!nombre) return 'Medicare Farmacia';
+    const n = nombre.toLowerCase().trim();
+    if (n.includes('kelly') || n.includes('apurimac') || n.includes('baños')) {
+      return 'D Kelly Store';
+    }
+    return 'Medicare Farmacia';
+  }
+
+  sedeCoincide(sedeItem?: string, filtro?: string): boolean {
+    if (!filtro || filtro === 'TODAS') return true;
+    return this.normalizarNombreSede(sedeItem) === this.normalizarNombreSede(filtro);
   }
 
   obtenerSucursalIdPorNombre(nombreSede: string): string | undefined {
     if (!nombreSede || nombreSede === 'TODAS') return undefined;
     const sedes = this.authService.getSedes();
-    const s = sedes.find(x => x.nombre?.toLowerCase() === nombreSede.toLowerCase());
+    const s = sedes.find(x => this.normalizarNombreSede(x.nombre) === this.normalizarNombreSede(nombreSede));
     if (s) return s.id;
-    if (nombreSede.toLowerCase().includes('baños')) return '45fca103-2669-48b8-8a1c-7e5380da5e1f';
+    if (this.normalizarNombreSede(nombreSede) === 'D Kelly Store') return '45fca103-2669-48b8-8a1c-7e5380da5e1f';
     return '11111111-1111-1111-1111-111111111111';
   }
 
   ngOnInit() {
     // Sincronizar reportes con la Sede Activa para mantener información 100% independiente
     const sedeActiva = this.authService.activeSede();
-    const nombreSede = sedeActiva?.nombre || 'Sede Cajamarca Central';
+    const nombreSede = sedeActiva?.nombre || 'Medicare Farmacia';
     this.filtroSedeGeneral = nombreSede;
     this.filtroSedeDetalle = nombreSede;
     this.filtroSedeApertura = nombreSede;
+    this.filtroSedeStock = 'TODAS';
 
     // Configurar fechas iniciales del reporte general y aperturas (últimos 14 días a hoy)
     const fin = new Date();
@@ -134,8 +195,15 @@ export class Reportes implements OnInit {
     this.cargarAperturas();
     this.calcularReporteGeneral();
 
-    // Sincronizar en vivo con Supabase Cloud PostgreSQL
-    this.consultarSupabaseGeneral();
+    // Verificar si se solicitó abrir directamente la pestaña de STOCK desde Inventario
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam === 'STOCK') {
+      this.tabActiva = 'STOCK';
+      this.consultarSupabaseStock();
+    } else {
+      // Sincronizar en vivo con Supabase Cloud PostgreSQL
+      this.consultarSupabaseGeneral();
+    }
   }
 
   cargarDatos() {
@@ -149,6 +217,8 @@ export class Reportes implements OnInit {
       this.consultarSupabaseDetalle();
     } else if (this.tabActiva === 'APERTURAS') {
       this.consultarSupabaseAperturas();
+    } else if (this.tabActiva === 'STOCK') {
+      this.consultarSupabaseStock();
     }
   }
 
@@ -177,9 +247,7 @@ export class Reportes implements OnInit {
           });
           this.ventas = Array.from(mapa.values());
 
-          if (turnos && turnos.length > 0) {
-            this.historialTurnos = turnos;
-          }
+          this.historialTurnos = turnos || [];
           this.cargarAperturas();
           this.calcularReporteGeneral();
 
@@ -251,9 +319,15 @@ export class Reportes implements OnInit {
             this.cargandoSupabase = false;
             this.ultimaConsultaNube = new Date();
 
-            if (turnosDb && turnosDb.length > 0) {
-              this.historialTurnos = turnosDb;
+            this.historialTurnos = turnosDb || [];
+            const hoyIso = new Date().toLocaleDateString('en-CA');
+            const turnoHoyDb = this.historialTurnos.find(t => this.toIsoDate(t.fechaApertura) === hoyIso);
+            if (turnoHoyDb) {
+              this.turnoActual = turnoHoyDb;
+            } else {
+              this.turnoActual = this.ventaService.getTurnoActual();
             }
+
             this.cargarAperturas();
             this.calcularReporteGeneral();
             this.cdr.markForCheck();
@@ -271,7 +345,7 @@ export class Reportes implements OnInit {
       });
   }
 
-  cambiarTab(tab: 'GENERAL' | 'DETALLADO' | 'APERTURAS') {
+  cambiarTab(tab: 'GENERAL' | 'DETALLADO' | 'APERTURAS' | 'STOCK') {
     this.tabActiva = tab;
     if (tab === 'GENERAL') {
       this.consultarSupabaseGeneral();
@@ -279,7 +353,264 @@ export class Reportes implements OnInit {
       this.consultarSupabaseDetalle();
     } else if (tab === 'APERTURAS') {
       this.consultarSupabaseAperturas();
+    } else if (tab === 'STOCK') {
+      this.consultarSupabaseStock();
     }
+  }
+
+  // ================= LÓGICA: REPORTE DE STOCK VALORIZADO =================
+  consultarSupabaseStock() {
+    this.cargandoSupabase = true;
+    this.cdr.markForCheck();
+
+    const sucursalId = this.obtenerSucursalIdPorNombre(this.filtroSedeStock);
+
+    // Precarga inmediata si ya hay datos en memoria
+    if (this.inventoryService.lotesInventario?.length > 0 || this.productService.productosCatalogo?.length > 0) {
+      this.lotesStockReporte = [...(this.inventoryService.lotesInventario || [])];
+      this.catalogoStockReporte = [...(this.productService.productosCatalogo || [])];
+      this.calcularReporteStock();
+    }
+
+    forkJoin({
+      lotes: this.inventoryService.listarLotesFefo(sucursalId || 'TODAS'),
+      catalogo: this.productService.listarCatalogoActivos()
+    }).subscribe({
+      next: ({ lotes, catalogo }) => {
+        this.ngZone.run(() => {
+          this.cargandoSupabase = false;
+          this.ultimaConsultaNube = new Date();
+          this.lotesStockReporte = lotes || [];
+          this.catalogoStockReporte = catalogo || [];
+          this.calcularReporteStock();
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.ngZone.run(() => {
+          this.cargandoSupabase = false;
+          this.calcularReporteStock();
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
+
+  calcularReporteStock() {
+    const mapaCatalogo = new Map<string, ProductoCatalogoItem>();
+    (this.catalogoStockReporte || []).forEach(p => {
+      if (p?.id) mapaCatalogo.set(String(p.id), p);
+    });
+
+    const agrupado = new Map<string, {
+      productoId: string;
+      sku: string;
+      nombre: string;
+      laboratorio: string;
+      categoria: string;
+      tipoProducto: 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
+      cantidadLotes: number;
+      lotePrincipal: string;
+      proximoVencimiento: string;
+      sede: string;
+      stockTotal: number;
+      precioVentaUnitario: number;
+      costoInversionTotal: number;
+      valorVentaTotal: number;
+    }>();
+
+    // 1. Procesar todos los lotes en stock_inventario
+    (this.lotesStockReporte || []).forEach(l => {
+      if (this.filtroSedeStock !== 'TODAS' && !this.sedeCoincide(l.sucursalNombre, this.filtroSedeStock)) {
+        return;
+      }
+
+      const prodCat = mapaCatalogo.get(String(l.productoId));
+      const key = String(l.productoId || l.producto);
+      const stockLote = Number(l.stock) || 0;
+
+      const pvUnit = (l.precioVentaUnitario && l.precioVentaUnitario > 0)
+        ? l.precioVentaUnitario
+        : (Number(prodCat?.precioUnidad) || Number(prodCat?.precioVenta) || Number(prodCat?.precioCaja) || 0);
+
+      const costoUnit = (l.costoTotalProveedor && l.costoTotalProveedor > 0 && stockLote > 0)
+        ? Number((l.costoTotalProveedor / stockLote).toFixed(2))
+        : ((l.costoUnitario && l.costoUnitario > 0) ? l.costoUnitario : Number((pvUnit * 0.70).toFixed(2)));
+
+      const costoLote = (l.costoTotalProveedor && l.costoTotalProveedor > 0)
+        ? Number(l.costoTotalProveedor)
+        : Number((stockLote * costoUnit).toFixed(2));
+
+      const valorVentaLote = Number((stockLote * pvUnit).toFixed(2));
+
+      const tipo: 'MEDICAMENTO' | 'PERFUME' | 'OTROS' = l.tipoProducto || prodCat?.tipoProducto || 'MEDICAMENTO';
+      const sku = l.sku || prodCat?.sku || ('MED-' + key.slice(0, 6));
+      const categoria = l.categoriaNombre || prodCat?.categoriaNombre || 'General';
+      const lab = l.laboratorio || prodCat?.laboratorio || prodCat?.marca || 'General';
+      const nombre = l.producto || prodCat?.nombreComercial || 'Producto';
+
+      const existente = agrupado.get(key);
+      if (existente) {
+        existente.cantidadLotes += 1;
+        existente.stockTotal += stockLote;
+        existente.costoInversionTotal = Number((existente.costoInversionTotal + costoLote).toFixed(2));
+        existente.valorVentaTotal = Number((existente.valorVentaTotal + valorVentaLote).toFixed(2));
+        if (l.vencimiento && l.vencimiento !== 'No expira' && (existente.proximoVencimiento === 'No expira' || l.vencimiento < existente.proximoVencimiento)) {
+          existente.proximoVencimiento = l.vencimiento;
+          existente.lotePrincipal = l.lote;
+        }
+      } else {
+        agrupado.set(key, {
+          productoId: key,
+          sku,
+          nombre,
+          laboratorio: lab,
+          categoria,
+          tipoProducto: tipo,
+          cantidadLotes: 1,
+          lotePrincipal: l.lote || 'S/L',
+          proximoVencimiento: l.vencimiento || 'No expira',
+          sede: l.sucursalNombre || this.sedeActivaNombre,
+          stockTotal: stockLote,
+          precioVentaUnitario: pvUnit,
+          costoInversionTotal: costoLote,
+          valorVentaTotal: valorVentaLote
+        });
+      }
+    });
+
+    // 2. Si el usuario desea ver también productos del catálogo sin lotes/stock
+    if (this.filtroNivelStock === 'TODOS' || this.filtroNivelStock === 'SIN_STOCK') {
+      (this.catalogoStockReporte || []).forEach(p => {
+        const key = String(p.id);
+        if (!agrupado.has(key)) {
+          const pvUnit = Number(p.precioUnidad) || Number(p.precioVenta) || Number(p.precioCaja) || 0;
+          agrupado.set(key, {
+            productoId: key,
+            sku: p.sku || ('MED-' + key.slice(0, 6)),
+            nombre: p.nombreComercial,
+            laboratorio: p.laboratorio || p.marca || 'General',
+            categoria: p.categoriaNombre || 'General',
+            tipoProducto: p.tipoProducto || 'MEDICAMENTO',
+            cantidadLotes: 0,
+            lotePrincipal: 'SIN LOTE',
+            proximoVencimiento: '—',
+            sede: this.filtroSedeStock === 'TODAS' ? 'Todas las sedes' : this.filtroSedeStock,
+            stockTotal: 0,
+            precioVentaUnitario: pvUnit,
+            costoInversionTotal: 0,
+            valorVentaTotal: 0
+          });
+        }
+      });
+    }
+
+    this.itemsReporteStock = Array.from(agrupado.values()).map(item => {
+      const costoUnitPromedio = item.stockTotal > 0
+        ? Number((item.costoInversionTotal / item.stockTotal).toFixed(2))
+        : Number((item.precioVentaUnitario * 0.70).toFixed(2));
+      const ganancia = Math.max(0, Number((item.valorVentaTotal - item.costoInversionTotal).toFixed(2)));
+      return {
+        ...item,
+        costoUnitario: costoUnitPromedio,
+        gananciaProyectada: ganancia
+      };
+    });
+
+    this.paginaStock = 1;
+    this.cdr.markForCheck();
+  }
+
+  get itemsReporteStockFiltrados(): ItemReporteStock[] {
+    let list = [...this.itemsReporteStock];
+
+    // Filtro por nivel de stock
+    if (this.filtroNivelStock === 'CON_STOCK') {
+      list = list.filter(i => i.stockTotal > 0);
+    } else if (this.filtroNivelStock === 'STOCK_BAJO') {
+      list = list.filter(i => i.stockTotal > 0 && i.stockTotal <= 10);
+    } else if (this.filtroNivelStock === 'SIN_STOCK') {
+      list = list.filter(i => i.stockTotal === 0);
+    }
+
+    // Filtro por tipo de producto
+    if (this.filtroTipoStock !== 'TODOS') {
+      list = list.filter(i => i.tipoProducto === this.filtroTipoStock);
+    }
+
+    // Búsqueda inteligente por texto
+    if (this.busquedaStock && this.busquedaStock.trim()) {
+      list = this.searchService.search(
+        list,
+        this.busquedaStock,
+        ['nombre', 'sku', 'laboratorio', 'categoria', 'lotePrincipal'],
+        { nombre: 3, sku: 2 }
+      );
+    }
+
+    // Ordenamiento
+    switch (this.ordenStock) {
+      case 'VALOR_DESC':
+        list.sort((a, b) => b.valorVentaTotal - a.valorVentaTotal);
+        break;
+      case 'STOCK_DESC':
+        list.sort((a, b) => b.stockTotal - a.stockTotal);
+        break;
+      case 'STOCK_ASC':
+        list.sort((a, b) => a.stockTotal - b.stockTotal);
+        break;
+      case 'NOMBRE_ASC':
+        list.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        break;
+    }
+
+    return list;
+  }
+
+  get itemsReporteStockPaginados(): ItemReporteStock[] {
+    const inicio = (this.paginaStock - 1) * this.itemsPorPaginaStock;
+    return this.itemsReporteStockFiltrados.slice(inicio, inicio + this.itemsPorPaginaStock);
+  }
+
+  get totalPaginasStock(): number {
+    return Math.max(1, Math.ceil(this.itemsReporteStockFiltrados.length / this.itemsPorPaginaStock));
+  }
+
+  cambiarPaginaStock(p: number) {
+    if (p >= 1 && p <= this.totalPaginasStock) {
+      this.paginaStock = p;
+    }
+  }
+
+  get totalUnidadesStockReporte(): number {
+    return this.itemsReporteStockFiltrados.reduce((sum, i) => sum + i.stockTotal, 0);
+  }
+
+  get totalLotesStockReporte(): number {
+    return this.itemsReporteStockFiltrados.reduce((sum, i) => sum + i.cantidadLotes, 0);
+  }
+
+  get totalCostoInversionStockReporte(): number {
+    return this.itemsReporteStockFiltrados.reduce((sum, i) => sum + i.costoInversionTotal, 0);
+  }
+
+  get totalValorVentaStockReporte(): number {
+    return this.itemsReporteStockFiltrados.reduce((sum, i) => sum + i.valorVentaTotal, 0);
+  }
+
+  get totalGananciaStockReporte(): number {
+    return this.itemsReporteStockFiltrados.reduce((sum, i) => sum + i.gananciaProyectada, 0);
+  }
+
+  limpiarFiltrosStock() {
+    this.busquedaStock = '';
+    this.filtroTipoStock = 'TODOS';
+    this.filtroNivelStock = 'CON_STOCK';
+    this.ordenStock = 'VALOR_DESC';
+    this.paginaStock = 1;
+    this.calcularReporteStock();
   }
 
   // ================= LÓGICA: REPORTE GENERAL =================
@@ -292,7 +623,7 @@ export class Reportes implements OnInit {
 
     this.ventas.forEach(v => {
       const f = this.toIsoDate(v.fecha);
-      const coincideSede = this.filtroSedeGeneral === 'TODAS' || (v.sede || 'Sede Cajamarca Central') === this.filtroSedeGeneral;
+      const coincideSede = this.sedeCoincide(v.sede, this.filtroSedeGeneral);
       if (coincideSede && (!inicioStr || f >= inicioStr) && (!finStr || f <= finStr)) {
         fechasSet.add(f);
       }
@@ -300,15 +631,16 @@ export class Reportes implements OnInit {
 
     this.todasLasAperturas.forEach(t => {
       const f = this.toIsoDate(t.fechaApertura);
-      const coincideSede = this.filtroSedeGeneral === 'TODAS' || (t.sede || 'Sede Cajamarca Central') === this.filtroSedeGeneral;
+      const coincideSede = this.sedeCoincide(t.sede, this.filtroSedeGeneral);
       if (coincideSede && (!inicioStr || f >= inicioStr) && (!finStr || f <= finStr)) {
         fechasSet.add(f);
       }
     });
 
-    // Si el rango es válido y no hay datos, incluir al menos la fecha de hoy
-    if (fechasSet.size === 0 && inicioStr && finStr) {
-      fechasSet.add(new Date().toLocaleDateString('en-CA'));
+    // Si no existen movimientos ni aperturas en el rango, no generar datos ficticios
+    if (fechasSet.size === 0) {
+      this.reportePorDias = [];
+      return;
     }
 
     const fechasOrdenadas = Array.from(fechasSet).sort().reverse();
@@ -317,13 +649,13 @@ export class Reportes implements OnInit {
       // Ventas de este día
       let ventasDia = this.ventas.filter(v => this.toIsoDate(v.fecha) === fechaStr);
       if (this.filtroSedeGeneral !== 'TODAS') {
-        ventasDia = ventasDia.filter(v => (v.sede || 'Sede Cajamarca Central') === this.filtroSedeGeneral);
+        ventasDia = ventasDia.filter(v => this.sedeCoincide(v.sede, this.filtroSedeGeneral));
       }
 
       // Turnos de este día filtrados estrictamente por sede
       let turnosDia = this.todasLasAperturas.filter(t => this.toIsoDate(t.fechaApertura) === fechaStr);
       if (this.filtroSedeGeneral !== 'TODAS') {
-        turnosDia = turnosDia.filter(t => (t.sede || 'Sede Cajamarca Central') === this.filtroSedeGeneral);
+        turnosDia = turnosDia.filter(t => this.sedeCoincide(t.sede, this.filtroSedeGeneral));
       }
 
       // Cajeros que trabajaron ese día
@@ -337,8 +669,11 @@ export class Reportes implements OnInit {
         });
       }
       if (setCajeros.size === 0) {
-        // Si no hay turno registrado explícito, inferir cajero o titular
-        setCajeros.add(this.turnoActual?.cajeroActual || 'Carlos Mendoza (Cajero Principal)');
+        if (this.turnoActual?.cajaAbierta && this.turnoActual?.cajeroActual && this.toIsoDate(this.turnoActual?.fechaApertura) === fechaStr) {
+          setCajeros.add(this.turnoActual.cajeroActual);
+        } else {
+          setCajeros.add('Sin turno asignado');
+        }
       }
       const cajerosArray = Array.from(setCajeros);
       const cajeroPrincipal = cajerosArray.join(', ');
@@ -346,9 +681,11 @@ export class Reportes implements OnInit {
       // Fondo de apertura de ese día
       let fondo = 0;
       if (turnosDia.length > 0) {
-        fondo = turnosDia[0].fondoInicial || 100.00;
+        fondo = Number(turnosDia[0].fondoInicial) || 0;
+      } else if (this.turnoActual?.cajaAbierta && this.toIsoDate(this.turnoActual?.fechaApertura) === fechaStr) {
+        fondo = Number(this.turnoActual.fondoInicial) || 0;
       } else {
-        fondo = 100.00;
+        fondo = 0;
       }
 
       // Desglose de ventas
@@ -516,7 +853,7 @@ export class Reportes implements OnInit {
 
     // Filtro Sede
     if (this.filtroSedeDetalle && this.filtroSedeDetalle !== 'TODAS') {
-      list = list.filter(v => (v.sede || 'Sede Cajamarca Central') === this.filtroSedeDetalle);
+      list = list.filter(v => this.sedeCoincide(v.sede, this.filtroSedeDetalle));
     }
 
     // Buscador
@@ -613,19 +950,25 @@ export class Reportes implements OnInit {
     // Regla estricta: solo debe haber UNA apertura por día POR CADA SEDE
     const mapaPorDiaSede = new Map<string, TurnoCajaDTO>();
 
-    // 1. Si hay turno actual registrado, colocarlo para su fecha y sede
-    if (this.turnoActual) {
+    // 1. Si hay turno actual registrado con fecha válida, colocarlo para su fecha y sede
+    if (this.turnoActual && this.turnoActual.fechaApertura) {
       const fechaIso = this.toIsoDate(this.turnoActual.fechaApertura);
-      const clave = `${fechaIso}_${this.turnoActual.sede || 'Sede Cajamarca Central'}`;
-      mapaPorDiaSede.set(clave, this.turnoActual);
+      if (fechaIso) {
+        const clave = `${fechaIso}_${this.normalizarNombreSede(this.turnoActual.sede)}`;
+        mapaPorDiaSede.set(clave, this.turnoActual);
+      }
     }
 
-    // 2. Agregar turnos históricos, respetando que no haya más de una apertura por fecha y sede
+    // 2. Agregar turnos históricos válidos, respetando que no haya más de una apertura por fecha y sede
     this.historialTurnos.forEach(t => {
-      const fechaIso = this.toIsoDate(t.fechaApertura);
-      const clave = `${fechaIso}_${t.sede || 'Sede Cajamarca Central'}`;
-      if (!mapaPorDiaSede.has(clave)) {
-        mapaPorDiaSede.set(clave, t);
+      if (t.fechaApertura) {
+        const fechaIso = this.toIsoDate(t.fechaApertura);
+        if (fechaIso) {
+          const clave = `${fechaIso}_${this.normalizarNombreSede(t.sede)}`;
+          if (!mapaPorDiaSede.has(clave)) {
+            mapaPorDiaSede.set(clave, t);
+          }
+        }
       }
     });
 
@@ -690,7 +1033,7 @@ export class Reportes implements OnInit {
 
     // Filtro Sede / Local
     if (this.filtroSedeApertura !== 'TODAS') {
-      list = list.filter(t => (t.sede || 'Sede Cajamarca Central') === this.filtroSedeApertura);
+      list = list.filter(t => this.sedeCoincide(t.sede, this.filtroSedeApertura));
     }
 
     // Búsqueda general
@@ -874,16 +1217,6 @@ export class Reportes implements OnInit {
   }
 
   get listaSedes(): string[] {
-    const set = new Set<string>();
-    this.authService.getSedes().forEach(s => {
-      if (s.nombre) set.add(s.nombre);
-    });
-    this.ventas.forEach(v => {
-      if (v.sede) set.add(v.sede);
-    });
-    this.todasLasAperturas.forEach(t => {
-      if (t.sede) set.add(t.sede);
-    });
-    return Array.from(set);
+    return this.authService.getSedes().map(s => s.nombre);
   }
 }

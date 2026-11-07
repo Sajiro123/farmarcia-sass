@@ -6,6 +6,7 @@ import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { InventoryService, LoteItem, ActaBaja } from '../../core/services/inventory.service';
 import { ProductService, ProductoCatalogoItem } from '../../core/services/product.service';
+import { SearchService } from '../../core/services/search.service';
 
 export interface ItemLoteTemporal {
   productoId: string;
@@ -39,6 +40,7 @@ export class Inventory implements OnInit, OnDestroy {
   public authService = inject(AuthService);
   private inventoryService = inject(InventoryService);
   private productService = inject(ProductService);
+  private searchService = inject(SearchService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
@@ -132,15 +134,11 @@ export class Inventory implements OnInit, OnDestroy {
     if (!this.busquedaProductoCatalogo || !this.busquedaProductoCatalogo.trim()) {
       return this.productosCatalogo;
     }
-    const q = this.busquedaProductoCatalogo.toLowerCase().trim();
-    return this.productosCatalogo.filter(p =>
-      (p.nombreComercial && p.nombreComercial.toLowerCase().includes(q)) ||
-      (p.sku && p.sku.toLowerCase().includes(q)) ||
-      (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
-      (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
-      (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
-      (p.marca && p.marca.toLowerCase().includes(q)) ||
-      (p.tipoProducto && p.tipoProducto.toLowerCase().includes(q))
+    return this.searchService.search(
+      this.productosCatalogo,
+      this.busquedaProductoCatalogo,
+      ['nombreComercial', 'sku', 'codigoBarra', 'principioActivo', 'laboratorio', 'marca', 'tipoProducto', 'concentracion'],
+      { nombreComercial: 3, principioActivo: 2, sku: 2, codigoBarra: 2 }
     );
   }
 
@@ -512,6 +510,68 @@ export class Inventory implements OnInit, OnDestroy {
     return this.lotesFiltrados.reduce((sum, item) => sum + (item.stock || 0), 0);
   }
 
+  get totalProductosUnicosConStock(): number {
+    const ids = new Set(this.lotesFefo.filter(l => (l.stock || 0) > 0).map(l => l.productoId));
+    return ids.size;
+  }
+
+  obtenerPrecioVentaUnitario(item: LoteItem): number {
+    if (item.precioVentaUnitario && item.precioVentaUnitario > 0) {
+      return item.precioVentaUnitario;
+    }
+    const prod = this.productosCatalogo.find(p => p.id === item.productoId);
+    if (prod) {
+      return Number(prod.precioUnidad) || Number(prod.precioVenta) || Number(prod.precioCaja) || 0;
+    }
+    return 0;
+  }
+
+  obtenerCostoUnitario(item: LoteItem): number {
+    if (item.costoTotalProveedor && item.costoTotalProveedor > 0 && item.stock > 0) {
+      return Number((item.costoTotalProveedor / item.stock).toFixed(2));
+    }
+    if (item.costoUnitario && item.costoUnitario > 0) {
+      return item.costoUnitario;
+    }
+    const pv = this.obtenerPrecioVentaUnitario(item);
+    return Number((pv * 0.70).toFixed(2));
+  }
+
+  obtenerValorVentaLote(item: LoteItem): number {
+    return Number(((item.stock || 0) * this.obtenerPrecioVentaUnitario(item)).toFixed(2));
+  }
+
+  obtenerCostoInversionLote(item: LoteItem): number {
+    if (item.costoTotalProveedor && item.costoTotalProveedor > 0) {
+      return Number(item.costoTotalProveedor);
+    }
+    return Number(((item.stock || 0) * this.obtenerCostoUnitario(item)).toFixed(2));
+  }
+
+  get totalValorVentaGeneral(): number {
+    return this.lotesFefo.reduce((sum, item) => sum + this.obtenerValorVentaLote(item), 0);
+  }
+
+  get totalCostoInversionGeneral(): number {
+    return this.lotesFefo.reduce((sum, item) => sum + this.obtenerCostoInversionLote(item), 0);
+  }
+
+  get totalUtilidadProyectadaGeneral(): number {
+    return Math.max(0, this.totalValorVentaGeneral - this.totalCostoInversionGeneral);
+  }
+
+  get totalValorVentaFiltrado(): number {
+    return this.lotesFiltrados.reduce((sum, item) => sum + this.obtenerValorVentaLote(item), 0);
+  }
+
+  get totalCostoInversionFiltrado(): number {
+    return this.lotesFiltrados.reduce((sum, item) => sum + this.obtenerCostoInversionLote(item), 0);
+  }
+
+  irAReporteStock() {
+    this.router.navigate(['/reportes'], { queryParams: { tab: 'STOCK' } });
+  }
+
   obtenerTipoLote(item: LoteItem): 'MEDICAMENTO' | 'PERFUME' | 'OTROS' {
     if (item.tipoProducto === 'PERFUME' || item.vencimiento === 'No expira') return 'PERFUME';
     if (item.tipoProducto === 'OTROS') return 'OTROS';
@@ -554,17 +614,13 @@ export class Inventory implements OnInit, OnDestroy {
       result = result.filter(item => item.temperatura === this.filtroCondicion);
     }
 
-    // 4. Filtro de texto predictivo
-    if (this.busqueda.trim()) {
-      const q = this.busqueda.toLowerCase().trim();
-      result = result.filter(item =>
-        (item.producto && item.producto.toLowerCase().includes(q)) ||
-        (item.lote && item.lote.toLowerCase().includes(q)) ||
-        (item.principioActivo && item.principioActivo.toLowerCase().includes(q)) ||
-        (item.laboratorio && item.laboratorio.toLowerCase().includes(q)) ||
-        (item.registroSanitario && item.registroSanitario.toLowerCase().includes(q)) ||
-        (item.pasillo && item.pasillo.toLowerCase().includes(q)) ||
-        (item.ubicacion && item.ubicacion.toLowerCase().includes(q))
+    // 4. Filtro de texto predictivo de alta precisión
+    if (this.busqueda && this.busqueda.trim()) {
+      result = this.searchService.search(
+        result,
+        this.busqueda,
+        ['producto', 'lote', 'principioActivo', 'laboratorio', 'registroSanitario', 'pasillo', 'ubicacion'],
+        { producto: 3, lote: 2, principioActivo: 2 }
       );
     }
 
@@ -799,7 +855,7 @@ export class Inventory implements OnInit, OnDestroy {
     const fechaIng = this.loteCabecera.fechaIngreso || new Date().toLocaleDateString('en-CA');
     const targetSede = this.loteCabecera.sucursalId || this.authService.activeSede()?.id || '11111111-1111-1111-1111-111111111111';
     const sedeObj = this.authService.getSedes().find(s => s.id === targetSede);
-    const nombreSede = sedeObj ? sedeObj.nombre : (targetSede === '11111111-1111-1111-1111-111111111111' ? 'Sede Cajamarca Central' : 'Sede Baños del Inca');
+    const nombreSede = sedeObj ? sedeObj.nombre : (targetSede === '11111111-1111-1111-1111-111111111111' ? 'Medicare Farmacia' : 'D Kelly Store');
 
     const nuevosLotes: LoteItem[] = this.productosEnLoteTemporal.map((item, index) => {
       const esPerf = item.tipoProducto === 'PERFUME';

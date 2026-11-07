@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { SearchService } from './search.service';
 import { Observable, of, from, map, catchError, throwError } from 'rxjs';
 
 export type TipoProducto = 'MEDICAMENTO' | 'PERFUME' | 'OTROS';
@@ -45,6 +46,7 @@ export interface ProductoCatalogoItem {
 })
 export class ProductService {
   private supabase = inject(SupabaseService);
+  private searchService = inject(SearchService);
 
   productosCatalogo: ProductoCatalogoItem[] = [];
 
@@ -480,16 +482,12 @@ export class ProductService {
   buscarEnCatalogo(query?: string): Observable<ProductoCatalogoItem[]> {
     const items = this.productosCatalogo.filter(p => p.estaActivo);
     if (!query || !query.trim()) return of([...items]);
-    const q = query.toLowerCase().trim();
-    return of(items.filter(p =>
-      p.nombreComercial.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
-      (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
-      (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
-      (p.marca && p.marca.toLowerCase().includes(q)) ||
-      (p.categoriaNombre && p.categoriaNombre.toLowerCase().includes(q)) ||
-      (p.descripcion && p.descripcion.toLowerCase().includes(q))
-    ));
+    const res = this.searchService.search(
+      items,
+      query,
+      ['nombreComercial', 'sku', 'codigoBarra', 'laboratorio', 'principioActivo', 'marca', 'categoriaNombre', 'descripcion'],
+      { nombreComercial: 3, principioActivo: 2, sku: 2, codigoBarra: 2 }
+    );
+    return of(res);
   }
 }

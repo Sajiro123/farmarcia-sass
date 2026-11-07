@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CustomerService, CustomerPuntos } from '../../core/services/customer.service';
 import { VentaService } from '../../core/services/venta.service';
 import { AuthService } from '../../core/services/auth.service';
+import { SearchService } from '../../core/services/search.service';
 
 @Component({
   selector: 'app-customers',
@@ -15,6 +16,7 @@ export class Customers implements OnInit {
   private customerService = inject(CustomerService);
   private ventaService = inject(VentaService);
   private authService = inject(AuthService);
+  private searchService = inject(SearchService);
 
   clientes: CustomerPuntos[] = [];
   clientesFiltrados: CustomerPuntos[] = [];
@@ -50,7 +52,7 @@ export class Customers implements OnInit {
   clienteFormDireccion = '';
   clienteFormFechaNacimiento = ''; // Opcional
   clienteFormPuntos = 0;
-  clienteFormSede = 'Sede Cajamarca Central';
+  clienteFormSede = 'Medicare Farmacia';
   errorFormulario = '';
 
   // Notificaciones Toast
@@ -100,15 +102,12 @@ export class Customers implements OnInit {
       );
     }
 
-    if (this.busqueda.trim()) {
-      const q = this.busqueda.toLowerCase();
-      result = result.filter(c =>
-        c.nombre.toLowerCase().includes(q) ||
-        c.id.includes(q) ||
-        (c.celular && c.celular.includes(q)) ||
-        (c.email && c.email.toLowerCase().includes(q)) ||
-        (c.ultimaSede && c.ultimaSede.toLowerCase().includes(q)) ||
-        (c.sedeNombre && c.sedeNombre.toLowerCase().includes(q))
+    if (this.busqueda && this.busqueda.trim()) {
+      result = this.searchService.search(
+        result,
+        this.busqueda,
+        ['nombre', 'id', 'celular', 'email', 'ultimaSede', 'sedeNombre'],
+        { nombre: 3, id: 3, celular: 2 }
       );
     }
 

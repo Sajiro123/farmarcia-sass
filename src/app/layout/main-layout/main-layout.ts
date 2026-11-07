@@ -27,7 +27,7 @@ export class MainLayout {
   showSedesModal = false;
 
   get logoUrl(): string | null {
-    return localStorage.getItem('medicare_tenant_logo') || this.authService.currentUser()?.logoUrl || null;
+    return localStorage.getItem('medicare_tenant_logo') || this.authService.currentUser()?.logoUrl || 'assets/images/logo-medicare.png';
   }
 
   constructor() {

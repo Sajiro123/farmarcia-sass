@@ -12,6 +12,7 @@ import {
   MedioPagoDTO,
   CategoriaVentaDTO
 } from '../../core/services/dashboard.service';
+import { SearchService } from '../../core/services/search.service';
 
 export interface KpiFarmaceutico {
   label: string;
@@ -33,6 +34,7 @@ export class Dashboard implements OnInit {
   public authService = inject(AuthService);
   public ventaService = inject(VentaService);
   private dashboardService = inject(DashboardService);
+  private searchService = inject(SearchService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
 
@@ -53,7 +55,11 @@ export class Dashboard implements OnInit {
   }
 
   get cajaAbierta(): boolean {
-    return Boolean(this.turnoActual && this.turnoActual.cajaAbierta);
+    const t = this.turnoActual;
+    if (!t || !t.cajaAbierta || !t.fechaApertura) return false;
+    const hoyIso = new Date().toLocaleDateString('en-CA');
+    const fIso = typeof t.fechaApertura === 'string' ? t.fechaApertura.split('T')[0] : '';
+    return fIso === hoyIso;
   }
 
   get aperturaHoy(): TurnoCajaDTO | null {
@@ -180,13 +186,12 @@ export class Dashboard implements OnInit {
       list = list.filter(p => p.categoria === this.filtroCategoriaVendido);
     }
 
-    if (this.busquedaProductoVendido.trim()) {
-      const q = this.busquedaProductoVendido.toLowerCase().trim();
-      list = list.filter(p =>
-        (p.nombre && p.nombre.toLowerCase().includes(q)) ||
-        (p.generico && p.generico.toLowerCase().includes(q)) ||
-        (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
-        (p.categoria && p.categoria.toLowerCase().includes(q))
+    if (this.busquedaProductoVendido && this.busquedaProductoVendido.trim()) {
+      list = this.searchService.search(
+        list,
+        this.busquedaProductoVendido,
+        ['nombre', 'generico', 'laboratorio', 'categoria'],
+        { nombre: 3, generico: 2 }
       );
     }
 

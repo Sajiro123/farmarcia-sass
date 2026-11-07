@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { UserService, UsuarioNegocioDTO, PerfilDTO, AccionDTO } from './user.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SedeService, SedeDTO } from '../../core/services/sede.service';
+import { SearchService } from '../../core/services/search.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -15,6 +16,7 @@ export class Usuarios implements OnInit {
   public authService = inject(AuthService);
   private userService = inject(UserService);
   private sedeService = inject(SedeService);
+  private searchService = inject(SearchService);
   private cdr = inject(ChangeDetectorRef);
 
   usuarios: UsuarioNegocioDTO[] = [];
@@ -107,27 +109,27 @@ export class Usuarios implements OnInit {
   }
 
   get usuariosFiltrados(): UsuarioNegocioDTO[] {
-    return this.usuarios.filter(u => {
-      let matchRol = true;
+    let list = this.usuarios.filter(u => {
       if (this.filtroRol === 'PERSONAL') {
-        matchRol = !u.tieneUsuario;
+        return !u.tieneUsuario;
       } else if (this.filtroRol === 'CON_CUENTA') {
-        matchRol = !!u.tieneUsuario;
+        return !!u.tieneUsuario;
       } else if (this.filtroRol !== 'TODOS') {
-        matchRol = u.tieneUsuario === true && u.perfilCodigo === this.filtroRol;
+        return u.tieneUsuario === true && u.perfilCodigo === this.filtroRol;
       }
-
-      const q = this.busqueda.toLowerCase().trim();
-      const matchTexto = !q || 
-        (u.nombreCompleto && u.nombreCompleto.toLowerCase().includes(q)) ||
-        (u.nombres && u.nombres.toLowerCase().includes(q)) ||
-        (u.apellidos && u.apellidos.toLowerCase().includes(q)) ||
-        (u.email && u.email.toLowerCase().includes(q)) ||
-        (u.numeroDocumento && u.numeroDocumento.includes(q)) ||
-        (u.nroColegiatura && u.nroColegiatura.toLowerCase().includes(q)) ||
-        (u.sedeNombre && u.sedeNombre.toLowerCase().includes(q));
-      return matchRol && matchTexto;
+      return true;
     });
+
+    if (this.busqueda && this.busqueda.trim()) {
+      list = this.searchService.search(
+        list,
+        this.busqueda,
+        ['nombreCompleto', 'nombres', 'apellidos', 'email', 'numeroDocumento', 'nroColegiatura', 'sedeNombre'],
+        { nombreCompleto: 3, numeroDocumento: 3 }
+      );
+    }
+
+    return list;
   }
 
   get totalPersonal(): number {

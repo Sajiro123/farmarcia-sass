@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { AuthService } from './auth.service';
 import { Observable, from, of, map, catchError, timeout } from 'rxjs';
 
 export interface VentaItemDTO {
@@ -80,6 +81,7 @@ export interface TurnoCajaDTO {
 })
 export class VentaService {
   private supabase = inject(SupabaseService);
+  private authService = inject(AuthService, { optional: true });
 
   private historialVentas: TicketVentaDTO[] = [];
   private turnoActivo: TurnoCajaDTO | null = null;
@@ -119,11 +121,38 @@ export class VentaService {
   }
 
   getTurnoActual(): TurnoCajaDTO {
+    const hoyIso = new Date().toLocaleDateString('en-CA');
     const saved = localStorage.getItem('medicare_turno_caja_activo');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
+          const fechaTurnoIso = this.toIsoDate(parsed.fechaApertura);
+
+          // Si el turno guardado es de una fecha anterior o no tiene fecha válida:
+          // Ya no es un turno activo para la jornada de hoy.
+          if (!fechaTurnoIso || fechaTurnoIso !== hoyIso) {
+            // Si estaba marcado como abierto, archivarlo como cerrado en el historial
+            if (parsed.cajaAbierta && fechaTurnoIso) {
+              parsed.cajaAbierta = false;
+              parsed.fechaCierre = parsed.fechaCierre || new Date(parsed.fechaApertura).toISOString();
+              const hist = this.getHistorialTurnos();
+              if (!hist.some(t => (parsed.id && t.id === parsed.id) || this.toIsoDate(t.fechaApertura) === fechaTurnoIso)) {
+                hist.unshift({ ...parsed });
+                localStorage.setItem('medicare_historial_turnos', JSON.stringify(hist));
+              }
+            }
+            localStorage.removeItem('medicare_turno_caja_activo');
+            this.turnoActivo = null;
+            return {
+              cajaAbierta: false,
+              fechaApertura: '',
+              cajeroActual: '',
+              fondoInicial: 0,
+              sede: ''
+            };
+          }
+
           return {
             ...parsed,
             cajaAbierta: Boolean(parsed.cajaAbierta)
@@ -172,6 +201,102 @@ export class VentaService {
       historial.unshift({ ...turno });
     }
     localStorage.setItem('medicare_historial_turnos', JSON.stringify(historial));
+
+    // Sincronizar en segundo plano con Supabase si está disponible
+    this.sincronizarTurnoConSupabase(turno).catch(err => {
+      console.warn('Aviso sincronizando turno con Supabase:', err);
+    });
+  }
+
+  /**
+   * Sincroniza un turno de caja (apertura o cierre) con Supabase en la tabla turnos_caja
+   */
+  async sincronizarTurnoConSupabase(turno: TurnoCajaDTO): Promise<string | null> {
+    const client = this.supabase.client;
+    if (!this.supabase.isConfigured || !client) return null;
+
+    try {
+      let cajaId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      let usuarioId = '33333333-3333-3333-3333-333333333332'; // Juan Carlos Mendoza
+
+      const user = this.authService?.currentUser();
+      const uId = (user as any)?.usuarioId || (user as any)?.id;
+      if (uId && typeof uId === 'string' && uId.includes('-') && uId.length > 20) {
+        usuarioId = uId;
+      }
+
+      if (turno.sedeId) {
+        const { data: cData } = await client.from('cajas_pos').select('id').eq('sucursal_id', turno.sedeId).limit(1);
+        if (cData && cData.length > 0) cajaId = cData[0].id;
+      }
+
+      if (turno.cajaAbierta) {
+        // Apertura o reactivación
+        if (turno.id && turno.id.includes('-') && turno.id.length > 20) {
+          await client.from('turnos_caja').upsert({
+            id: turno.id,
+            caja_id: cajaId,
+            usuario_id: usuarioId,
+            apertura_en: turno.fechaApertura || new Date().toISOString(),
+            saldo_apertura: turno.fondoInicial || 0,
+            estado: 'ABIERTO',
+            observaciones: turno.motivoReapertura || 'Apertura de turno POS'
+          });
+          return turno.id;
+        } else {
+          const { data, error } = await client.from('turnos_caja').insert([{
+            caja_id: cajaId,
+            usuario_id: usuarioId,
+            apertura_en: turno.fechaApertura || new Date().toISOString(),
+            saldo_apertura: turno.fondoInicial || 0,
+            estado: 'ABIERTO',
+            observaciones: 'Apertura de turno POS'
+          }]).select('id');
+
+          if (!error && data && data.length > 0) {
+            turno.id = data[0].id;
+            localStorage.setItem('medicare_turno_caja_activo', JSON.stringify(turno));
+            const hist = this.getHistorialTurnos();
+            const fIso = this.toIsoDate(turno.fechaApertura);
+            const idx = hist.findIndex(t => this.toIsoDate(t.fechaApertura) === fIso);
+            if (idx >= 0) {
+              hist[idx].id = turno.id;
+              localStorage.setItem('medicare_historial_turnos', JSON.stringify(hist));
+            }
+            return data[0].id;
+          }
+        }
+      } else {
+        // Cierre de turno
+        if (turno.id && turno.id.includes('-') && turno.id.length > 20) {
+          await client.from('turnos_caja').update({
+            cierre_en: turno.fechaCierre || new Date().toISOString(),
+            saldo_cierre_real: turno.totalVentas || 0,
+            diferencia: turno.diferencia || 0,
+            estado: 'CERRADO',
+            observaciones: 'Cierre Z de turno'
+          }).eq('id', turno.id);
+        } else {
+          const { data } = await client.from('turnos_caja').insert([{
+            caja_id: cajaId,
+            usuario_id: usuarioId,
+            apertura_en: turno.fechaApertura || new Date().toISOString(),
+            cierre_en: turno.fechaCierre || new Date().toISOString(),
+            saldo_apertura: turno.fondoInicial || 0,
+            saldo_cierre_real: turno.totalVentas || 0,
+            diferencia: turno.diferencia || 0,
+            estado: 'CERRADO',
+            observaciones: 'Cierre Z de turno'
+          }]).select('id');
+          if (data && data.length > 0) {
+            turno.id = data[0].id;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Aviso sincronizando turno con Supabase:', e);
+    }
+    return turno.id || null;
   }
 
   /**
@@ -288,61 +413,14 @@ export class VentaService {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filtrar turnos mock predefinidos que pudieran haber quedado en caché local
+          return parsed.filter(t => !t.id?.startsWith('TURNO-2026092') && t.cajeroActual !== 'Carlos Mendoza (Cajero Principal)');
+        }
       } catch (e) {}
     }
 
-    const d1 = new Date(); d1.setDate(d1.getDate() - 1);
-    const d2 = new Date(); d2.setDate(d2.getDate() - 2);
-    const d3 = new Date(); d3.setDate(d3.getDate() - 3);
-
-    return [
-      {
-        id: 'TURNO-20260923-01',
-        cajaAbierta: false,
-        fechaApertura: new Date(new Date(d1).setHours(8, 0, 0, 0)).toISOString(),
-        fechaCierre: new Date(new Date(d1).setHours(20, 30, 0, 0)).toISOString(),
-        cajeroActual: 'Carlos Mendoza (Cajero Principal)',
-        fondoInicial: 150.00,
-        sede: 'Sede Cajamarca Central',
-        totalVentas: 640.50,
-        declaradoEfectivo: 320.00,
-        declaradoYape: 210.50,
-        declaradoPlin: 50.00,
-        declaradoTarjeta: 60.00,
-        diferencia: 0.00
-      },
-      {
-        id: 'TURNO-20260922-01',
-        cajaAbierta: false,
-        fechaApertura: new Date(new Date(d2).setHours(8, 15, 0, 0)).toISOString(),
-        fechaCierre: new Date(new Date(d2).setHours(21, 0, 0, 0)).toISOString(),
-        cajeroActual: 'Lic. Ana Panta (Farmacéutica Titular)',
-        fondoInicial: 100.00,
-        sede: 'Sede Cajamarca Central',
-        totalVentas: 890.20,
-        declaradoEfectivo: 450.00,
-        declaradoYape: 310.20,
-        declaradoPlin: 80.00,
-        declaradoTarjeta: 50.00,
-        diferencia: 0.00
-      },
-      {
-        id: 'TURNO-20260921-01',
-        cajaAbierta: false,
-        fechaApertura: new Date(new Date(d3).setHours(7, 45, 0, 0)).toISOString(),
-        fechaCierre: new Date(new Date(d3).setHours(20, 0, 0, 0)).toISOString(),
-        cajeroActual: 'Dr. Roberto Sánchez (Director Técnico)',
-        fondoInicial: 120.00,
-        sede: 'Sede Cajamarca Central',
-        totalVentas: 520.00,
-        declaradoEfectivo: 300.00,
-        declaradoYape: 150.00,
-        declaradoPlin: 40.00,
-        declaradoTarjeta: 30.00,
-        diferencia: 0.00
-      }
-    ];
+    return [];
   }
 
   /**
@@ -437,7 +515,7 @@ export class VentaService {
             dni: v.clientes?.numero_documento || '00000000',
             tipoComprobante: 'Ticket',
             sedeId: v.sucursales?.id,
-            sede: v.sucursales?.nombre || 'Sede Cajamarca Central',
+            sede: v.sucursales?.nombre || 'Medicare Farmacia',
             cajero: v.usuarios?.nombre_completo || v.usuarios?.nombre_usuario || 'Cajero de Turno',
             estado: v.estado === 'ANULADA' ? 'ANULADO' : 'EMITIDO'
           };
@@ -504,7 +582,7 @@ export class VentaService {
             cajeroActual: t.usuarios?.nombre_completo || t.usuarios?.nombre_usuario || 'Cajero Principal',
             fondoInicial: Number(t.saldo_apertura) || 0,
             sedeId: t.cajas_pos?.sucursales?.id,
-            sede: t.cajas_pos?.sucursales?.nombre || 'Sede Cajamarca Central',
+            sede: t.cajas_pos?.sucursales?.nombre || 'Medicare Farmacia',
             totalVentas: Number(t.saldo_cierre_real || t.saldo_cierre_estimado) || 0,
             reabierta: (t.observaciones || '').includes('REABIERTA'),
             motivoReapertura: t.observaciones || undefined

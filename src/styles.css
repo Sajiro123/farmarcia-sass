@@ -95,6 +95,9 @@
 }
 
 :root {
+  --in-oklab: ;
+  --in-oklch: ;
+
   --p-border-radius-sm: 6px;
   --p-border-radius-md: 10px;
   --p-border-radius-lg: 14px;
@@ -110,6 +113,13 @@
   --layout-border: #ECF0F1;
   --layout-text-main: #2C3E50;
   --layout-text-muted: #7F8C8D;
+}
+
+@supports (background: linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+    --in-oklch: in oklch;
+  }
 }
 
 .dark,

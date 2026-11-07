@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
@@ -6,6 +6,7 @@ import { filter, Subscription } from 'rxjs';
 import { ProductService, ProductoCatalogoItem, TipoProducto } from '../../core/services/product.service';
 import { CategoryService, CategoriaItem, mapIdTipoToTipoProducto, mapTipoProductoToIdTipo } from '../../core/services/category.service';
 import { StorageService } from '../../core/services/storage.service';
+import { SearchService } from '../../core/services/search.service';
 
 @Component({
   selector: 'app-products',
@@ -18,6 +19,7 @@ export class Products implements OnInit, OnDestroy {
   private productService = inject(ProductService);
   private categoryService = inject(CategoryService);
   public storageService = inject(StorageService);
+  private searchService = inject(SearchService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
@@ -733,23 +735,18 @@ export class Products implements OnInit, OnDestroy {
         return false;
       }
 
-      // Buscador predictivo general
-      const q = this.busquedaGrilla.toLowerCase().trim();
-      if (!q) return true;
-
-      return (
-        (p.nombreComercial && p.nombreComercial.toLowerCase().includes(q)) ||
-        (p.sku && p.sku.toLowerCase().includes(q)) ||
-        (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
-        (p.laboratorio && p.laboratorio.toLowerCase().includes(q)) ||
-        (p.marca && p.marca.toLowerCase().includes(q)) ||
-        (p.categoriaNombre && p.categoriaNombre.toLowerCase().includes(q)) ||
-        (p.principioActivo && p.principioActivo.toLowerCase().includes(q)) ||
-        (p.descripcion && p.descripcion.toLowerCase().includes(q)) ||
-        (p.familiaOlfativa && p.familiaOlfativa.toLowerCase().includes(q)) ||
-        (p.ubicacionAlmacen && p.ubicacionAlmacen.toLowerCase().includes(q))
-      );
+      return true;
     });
+
+    // Buscador predictivo inteligente (multi-token, sin acentos y difuso con Fuse.js)
+    if (this.busquedaGrilla && this.busquedaGrilla.trim()) {
+      result = this.searchService.search(
+        result,
+        this.busquedaGrilla,
+        ['nombreComercial', 'sku', 'codigoBarra', 'laboratorio', 'marca', 'categoriaNombre', 'principioActivo', 'descripcion', 'familiaOlfativa', 'ubicacionAlmacen'],
+        { nombreComercial: 3, principioActivo: 2, sku: 2, codigoBarra: 2 }
+      );
+    }
 
     // Ordenamiento
     switch (this.ordenarPor) {
@@ -782,13 +779,12 @@ export class Products implements OnInit, OnDestroy {
   }
 
   get productosRecientesFiltrados(): ProductoCatalogoItem[] {
-    const q = this.busquedaRecientes.toLowerCase().trim();
-    if (!q) return this.productosRecientes;
-    return this.productosRecientes.filter(p =>
-      p.nombreComercial.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      (p.codigoBarra && p.codigoBarra.toLowerCase().includes(q)) ||
-      (p.marca && p.marca.toLowerCase().includes(q))
+    if (!this.busquedaRecientes || !this.busquedaRecientes.trim()) return this.productosRecientes;
+    return this.searchService.search(
+      this.productosRecientes,
+      this.busquedaRecientes,
+      ['nombreComercial', 'sku', 'codigoBarra', 'marca'],
+      { nombreComercial: 3, sku: 2, codigoBarra: 2 }
     );
   }
 
@@ -839,9 +835,111 @@ export class Products implements OnInit, OnDestroy {
   }
 
   // ==========================================
+  // GESTIÓN DE AUTOCOMPLETE DE CATEGORÍAS
+  // ==========================================
+  mostrarDropdownCategoriaForm = false;
+  busquedaCategoriaForm = '';
+
+  mostrarDropdownFiltroCategoria = false;
+  busquedaFiltroCategoria = '';
+
+  @HostListener('document:click', ['$event'])
+  onClickOutside(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    if (!target.closest('.categoria-form-container')) {
+      this.mostrarDropdownCategoriaForm = false;
+    }
+    if (!target.closest('.categoria-filtro-container')) {
+      this.mostrarDropdownFiltroCategoria = false;
+    }
+    this.cdr.markForCheck();
+  }
+
+  get categoriasFiltradasParaFormAutocomplete(): CategoriaItem[] {
+    const base = this.categoriasFiltradasParaForm;
+    const q = (this.busquedaCategoriaForm || '').trim();
+    if (!q) return base;
+    return this.searchService.search(base, q, ['nombre', 'codigo', 'descripcion'], { nombre: 3 });
+  }
+
+  get categoriasFiltradasParaGridAutocomplete(): CategoriaItem[] {
+    const q = (this.busquedaFiltroCategoria || '').trim();
+    if (!q) return this.categorias;
+    return this.searchService.search(this.categorias, q, ['nombre', 'codigo', 'descripcion'], { nombre: 3 });
+  }
+
+  toggleDropdownCategoriaForm(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.mostrarDropdownCategoriaForm = !this.mostrarDropdownCategoriaForm;
+    this.busquedaCategoriaForm = '';
+    this.cdr.markForCheck();
+  }
+
+  abrirDropdownCategoriaForm(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.mostrarDropdownCategoriaForm = true;
+    this.busquedaCategoriaForm = '';
+    this.cdr.markForCheck();
+  }
+
+  onInputCategoriaForm(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.busquedaCategoriaForm = input?.value || '';
+    this.mostrarDropdownCategoriaForm = true;
+    this.cdr.markForCheck();
+  }
+
+  seleccionarCategoriaForm(cat: CategoriaItem): void {
+    this.productoForm.categoriaNombre = cat.nombre;
+    this.productoForm.categoriaId = cat.id;
+    this.busquedaCategoriaForm = '';
+    this.mostrarDropdownCategoriaForm = false;
+    this.cdr.markForCheck();
+  }
+
+  limpiarCategoriaForm(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.productoForm.categoriaNombre = '';
+    this.productoForm.categoriaId = undefined;
+    this.busquedaCategoriaForm = '';
+    this.mostrarDropdownCategoriaForm = false;
+    this.cdr.markForCheck();
+  }
+
+  crearNuevaCategoriaConNombre(nombre: string): void {
+    this.mostrarDropdownCategoriaForm = false;
+    this.busquedaCategoriaForm = '';
+    this.abrirModalNuevaCategoriaRapida();
+    if (nombre && nombre.trim()) {
+      this.categoriaForm.nombre = nombre.trim();
+    }
+    this.cdr.markForCheck();
+  }
+
+  toggleDropdownFiltroCategoria(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.mostrarDropdownFiltroCategoria = !this.mostrarDropdownFiltroCategoria;
+    this.cdr.markForCheck();
+  }
+
+  onInputFiltroCategoria(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.busquedaFiltroCategoria = input?.value || '';
+    this.mostrarDropdownFiltroCategoria = true;
+    this.cdr.markForCheck();
+  }
+
+  seleccionarCategoriaFiltro(nombreCat: string): void {
+    this.filtroCategoria = nombreCat;
+    this.busquedaFiltroCategoria = nombreCat === 'TODOS' ? '' : nombreCat;
+    this.mostrarDropdownFiltroCategoria = false;
+    this.paginaActual = 1;
+    this.cdr.markForCheck();
+  }
+  // ==========================================
   // GESTIÓN DE CATEGORÍAS (SELECT & TABLA)
   // ==========================================
-
   get categoriasFiltradasParaForm(): CategoriaItem[] {
     return this.categorias.filter(c =>
       c.estaActiva !== false && (c.tipoAsociado === this.tipoSeleccionado || c.tipoAsociado === 'TODOS')

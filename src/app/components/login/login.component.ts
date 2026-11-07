@@ -35,10 +35,11 @@ export class LoginComponent implements OnInit {
   showPassword = false;
 
   // Datos dinámicos del negocio (Tenant) cargados de la base de datos
-  logoUrl: string | null = null;
+  readonly defaultLogoUrl = 'assets/images/logo-medicare.png';
+  logoUrl: string | null = this.defaultLogoUrl;
   businessName: string = 'Farmacia Medicare';
   businessVertical: string = 'FARMACIA';
-  isLoadingLogo = true;
+  isLoadingLogo = false;
   logoError = false;
 
   ngOnInit() {
@@ -84,7 +85,12 @@ export class LoginComponent implements OnInit {
   }
 
   handleLogoError() {
-    this.logoError = true;
+    if (this.logoUrl !== this.defaultLogoUrl) {
+      this.logoUrl = this.defaultLogoUrl;
+      this.logoError = false;
+    } else {
+      this.logoError = true;
+    }
     this.cdr.detectChanges();
   }
 
